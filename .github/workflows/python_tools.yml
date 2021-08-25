@@ -30,15 +30,12 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        cd tools
         make flake8
 
     - name: Type checking with MyPy
       run: |
-        cd tools
         make mypy
 
     - name: Test with unittest
       run: |
-        cd tools
         make tests
