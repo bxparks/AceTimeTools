@@ -1,10 +1,13 @@
-# Tools
+# AceTime Tools
 
-These are the Python, Java and C++ programs which generate the various zoneinfo
-files and validation datasets from the [IANA TZ
-database](https://www.iana.org/time-zones).
+These are various tools (Python, Java, C++, C# programs) which parse the [IANA
+TZ database](https://www.iana.org/time-zones) and generate zoneinfo datasets for
+the [AceTime](https://github.com/bxparks/AceTime) Arduino library. These tools
+used to be in the AceTime project itself, but was extracted into a separate repo
+to support other languages and environments.
 
 A number of scripts are exposed at the top level:
+
 * `tzcompiler.sh` is the main driver for generating the zoneinfo files in
   the various `zonedb*/` directories. It is a thin shell wrapper around the
   `tzcompiler.py` script, which invokes an ETL data processing pipeline to
@@ -192,16 +195,19 @@ zone_specifier.py      v             v
 
 ## Dependencies
 
-The `tzcompiler.sh` script assumes that the [TZ Database from
-GitHub](https://github.com/eggert/tz) is located as a sibling directory to
-`./AceTime`. If `$ACE_TIME` is the directory of the AceTime library, then
-we can run the following commands:
-```
-$ cd $ACE_TIME/..
-$ git clone https://github.com/eggert/tz
-```
+* Python3.7 or higher
+* the [TZ Database](https://github.com/eggert/tz) as a sibling directory
+    * `$ cd ..`
+    * `$ git clone https://github.com/eggert/tz`
+* [Hinnant Date](https://github.com/HowardHinnant/date) as a sibling directory
+    * See [compare_cpp](compare_cpp)
 
 ## Usage
+
+In the following:
+
+* `$ACE_TIME` is the location of the AceTime project
+* `$TOOLS` is the location of the AceTimeTools project
 
 ### Generating ZoneDB Files
 
@@ -210,7 +216,7 @@ option is used:
 
 ```
 $ cd $ACE_TIME/src/ace_time/zonedb
-$ ../../../tools/tzcompiler.sh --tag 2019a --action zonedb --language arduino
+$ $TOOLS/tzcompiler.sh --tag 2019a --action zonedb --language arduino
 --scope basic --start_year 2000 --until_year 2050
 ```
 
@@ -225,7 +231,7 @@ commands:
 
 ```
 $ cd $ACE_TIME/src/ace_time/zonedbx
-$ ../../../tools/tzcompiler.sh --tag 2019a --action zonedb \
+$ $TOOLS/tzcompiler.sh --tag 2019a --action zonedb \
 --language arduino --scope extended --start_year 2000 --until_year 2050
 ```
 
@@ -250,11 +256,11 @@ files out from `tzcompiler.py` into a separate Python program.)
 
 First, compile the Java and C++ programs:
 ```
-$ cd $ACE_TIME/tools/compare_java
+$ cd $TOOLS/compare_java
 $ make clean
 $ make
 
-$ cd $ACE_TIME/tools/compare_cpp
+$ cd $TOOLS/compare_cpp
 $ make clean
 $ make
 ```
