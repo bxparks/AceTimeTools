@@ -31,8 +31,9 @@ set -eu
 
 DIRNAME=$(realpath $(dirname $0))
 
-# Default TZ git repository.
-SOURCE_DIR=$(realpath $DIRNAME/../../tz)
+# Location of the https://github.com/eggert/tz repo, assumed to be a sibling to
+# this project.
+SOURCE_DIR=$(realpath $DIRNAME/../tz)
 
 # TZ files to copy for consumption by extractor.py
 TZ_FILES="\
