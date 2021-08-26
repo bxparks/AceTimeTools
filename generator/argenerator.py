@@ -520,7 +520,7 @@ extern const internal::ZoneContext kZoneContext;
 
 //---------------------------------------------------------------------------
 // Estimated size of the Transition buffer in ExtendedZoneProcessor for each
-// zone. Used only in the tests/validation/Extended*Test tests for
+// zone. Used only in the AceTimeValidation/Extended*Test tests for
 // ExtendedZoneProcessor. This used to be included in the ZoneInfo data struct
 // above, but it is used only for tests, so pulling them out to these constants
 // means that they take up no permanent storage space.
