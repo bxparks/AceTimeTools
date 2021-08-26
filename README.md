@@ -8,6 +8,12 @@ the [AceTime](https://github.com/bxparks/AceTime) Arduino library. These tools
 used to be in the AceTime project itself, but was extracted into a separate repo
 to support other languages and environments.
 
+**Version**: (2021-08-25, initial split from AceTime)
+
+**Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+## Summary of Tools
+
 A number of scripts are exposed at the top level:
 
 * `tzcompiler.sh` is the main driver for generating the zoneinfo files in
@@ -307,3 +313,29 @@ The unit tests for the AceTimeTools project itself can be run with:
 ```
 $ make tests
 ```
+
+<a name="License"></a>
+## License
+
+[MIT License](https://opensource.org/licenses/MIT)
+
+<a name="FeedbackAndSupport"></a>
+## Feedback and Support
+
+If you have any questions, comments and other support questions about how to
+use this library, please use the
+[GitHub Discussions](https://github.com/bxparks/AceTimeTools/discussions)
+for this project. If you have bug reports or feature requests, please file a
+ticket in [GitHub Issues](https://github.com/bxparks/AceTimeTools/issues).
+I'd love to hear about how this software and its documentation can be improved.
+I can't promise that I will incorporate everything, but I will give your ideas
+serious consideration.
+
+Please refrain from emailing me directly unless the content is sensitive. The
+problem with email is that I cannot reference the email conversation when other
+people ask similar questions later.
+
+<a name="Authors"></a>
+## Authors
+
+* Created by Brian T. Park (brian@xparks.net).
