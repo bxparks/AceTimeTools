@@ -39,3 +39,7 @@ jobs:
     - name: Test with unittest
       run: |
         make tests
+
+    - name: Validate compare_xxx Tools
+      run: |
+        make compares

@@ -19,9 +19,9 @@ validator \
 zinfo.py \
 zone_processor
 
-.PHONY: all mypy flake8 tests
+.PHONY: all mypy flake8 tests compares
 
-all: mypy flake8 tests
+all: mypy flake8 tests compares
 
 mypy:
 	mypy --strict $(SRC)
@@ -41,6 +41,15 @@ flake8:
 		--show-source \
 		--statistics \
 		--max-line-length=80
+
+compares:
+	$(MAKE) -C compare_acetz
+	$(MAKE) -C compare_cpp
+	$(MAKE) -C compare_dateutil
+	$(MAKE) -C compare_java
+	$(MAKE) -C compare_pytz
+	# TODO: Add C# compilation test
+	# $(MAKE) -C compare_noda
 
 # Copy the TZ DB files into this directory for testing purposes.
 $(TZ_VERSION):
