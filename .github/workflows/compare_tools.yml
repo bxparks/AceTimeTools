@@ -1,0 +1,25 @@
+# See https://docs.github.com/en/actions/guides/building-and-testing-python
+# for information about Python testing on GitHub Actions.
+
+name: Compare Tools
+
+# Run on all branches.
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt install libcurl4-openssl-dev`
+        cd ..
+        git clone https://github.com/HowardHinnant/date
+
+    - name: Validate compare_xxx Tools
+      run: |
+        make compares
