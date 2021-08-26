@@ -16,7 +16,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt install libcurl4-openssl-dev`
+        sudo apt install libcurl4-openssl-dev
         cd ..
         git clone https://github.com/HowardHinnant/date
 
