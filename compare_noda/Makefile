@@ -1,12 +1,15 @@
-TZ_VERSION = 2021a
+TZ_VERSION := 2021a
 START_YEAR := 2000
 UNTIL_YEAR := 2050
 
-# Location of the https://github.com/nodatime/nodatime repo.
-NODA_TIME_DIR := $(HOME)/dev/nodatime
+# Location of the https://github.com/nodatime/nodatime repo, assuming to be
+# a sibling to this project.
+NODA_TIME_DIR := $(abspath ../../nodatime)
 
 validation_data.json: Program.cs small.txt tzdata$(TZ_VERSION).nzd
-	dotnet run -- \
+	dotnet run \
+		--framework net5.0 \
+		-- \
 		--start_year $(START_YEAR) \
 		--until_year $(UNTIL_YEAR) \
 		--nzd_file tzdata$(TZ_VERSION).nzd \
@@ -16,6 +19,7 @@ validation_data.json: Program.cs small.txt tzdata$(TZ_VERSION).nzd
 # Generate the custom tzdata{xxx}.nzd file, depending on TZ_VERSION.
 tzdata$(TZ_VERSION).nzd:
 	dotnet run \
+		--framework net5.0 \
 		-p $(NODA_TIME_DIR)/src/NodaTime.TzdbCompiler/NodaTime.TzdbCompiler.csproj \
 		-- \
 		-s https://data.iana.org/time-zones/releases/tzdata$(TZ_VERSION).tar.gz \
