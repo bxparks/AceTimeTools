@@ -4,7 +4,7 @@
 
 """
 Data structures required by ZoneSpecifier class. Created inline by
-InlineZoneInfo. Written out to 'zone_policies.py' and 'zone_infos.py' by
+ZoneInfoInliner. Written out to 'zone_policies.py' and 'zone_infos.py' by
 pygenerator.py
 """
 

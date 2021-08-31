@@ -4,7 +4,7 @@
 """
 Cleanses and transforms the Zone, Rule and Link entries for processing by
 various AceTime algorithms. The data will be consumed by code generation classes
-(ArduinoGenerator, PythonGenerator) or by the InlineZoneInfo to generate zone
+(ArduinoGenerator, PythonGenerator) or by the ZoneInfoInliner to generate zone
 info records internally.
 """
 

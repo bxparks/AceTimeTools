@@ -22,7 +22,7 @@ from .zone_info_types import ZoneEra
 from .zone_info_types import ZoneInfoMap
 
 
-class InlineZoneInfo:
+class ZoneInfoInliner:
     """Generate Python zone infos and policies maps inlined (instead of files).
     """
 

@@ -71,7 +71,7 @@ transformer               v
   |                       |  bufestimator.BufSizeEstimator.estimate()
   |                       |        \
   |                       |         v    (ZonesMap, PoliciesMap)
-  |                       |  inline_zone_info.InlineZoneInfo.generate_zonedb()
+  |                       |  inline_zone_info.ZoneInfoInliner.generate_zonedb()
   |                       |          \      (ZoneInfoMap, ZonePolicyMap)
   |                       |           v
   |                       |  bufestimator.BufSizeEstimator.calculate_buf_sizes()
