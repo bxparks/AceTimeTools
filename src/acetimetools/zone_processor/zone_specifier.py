@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-#
 # Copyright 2018 Brian T. Park
 #
 # MIT License
+
 """
 A Python version of the C++ ExtendedZoneSpecifier class to allow easier and
 faster iteration of its algorithms. It is too cumbersome and tedious to
