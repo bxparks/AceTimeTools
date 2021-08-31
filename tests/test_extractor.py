@@ -3,7 +3,8 @@
 # MIT License
 
 import unittest
-from extractor.extractor import parse_at_time_string
+
+from acetimetools.extractor.extractor import parse_at_time_string
 
 
 class TestParseAtHourString(unittest.TestCase):

@@ -4,8 +4,9 @@
 
 import logging
 from collections import OrderedDict
-from data_types.at_types import ZonesMap, PoliciesMap
-from data_types.at_types import BufSizeInfo, BufSizeMap
+
+from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
+from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
 from .zone_specifier import ZoneSpecifier
 from .inline_zone_info import ZoneInfoMap
 from .inline_zone_info import ZonePolicyMap

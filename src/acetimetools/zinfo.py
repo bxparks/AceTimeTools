@@ -52,10 +52,11 @@ import argparse
 import logging
 from typing import cast
 from datetime import datetime
-from zonedbpy import zone_infos
-from zone_processor.inline_zone_info import ZoneInfo
-from zone_processor.zone_specifier import ZoneSpecifier
-from zone_processor.zone_specifier import to_utc_string
+
+from acetimetools.zonedbpy import zone_infos
+from acetimetools.zone_processor.inline_zone_info import ZoneInfo
+from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
+from acetimetools.zone_processor.zone_specifier import to_utc_string
 
 
 def main() -> None:

@@ -55,15 +55,16 @@ Examples:
 
 import argparse
 import logging
-from data_types.at_types import TransformerResult
-from extractor.extractor import Extractor
-from transformer.transformer import Transformer
-from zone_processor.inline_zone_info import (
+
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.extractor.extractor import Extractor
+from acetimetools.transformer.transformer import Transformer
+from acetimetools.zone_processor.inline_zone_info import (
     InlineZoneInfo,
     ZoneInfoMap,
     ZonePolicyMap,
 )
-from validator.validator import Validator
+from acetimetools.validator.validator import Validator
 
 
 def validate(

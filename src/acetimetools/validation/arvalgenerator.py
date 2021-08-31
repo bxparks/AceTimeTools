@@ -11,8 +11,13 @@ from the 'validation_data.json' file on the STDIN.
 import logging
 import os
 from typing import List, Dict, Tuple, Optional
-from transformer.transformer import div_to_zero, normalize_name, hash_name
-from data_types.validation_types import TestItem, TestData, ValidationData
+
+from acetimetools.transformer.transformer import (
+    div_to_zero, normalize_name, hash_name
+)
+from acetimetools.data_types.validation_types import (
+    TestItem, TestData, ValidationData
+)
 
 
 class ArduinoValidationGenerator:

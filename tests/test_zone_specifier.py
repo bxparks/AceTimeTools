@@ -5,17 +5,18 @@
 from typing import cast
 import unittest
 from datetime import datetime
-from zonedbpy import zone_infos
-from zone_processor.zone_specifier import DateTuple
-from zone_processor.zone_specifier import Transition
-from zone_processor.zone_specifier import ZoneMatch
-from zone_processor.zone_specifier import ZoneSpecifier
-from zone_processor.zone_specifier import CandidateFinderBasic
-from zone_processor.zone_specifier import _compare_transition_to_match
-from zone_processor.zone_specifier import _compare_transition_to_match_fuzzy
-from zone_processor.zone_specifier import _subtract_date_tuple
-from zone_processor.zone_specifier import _normalize_date_tuple
-from zone_processor.inline_zone_info import ZoneInfo
+
+from acetimetools.zonedbpy import zone_infos
+from acetimetools.zone_processor.zone_specifier import DateTuple
+from acetimetools.zone_processor.zone_specifier import Transition
+from acetimetools.zone_processor.zone_specifier import ZoneMatch
+from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
+from acetimetools.zone_processor.zone_specifier import CandidateFinderBasic
+from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match  # noqa
+from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match_fuzzy  # noqa
+from acetimetools.zone_processor.zone_specifier import _subtract_date_tuple
+from acetimetools.zone_processor.zone_specifier import _normalize_date_tuple
+from acetimetools.zone_processor.inline_zone_info import ZoneInfo
 
 
 class TestZoneSpecifierHelperMethods(unittest.TestCase):

@@ -53,18 +53,19 @@ import argparse
 import logging
 import sys
 from typing_extensions import Protocol
-from data_types.at_types import TransformerResult
-from data_types.at_types import ZoneInfoDatabase
-from data_types.at_types import create_zone_info_database
-from data_types.at_types import BufSizeInfo
-from zone_processor.bufestimator import BufSizeEstimator
-from extractor.extractor import Extractor
-from transformer.transformer import Transformer
-from transformer.artransformer import ArduinoTransformer
-from generator.argenerator import ArduinoGenerator
-from generator.pygenerator import PythonGenerator
-from generator.zonelistgenerator import ZoneListGenerator
-from generator.jsongenerator import JsonGenerator
+
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.data_types.at_types import create_zone_info_database
+from acetimetools.data_types.at_types import BufSizeInfo
+from acetimetools.zone_processor.bufestimator import BufSizeEstimator
+from acetimetools.extractor.extractor import Extractor
+from acetimetools.transformer.transformer import Transformer
+from acetimetools.transformer.artransformer import ArduinoTransformer
+from acetimetools.generator.argenerator import ArduinoGenerator
+from acetimetools.generator.pygenerator import PythonGenerator
+from acetimetools.generator.zonelistgenerator import ZoneListGenerator
+from acetimetools.generator.jsongenerator import JsonGenerator
 
 
 # The value of `ExtendedZoneProcessor.kMaxTransitions` which determines the

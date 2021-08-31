@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
 
-from data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
+from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
 
 
 class TestDateUtil(unittest.TestCase):

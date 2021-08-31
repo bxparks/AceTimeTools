@@ -13,7 +13,7 @@ import argparse
 import logging
 import sys
 import json
-from validation.arvalgenerator import ArduinoValidationGenerator
+from acetimetools.validation.arvalgenerator import ArduinoValidationGenerator
 
 
 def main() -> None:

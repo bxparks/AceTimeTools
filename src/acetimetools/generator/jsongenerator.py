@@ -5,7 +5,8 @@
 import os
 import logging
 import json
-from data_types.at_types import ZoneInfoDatabase
+
+from acetimetools.data_types.at_types import ZoneInfoDatabase
 
 
 class JsonGenerator:

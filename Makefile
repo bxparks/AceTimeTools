@@ -1,30 +1,13 @@
-TZ_VERSION := 2021a
+.PHONY: all mypy flake8 tests
 
-# Files which pass 'mypy --strict'.
-SRC := \
-acetz.py \
-compare_acetz \
-compare_dateutil \
-compare_pytz \
-data_types \
-extractor \
-generate_validation.py \
-generator \
-tests \
-transformer \
-tzcompiler.py \
-validate.py \
-validation \
-validator \
-zinfo.py \
-zone_processor
+#------------------------------------------------------------------------------
+# Tests, validation, mypy.
+#------------------------------------------------------------------------------
 
-.PHONY: all mypy flake8 tests compares
-
-all: mypy flake8 tests compares
+all: mypy flake8 tests
 
 mypy:
-	mypy --strict $(SRC)
+	mypy --strict src tests
 
 tests:
 	python3 -m unittest
@@ -42,14 +25,13 @@ flake8:
 		--statistics \
 		--max-line-length=80
 
-compares:
-	$(MAKE) -C compare_acetz
-	$(MAKE) -C compare_cpp
-	$(MAKE) -C compare_dateutil
-	$(MAKE) -C compare_java
-	$(MAKE) -C compare_pytz
-	# TODO: Add C# compilation test
-	# $(MAKE) -C compare_noda
+#------------------------------------------------------------------------------
+# Rules for manual testing.
+#------------------------------------------------------------------------------
+
+# The TZ DB version used for internal testing targets defined below. This does
+# not affect the zonedb files generated in AceTime or AceTimePython.
+TZ_VERSION := 2021a
 
 # Copy the TZ DB files into this directory for testing purposes.
 $(TZ_VERSION):
@@ -57,11 +39,13 @@ $(TZ_VERSION):
 
 # Run the Validator using validate.py.
 validate: $(TZ_VERSION)
-	./validate.py --input_dir $(TZ_VERSION) --scope extended
+	./src/acetimetools/validate.py \
+		--input_dir $(TZ_VERSION) \
+		--scope extended
 
 # Generate zonedb.json for testing purposes.
-zonedb.json: $(SRC) $(TZ_VERSION)
-	./tzcompiler.py \
+zonedb.json: $(TZ_VERSION)
+	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
 		--input_dir $(TZ_VERSION) \
 		--scope basic \
@@ -71,8 +55,8 @@ zonedb.json: $(SRC) $(TZ_VERSION)
 		--until_year 2050
 
 # Generate zonedbx.json for testing purposes.
-zonedbx.json: $(SRC) $(TZ_VERSION)
-	./tzcompiler.py \
+zonedbx.json: $(TZ_VERSION)
+	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
 		--input_dir $(TZ_VERSION) \
 		--scope extended \
@@ -82,8 +66,8 @@ zonedbx.json: $(SRC) $(TZ_VERSION)
 		--until_year 2050
 
 # Generate the zones.txt file for testing purposes.
-zones.txt: $(SRC) $(TZ_VERSION)
-	./tzcompiler.py \
+zones.txt: $(TZ_VERSION)
+	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
 		--input_dir $(TZ_VERSION) \
 		--scope basic \
@@ -95,14 +79,32 @@ validation_data.json: zones.txt
 
 # Generate the validation_data.{h,cpp}, validation_tests.cpp
 validation_data.h: validation_data.json
-	./generate_validation.py --tz_version $(TZ_VERSION) \
-	--scope basic --db_namespace zonedb < $<
+	./generate_validation.py \
+		--tz_version $(TZ_VERSION) \
+		--scope basic \
+		--db_namespace zonedb \
+		< $<
 
 validation_data.cpp: validation_data.h
 	@true
 
 validation_tests.cpp: validation_data.h
 	@true
+
+#------------------------------------------------------------------------------
+# Rules to compile various compare_xxx validation data generators.
+#------------------------------------------------------------------------------
+
+compares:
+	$(MAKE) -C compare_acetz
+	$(MAKE) -C compare_cpp
+	$(MAKE) -C compare_dateutil
+	$(MAKE) -C compare_java
+	$(MAKE) -C compare_pytz
+	# TODO: Add C# compilation test
+	# $(MAKE) -C compare_noda
+
+#------------------------------------------------------------------------------
 
 clean:
 	rm -f zones.txt zonedb.json zonedbx.json validation_data.json \

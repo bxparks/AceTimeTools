@@ -101,12 +101,12 @@ if [[ $skip_checkout == '0' ]]; then
     popd
 fi
 
-echo \$ $DIRNAME/tzcompiler.py \
+echo \$ $DIRNAME/src/acetimetools/tzcompiler.py \
     --input_dir $INPUT_DIR \
     --output_dir $OUTPUT_DIR \
     --tz_version $tag \
     $@
-$DIRNAME/tzcompiler.py \
+$DIRNAME/src/acetimetools/tzcompiler.py \
     --input_dir $INPUT_DIR \
     --output_dir $OUTPUT_DIR \
     --tz_version $tag \

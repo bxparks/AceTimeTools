@@ -4,17 +4,18 @@
 
 import unittest
 from collections import OrderedDict
-from transformer.transformer import _parse_on_day_string
-from transformer.transformer import _days_in_month
-from transformer.transformer import calc_day_of_month
-from transformer.transformer import time_string_to_seconds
-from transformer.transformer import seconds_to_hms
-from transformer.transformer import hms_to_seconds
-from transformer.transformer import div_to_zero
-from transformer.transformer import truncate_to_granularity
-from transformer.transformer import INVALID_SECONDS
-from transformer.transformer import hash_name
-from transformer.transformer import add_string
+
+from acetimetools.transformer.transformer import _parse_on_day_string
+from acetimetools.transformer.transformer import _days_in_month
+from acetimetools.transformer.transformer import calc_day_of_month
+from acetimetools.transformer.transformer import time_string_to_seconds
+from acetimetools.transformer.transformer import seconds_to_hms
+from acetimetools.transformer.transformer import hms_to_seconds
+from acetimetools.transformer.transformer import div_to_zero
+from acetimetools.transformer.transformer import truncate_to_granularity
+from acetimetools.transformer.transformer import INVALID_SECONDS
+from acetimetools.transformer.transformer import hash_name
+from acetimetools.transformer.transformer import add_string
 
 
 class TestParseOnDayString(unittest.TestCase):

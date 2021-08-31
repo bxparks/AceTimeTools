@@ -69,7 +69,8 @@ from typing import TextIO
 from typing import Tuple
 import logging
 import os
-from data_types.at_types import (
+
+from acetimetools.data_types.at_types import (
     ZoneRuleRaw,
     ZoneEraRaw,
     PoliciesMap,
