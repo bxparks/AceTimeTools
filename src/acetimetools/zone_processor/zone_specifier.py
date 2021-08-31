@@ -30,10 +30,10 @@ from acetimetools.data_types.at_types import MIN_YEAR, SECONDS_SINCE_UNIX_EPOCH
 from acetimetools.transformer.transformer import seconds_to_hms
 from acetimetools.transformer.transformer import hms_to_seconds
 from acetimetools.transformer.transformer import calc_day_of_month
-from .inline_zone_info import ZoneRule
-from .inline_zone_info import ZonePolicy
-from .inline_zone_info import ZoneEra
-from .inline_zone_info import ZoneInfo
+from .zone_info_types import ZoneRule
+from .zone_info_types import ZonePolicy
+from .zone_info_types import ZoneEra
+from .zone_info_types import ZoneInfo
 
 
 class DateTuple(NamedTuple):
@@ -82,7 +82,7 @@ ACETIME_EPOCH = datetime(2000, 1, 1)  # in UTC
 
 # Note on the various XxxCooked classes: The ZoneRuleCooked, ZonePolicyCooked,
 # ZoneEraCooked, ZoneInfoCooked classes are thin class wrappers around the
-# corresponding pure data dictionaries defined in the 'inline_zone_info' module,
+# corresponding pure data dictionaries defined in the 'zone_info_types' module,
 # and written into the zonedbpy/zone_infos.py and zonedbpy/zone_policies.py
 # files. I created them mostly to take advantage of the Python interpreter to
 # validate the access to various fields. In other words, a typo in the 'name' in

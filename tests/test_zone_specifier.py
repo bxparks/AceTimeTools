@@ -16,7 +16,7 @@ from acetimetools.zone_processor.zone_specifier import _compare_transition_to_ma
 from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match_fuzzy  # noqa
 from acetimetools.zone_processor.zone_specifier import _subtract_date_tuple
 from acetimetools.zone_processor.zone_specifier import _normalize_date_tuple
-from acetimetools.zone_processor.inline_zone_info import ZoneInfo
+from acetimetools.zone_processor.zone_info_types import ZoneInfo
 
 
 class TestZoneSpecifierHelperMethods(unittest.TestCase):

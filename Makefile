@@ -7,7 +7,7 @@
 all: mypy flake8 tests
 
 mypy:
-	mypy --strict src tests
+	mypy --strict src tests compare_acetz compare_pytz compare_dateutil
 
 tests:
 	python3 -m unittest

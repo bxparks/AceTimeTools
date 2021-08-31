@@ -59,11 +59,9 @@ import logging
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
-from acetimetools.zone_processor.inline_zone_info import (
-    InlineZoneInfo,
-    ZoneInfoMap,
-    ZonePolicyMap,
-)
+from acetimetools.zone_processor.inline_zone_info import InlineZoneInfo
+from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
+from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
 from acetimetools.validator.validator import Validator
 
 

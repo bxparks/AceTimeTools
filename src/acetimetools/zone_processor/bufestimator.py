@@ -8,8 +8,8 @@ from collections import OrderedDict
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
 from .zone_specifier import ZoneSpecifier
-from .inline_zone_info import ZoneInfoMap
-from .inline_zone_info import ZonePolicyMap
+from .zone_info_types import ZoneInfoMap
+from .zone_info_types import ZonePolicyMap
 from .inline_zone_info import InlineZoneInfo
 
 

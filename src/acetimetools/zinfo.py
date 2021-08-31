@@ -54,7 +54,7 @@ from typing import cast
 from datetime import datetime
 
 from acetimetools.zonedbpy import zone_infos
-from acetimetools.zone_processor.inline_zone_info import ZoneInfo
+from acetimetools.zone_processor.zone_info_types import ZoneInfo
 from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
 from acetimetools.zone_processor.zone_specifier import to_utc_string
 

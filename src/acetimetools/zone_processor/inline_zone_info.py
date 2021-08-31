@@ -1,66 +1,25 @@
 # Copyright 2018 Brian T. Park
 #
 # MIT License
+
 """
 Generate the internal versions of zone_infos.py and zone_policies.py directly
 instead of creating files. These maps can be used for further processing.
 """
 
 import logging
-from typing import Dict
 from typing import List
 from typing import Tuple
 from typing import Union
-from typing_extensions import TypedDict
 
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.transformer.transformer import normalize_name
-
-# These are the data structures written out to 'zone_policies.py' and
-# 'zone_infos.py' by pygenerator.py.
-
-ZoneRule = TypedDict(
-    'ZoneRule', {
-        'from_year': int,
-        'to_year': int,
-        'in_month': int,
-        'on_day_of_week': int,
-        'on_day_of_month': int,
-        'at_seconds': int,
-        'at_time_suffix': str,
-        'delta_seconds': int,
-        'letter': str,
-    })
-
-ZonePolicy = TypedDict(
-    'ZonePolicy', {
-        'name': str,
-        'rules': List[ZoneRule],
-    })
-
-ZonePolicyMap = Dict[str, ZonePolicy]
-
-ZoneEra = TypedDict(
-    'ZoneEra', {
-        'offset_seconds': int,
-        'zone_policy': Union[ZonePolicy, str],  # '-', ':', or ZonePolicy
-        'rules_delta_seconds': int,
-        'format': str,
-        'until_year': int,
-        'until_month': int,
-        'until_day': int,
-        'until_seconds': int,
-        'until_time_suffix': str,
-    })
-
-ZoneInfo = TypedDict(
-    'ZoneInfo', {
-        'name': str,
-        'eras': List[ZoneEra],
-    })
-
-ZoneInfoMap = Dict[str, ZoneInfo]
+from .zone_info_types import ZoneRule
+from .zone_info_types import ZonePolicy
+from .zone_info_types import ZonePolicyMap
+from .zone_info_types import ZoneEra
+from .zone_info_types import ZoneInfoMap
 
 
 class InlineZoneInfo:
