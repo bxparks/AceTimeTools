@@ -9,7 +9,7 @@ from datetime import datetime
 from acetimetools.zonedbpy import zone_infos
 from acetimetools.zone_processor.zone_specifier import DateTuple
 from acetimetools.zone_processor.zone_specifier import Transition
-from acetimetools.zone_processor.zone_specifier import ZoneMatch
+from acetimetools.zone_processor.zone_specifier import MatchingEra
 from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
 from acetimetools.zone_processor.zone_specifier import CandidateFinderBasic
 from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match  # noqa
@@ -117,7 +117,7 @@ class TestZoneSpecifierHelperMethods(unittest.TestCase):
 
 class TestCompareTransitionToMatch(unittest.TestCase):
     def test_compare_exact(self) -> None:
-        match = ZoneMatch({
+        match = MatchingEra({
             'start_date_time': DateTuple(2000, 1, 1, 0, 'w'),
             'until_date_time': DateTuple(2001, 1, 1, 0, 'w')
         })
@@ -144,7 +144,7 @@ class TestCompareTransitionToMatch(unittest.TestCase):
         self.assertEqual(2, _compare_transition_to_match(transition, match))
 
     def test_compare_fuzzy(self) -> None:
-        match = ZoneMatch({
+        match = MatchingEra({
             'start_date_time': DateTuple(2000, 1, 1, 0, 'w'),
             'until_date_time': DateTuple(2001, 1, 1, 0, 'w')
         })
