@@ -531,31 +531,31 @@ class ZoneSpecifier:
                 f'Unsupported viewing_months: {self.viewing_months}')
 
         if self.debug:
-            logging.info('==== Finding matches')
+            logging.info('==== Step 1: Finding matches')
         self.matches = self._find_matches(start_ym, until_ym)
 
         if self.debug:
-            logging.info('==== Finding (raw) transitions')
+            logging.info('==== Step 2: Finding (raw) transitions')
         self._find_transitions(self.matches)
         if self.debug:
             print_transitions(self.transitions)
 
-        # Some transitions from simple match may be in 's' or 'u', so convert
-        # to 'w'.
+        # Some transitions from simple match may be in 's' or 'u', so
+        # convert to 'w'.
         if self.debug:
-            logging.info('==== Fixing transitions times')
+            logging.info('==== Step 3: Fixing transitions times')
         self._fix_transition_times(self.transitions)
         if self.debug:
             print_transitions(self.transitions)
 
         if self.debug:
-            logging.info('==== Generating start and until times')
+            logging.info('==== Step 4: Generating start and until times')
         self._generate_start_until_times(self.transitions)
         if self.debug:
             print_transitions(self.transitions)
 
         if self.debug:
-            logging.info('==== Calculating abbreviations')
+            logging.info('==== Step 5: Calculating abbreviations')
         self._calc_abbrev(self.transitions)
         if self.debug:
             print_transitions(self.transitions)
