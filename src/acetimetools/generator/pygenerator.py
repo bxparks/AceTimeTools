@@ -9,14 +9,15 @@ import logging
 import os
 from typing import List
 from typing import Tuple
-from data_types.at_types import ZoneEraRaw
-from data_types.at_types import ZoneRuleRaw
-from data_types.at_types import ZonesMap
-from data_types.at_types import PoliciesMap
-from data_types.at_types import CommentsMap
-from data_types.at_types import ZoneInfoDatabase
-from transformer.transformer import normalize_name
-from transformer.transformer import normalize_raw
+
+from acetimetools.data_types.at_types import ZoneEraRaw
+from acetimetools.data_types.at_types import ZoneRuleRaw
+from acetimetools.data_types.at_types import ZonesMap
+from acetimetools.data_types.at_types import PoliciesMap
+from acetimetools.data_types.at_types import CommentsMap
+from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.transformer.transformer import normalize_name
+from acetimetools.transformer.transformer import normalize_raw
 
 
 class PythonGenerator:

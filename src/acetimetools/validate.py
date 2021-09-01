@@ -55,15 +55,14 @@ Examples:
 
 import argparse
 import logging
-from data_types.at_types import TransformerResult
-from extractor.extractor import Extractor
-from transformer.transformer import Transformer
-from zone_processor.inline_zone_info import (
-    InlineZoneInfo,
-    ZoneInfoMap,
-    ZonePolicyMap,
-)
-from validator.validator import Validator
+
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.extractor.extractor import Extractor
+from acetimetools.transformer.transformer import Transformer
+from acetimetools.zone_processor.zone_info_inliner import ZoneInfoInliner
+from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
+from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
+from acetimetools.validator.validator import Validator
 
 
 def validate(
@@ -340,8 +339,8 @@ def main() -> None:
     # Generate internal versions of zone_infos and zone_policies
     # so that ZoneSpecifier can be created.
     logging.info('======== Generating inlined zone_infos and zone_policies')
-    inline_zone_info = InlineZoneInfo(tresult.zones_map, tresult.policies_map)
-    zone_infos, zone_policies = inline_zone_info.generate_zonedb()
+    zone_info_inliner = ZoneInfoInliner(tresult.zones_map, tresult.policies_map)
+    zone_infos, zone_policies = zone_info_inliner.generate_zonedb()
     logging.info(
         'Inlined zone_infos=%d; zone_policies=%d',
         len(zone_infos), len(zone_policies))

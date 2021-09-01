@@ -69,8 +69,8 @@ git checkout -q $tag
 echo '$ popd'
 popd
 
-echo \$ $DIRNAME/validate.py --input_dir $INPUT_DIR $@
-$DIRNAME/validate.py --input_dir $INPUT_DIR "$@"
+echo \$ $DIRNAME/src/acetimetools/validate.py --input_dir $INPUT_DIR $@
+$DIRNAME/src/acetimetools/validate.py --input_dir $INPUT_DIR "$@"
 
 echo "\$ pushd $INPUT_DIR"
 pushd $INPUT_DIR

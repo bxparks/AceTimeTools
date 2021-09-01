@@ -4,12 +4,13 @@
 
 import logging
 from collections import OrderedDict
-from data_types.at_types import ZonesMap, PoliciesMap
-from data_types.at_types import BufSizeInfo, BufSizeMap
+
+from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
+from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
 from .zone_specifier import ZoneSpecifier
-from .inline_zone_info import ZoneInfoMap
-from .inline_zone_info import ZonePolicyMap
-from .inline_zone_info import InlineZoneInfo
+from .zone_info_types import ZoneInfoMap
+from .zone_info_types import ZonePolicyMap
+from .zone_info_inliner import ZoneInfoInliner
 
 
 class BufSizeEstimator:
@@ -43,8 +44,8 @@ class BufSizeEstimator:
         """
         # Generate internal zone_infos and zone_policies to be used by
         # ZoneSpecifier.
-        inline_zone_info = InlineZoneInfo(self.zones_map, self.policies_map)
-        zone_infos, zone_policies = inline_zone_info.generate_zonedb()
+        zone_info_inliner = ZoneInfoInliner(self.zones_map, self.policies_map)
+        zone_infos, zone_policies = zone_info_inliner.generate_zonedb()
         logging.info(
             'InlinedZoneInfo: Zones %d; Policies %d',
             len(zone_infos), len(zone_policies))

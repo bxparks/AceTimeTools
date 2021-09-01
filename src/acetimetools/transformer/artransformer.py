@@ -11,21 +11,22 @@ from typing import Tuple
 from collections import OrderedDict, Counter
 import itertools
 import logging
-from transformer.transformer import hash_name
-from data_types.at_types import ZonesMap
-from data_types.at_types import PoliciesMap
-from data_types.at_types import LinksMap
-from data_types.at_types import LettersPerPolicy
-from data_types.at_types import IndexMap
-from data_types.at_types import TransformerResult
-from data_types.at_types import EPOCH_YEAR
-from data_types.at_types import MAX_YEAR
-from data_types.at_types import MAX_YEAR_TINY
-from data_types.at_types import MIN_YEAR
-from data_types.at_types import MIN_YEAR_TINY
-from data_types.at_types import MAX_UNTIL_YEAR
-from data_types.at_types import MAX_UNTIL_YEAR_TINY
-from data_types.at_types import add_comment
+
+from acetimetools.transformer.transformer import hash_name
+from acetimetools.data_types.at_types import ZonesMap
+from acetimetools.data_types.at_types import PoliciesMap
+from acetimetools.data_types.at_types import LinksMap
+from acetimetools.data_types.at_types import LettersPerPolicy
+from acetimetools.data_types.at_types import IndexMap
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import EPOCH_YEAR
+from acetimetools.data_types.at_types import MAX_YEAR
+from acetimetools.data_types.at_types import MAX_YEAR_TINY
+from acetimetools.data_types.at_types import MIN_YEAR
+from acetimetools.data_types.at_types import MIN_YEAR_TINY
+from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
+from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
+from acetimetools.data_types.at_types import add_comment
 
 
 class ArduinoTransformer:

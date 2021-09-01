@@ -15,7 +15,10 @@ import logging
 from datetime import datetime, timedelta
 import pytz
 from typing import Any, Tuple, List, Dict, Optional
-from data_types.validation_types import TestItem, TestData, ValidationData
+
+from acetimetools.data_types.validation_types import (
+    TestItem, TestData, ValidationData
+)
 
 # Number of seconds from Unix Epoch (1970-01-01 00:00:00) to AceTime Epoch
 # (2000-01-01 00:00:00)

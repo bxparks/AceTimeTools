@@ -9,7 +9,7 @@ all: $(TARGETS)
 .PHONY: $(TARGETS)
 
 zone_infos.py:
-	../tzcompiler.sh \
+	../../../tzcompiler.sh \
 		--tag $(TZ_VERSION) \
 		--action zonedb \
 		--language python \

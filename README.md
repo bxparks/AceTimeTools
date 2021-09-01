@@ -56,25 +56,39 @@ Python packages     Python files/classes/data
                       TZDB files
   .------>                |
   |                       v
-extractor            extractor.py
+extractor            extractor.Extractor.parse()
+  |                       |     (PoliciesMap, ZonesMap, LinksMap)
   |                       |
-  +------>                v
-  |                 transformer.py
+  +------>                v     (TransformerResult)
+  |                 transformer.Transformer.transform()
   |                       |
+  |                       |     (TransformerResult)
 transformer               v
-  |                 artransformer.py
-  +------>                |   \
-  |                       |    v
-  |                       |   inline_zone_info.py
-  |                       |      \
-  |                       |       v
-zone_processor            |   zone_specifier.py
+  |                 artransformer.ArduinoTransformer.transform()
+  |                       | \   (TransformerResult)
+  +------>                |  \
+  |                       |   v     (ZonesMap, PoliciesMap)
+  |                       |  bufestimator.BufSizeEstimator.estimate()
   |                       |        \
-  |                       |        v
-  |                       |       bufestimator.py
+  |                       |         v    (ZonesMap, PoliciesMap)
+  |                       |  inline_zone_info.ZoneInfoInliner.generate_zonedb()
+  |                       |          \      (ZoneInfoMap, ZonePolicyMap)
+  |                       |           v
+  |                       |  bufestimator.BufSizeEstimator.calculate_buf_sizes()
+  |                       |                \
+  |                       |                 v   (ZoneInfoMap)
+zone_processor            |              zone_specifier.get_buffer_sizes()
+  |                       |                 /   (BufferSizeInfo)
+  |                       |                /
+  |                       |               v  (BufSizeMap)
+  |                       |  bufestimator.BufSizeEstimator.estimate()
+  |                       |       /   (BufSizeInfo)
   +------>                |      /
   |                       v     v
-data_types         ZoneInfoDatabase
+  |             at_types.create_zone_info_database()
+data_types                |     (ZoneInfoDatabase)
+  |                       v
+  |                ZoneInfoDatabase
   |                 /     |     \
   +------>         /      |      \
   |               /       |       ------------------------.

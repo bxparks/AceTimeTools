@@ -3,7 +3,8 @@
 # MIT License
 
 import unittest
-from generator.argenerator import _compressed_name_to_c_string
+
+from acetimetools.generator.argenerator import _compressed_name_to_c_string
 
 
 class TestArduinoGenerator(unittest.TestCase):
