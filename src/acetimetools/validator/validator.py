@@ -117,7 +117,7 @@ class Validator:
                 logging.info('Validating zone %s', zone_name)
 
             zone_specifier = ZoneSpecifier(
-                zone_info_data=zone_info,
+                zone_info=zone_info,
                 viewing_months=self.viewing_months,
                 debug=self.debug_specifier,
                 in_place_transitions=self.in_place_transitions,
@@ -182,7 +182,7 @@ class Validator:
         """
         zone_info = self.zone_infos[zone_name]
         zone_specifier = ZoneSpecifier(
-            zone_info_data=zone_info,
+            zone_info=zone_info,
             viewing_months=self.viewing_months,
             debug=self.debug_specifier,
             in_place_transitions=self.in_place_transitions,

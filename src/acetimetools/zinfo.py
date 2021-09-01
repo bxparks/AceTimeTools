@@ -109,7 +109,7 @@ def main() -> None:
 
     # Create the ZoneSpecifier for zone
     zone_specifier = ZoneSpecifier(
-        zone_info_data=zone_info,
+        zone_info=zone_info,
         viewing_months=args.viewing_months,
         debug=args.debug,
         in_place_transitions=args.in_place_transitions,

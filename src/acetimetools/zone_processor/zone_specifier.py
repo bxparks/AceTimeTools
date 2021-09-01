@@ -80,176 +80,12 @@ class BufferSizeInfo(NamedTuple):
 ACETIME_EPOCH = datetime(2000, 1, 1)  # in UTC
 
 
-# Note on the various XxxCooked classes: The ZoneRuleCooked, ZonePolicyCooked,
-# ZoneEraCooked, ZoneInfoCooked classes are thin class wrappers around the
-# corresponding pure data dictionaries defined in the 'zone_info_types' module,
-# and written into the zonedbpy/zone_infos.py and zonedbpy/zone_policies.py
-# files. I created them mostly to take advantage of the Python interpreter to
-# validate the access to various fields. In other words, a typo in the 'name' in
-# 'zone_info.name' would show an error, but "zone_info['name']" would not.
-#
-# I created these classes before I knew about the type checking abilities of
-# mypy, so I think *most* of the XxxCooked classes could be replaced by direct
-# references to the underlying data objects. One possible problem is that some
-# wrapper classes provide additional convenience methods which return values
-# that are derived from the other values. Not sure how I would implement that
-# with primitive dict() types.
-
-
-class ZoneRuleCooked:
-    """Internal representation of a ZoneRule dictionary in the zone_policies.py
-    output file.
-    """
-    # yapf: disable
-    __slots__ = [
-        'from_year',  # from year
-        'to_year',  # to year, 1 to MAX_YEAR (9999) means 'max'
-        'in_month',  # month index (1-12)
-        'on_day_of_week',  # 1=Monday, 7=Sunday, 0={exact day_of_month match}
-        'on_day_of_month',  # (1-31), 0={last dayOfWeek match}
-        'at_seconds',  # at_time in seconds since 00:00:00
-        'at_time_suffix',  # 's', 'w', 'u'
-        'delta_seconds',  # offset from Standard time in seconds
-        'letter',  # Usually ('D', 'S', '-'), but sometimes longer
-                   # (e.g. WAT, CAT, DD, +00, +02, CST).
-    ]
-    # yapf: enable
-
-    # Hack because '__slots__' is unsupported by mypy. See
-    # https://github.com/python/mypy/issues/5941.
-    if TYPE_CHECKING:
-        from_year: int
-        to_year: int
-        in_month: int
-        on_day_of_week: int
-        on_day_of_month: int
-        at_seconds: int
-        at_time_suffix: str
-        delta_seconds: int
-        letter: str
-
-    def __init__(self, arg: ZoneRule):
-        """Create a ZoneRuleCooked from a dict in zone_infos.py.
-        """
-        if not isinstance(arg, dict):
-            raise Exception('Expected a dict')
-
-        for s in self.__slots__:
-            setattr(self, s, None)
-
-        for key, value in arg.items():
-            setattr(self, key, value)
-
-
-class ZonePolicyCooked:
-    """Internal representation of a ZonePolicy dictionary in the
-    zone_policies.py output file.
-    """
-    __slots__ = ['name', 'rules']
-
-    # Hack because '__slots__' is unsupported by mypy. See
-    # https://github.com/python/mypy/issues/5941.
-    if TYPE_CHECKING:
-        name: str
-        rules: List[ZoneRuleCooked]
-
-    def __init__(self, arg: ZonePolicy):
-        if not isinstance(arg, dict):
-            raise Exception('Expected a dict')
-
-        rules = [ZoneRuleCooked(i) for i in arg['rules']]
-        self.name = arg['name']
-        self.rules = rules
-
-
-class ZoneEraCooked:
-    """Internal representation of the ZoneEra dictionary stored in the
-    zone_infos.py file.
-    """
-    # yapf: disable
-    __slots__ = [
-        'offset_seconds',  # offset from UTC/GMT in seconds
-        'zone_policy',  # ZonePolicyCooked if 'RULES' field is a named policy,
-                        # otherwise '-' or ':'
-        'rules_delta_seconds',  # delta offset from UTC in seconds
-                                # if zone_policy == ':'. Always 0 if zone_policy
-                                # is '-'.
-        'format',  # abbreviation format (e.g. P%sT, E%sT, GMT/BST)
-        'until_year',  # MAX_UNTIL_YEAR means 'max'
-        'until_month',  # 1-12
-        'until_day',  # 1-31
-        'until_seconds',  # until_time converted into total seconds
-        'until_time_suffix',  # '', 's', 'w', 'u'
-    ]
-    # yapf: enable
-
-    # Hack because '__slots__' is unsupported by mypy. See
-    # https://github.com/python/mypy/issues/5941.
-    if TYPE_CHECKING:
-        offset_seconds: int
-        zone_policy: Union['ZonePolicyCooked', str]
-        rules_delta_seconds: int
-        format: str
-        until_year: int
-        until_month: int
-        until_day: int
-        until_seconds: int
-        until_time_suffix: str
-
-    def __init__(self, arg: ZoneEra):
-        """Create a ZoneEraCooked from a dict in zone_infos.py. The
-        'zone_policy' will be another 'dict', which needs to be converted to a
-        ZonePolicyCooked object.
-        """
-        if not isinstance(arg, dict):
-            raise Exception('Expected a dict')
-
-        for s in self.__slots__:
-            setattr(self, s, None)
-
-        for key, value in arg.items():
-            if key == 'zone_policy':
-                if isinstance(value, str):
-                    setattr(self, key, value)
-                elif isinstance(value, dict):
-                    setattr(self, key, ZonePolicyCooked(
-                        cast(ZonePolicy, value)))
-                else:
-                    raise Exception('zone_policy value must be str or dict')
-            else:
-                setattr(self, key, value)
-
-    @property
-    def policy_name(self) -> str:
-        """Return the human-readable name of the zone policy used by
-        this zone_era (i.e. value of RULES column). Will be in one of 3 states:
-        '-', ':' or a reference
-        """
-        if self.zone_policy in ['-', ':']:
-            return cast(str, self.zone_policy)
-        else:
-            return cast(ZonePolicyCooked, self.zone_policy).name
-
-
-class ZoneInfoCooked:
-    """Internal representation of a single ZoneInfo dictionary stored in the
-    zone_infos.py file.
-    """
-    __slots__ = ['name', 'eras']
-
-    # Hack because '__slots__' is unsupported by mypy. See
-    # https://github.com/python/mypy/issues/5941.
-    if TYPE_CHECKING:
-        name: str
-        eras: List[ZoneEraCooked]
-
-    def __init__(self, arg: ZoneInfo):
-        if not isinstance(arg, dict):
-            raise Exception('Expected a dict')
-
-        eras = [ZoneEraCooked(i) for i in arg['eras']]
-        self.name = arg['name']
-        self.eras = eras
+def policy_name_of(era: ZoneEra) -> str:
+    """Return the effective policy name of the given ZoneEra."""
+    if era['zone_policy'] in ['-', ':']:
+        return cast(str, era['zone_policy'])
+    else:
+        return cast(ZonePolicy, era['zone_policy'])['name']
 
 
 class ZoneMatch:
@@ -268,7 +104,7 @@ class ZoneMatch:
     if TYPE_CHECKING:
         start_date_time: DateTuple
         until_date_time: DateTuple
-        zone_era: ZoneEraCooked
+        zone_era: ZoneEra
 
     def __init__(self, arg: Dict[str, Any]):
         for s in self.__slots__:
@@ -295,7 +131,7 @@ class ZoneMatch:
             'ZoneMatch('
             f'start: {date_tuple_to_string(self.start_date_time)}'
             f'; until: {date_tuple_to_string(self.until_date_time)}'
-            f'; policy_name: {self.zone_era.policy_name}'
+            f'; policy_name: {policy_name_of(self.zone_era)}'
             ')'
         )
 
@@ -365,14 +201,14 @@ class Transition:
     if TYPE_CHECKING:
         start_date_time: DateTuple
         until_date_time: DateTuple
-        zone_era: ZoneEraCooked
+        zone_era: ZoneEra
         original_transition_time: DateTuple
         transition_time: DateTuple
         transition_time_s: DateTuple
         transition_time_u: DateTuple
         abbrev: str
         start_epoch_second: int
-        zone_rule: Optional[ZoneRuleCooked]
+        zone_rule: Optional[ZoneRule]
         is_active: bool
 
     def __init__(self, arg: Union[ZoneMatch, Dict[str, Any]]):
@@ -387,20 +223,20 @@ class Transition:
 
     @property
     def format(self) -> str:
-        return self.zone_era.format
+        return self.zone_era['format']
 
     @property
     def offset_seconds(self) -> int:
-        return self.zone_era.offset_seconds
+        return self.zone_era['offset_seconds']
 
     @property
     def letter(self) -> str:
-        return self.zone_rule.letter if self.zone_rule else ''
+        return self.zone_rule['letter'] if self.zone_rule else ''
 
     @property
     def delta_seconds(self) -> int:
-        return self.zone_rule.delta_seconds if self.zone_rule \
-            else self.zone_era.rules_delta_seconds
+        return self.zone_rule['delta_seconds'] if self.zone_rule \
+            else self.zone_era['rules_delta_seconds']
 
     def copy(self) -> 'Transition':
         result = cast('Transition', self.__class__.__new__(self.__class__))
@@ -414,7 +250,7 @@ class Transition:
 
     def __repr__(self) -> str:
         sepoch = self.start_epoch_second if self.start_epoch_second else '-'
-        policy_name = self.zone_era.policy_name
+        policy_name = policy_name_of(self.zone_era)
         offset_seconds = self.offset_seconds
         delta_seconds = self.delta_seconds
         format = self.format
@@ -438,8 +274,8 @@ class Transition:
             delta_seconds = self.delta_seconds
             letter = self.letter
             zone_rule = self.zone_rule
-            zone_rule_from = cast(ZoneRuleCooked, zone_rule).from_year
-            zone_rule_to = cast(ZoneRuleCooked, zone_rule).to_year
+            zone_rule_from = cast(ZoneRule, zone_rule)['from_year']
+            zone_rule_to = cast(ZoneRule, zone_rule)['to_year']
             original_transition = (
                 date_tuple_to_string(self.original_transition_time)
                 if self.original_transition_time
@@ -534,7 +370,7 @@ class ZoneSpecifier:
 
     def __init__(
             self,
-            zone_info_data: ZoneInfo,
+            zone_info: ZoneInfo,
             viewing_months: int = 14,
             debug: bool = False,
             in_place_transitions: bool = True,
@@ -544,10 +380,9 @@ class ZoneSpecifier:
         """Constructor.
 
         Args:
-            zone_info_data (dict): one of the ZONE_INFO_xxx constants from
+            zone_info (dict): one of the ZONE_INFO_xxx constants from
                 zone_infos.py. It can contain a reference to a zone_policy_data
-                map. We need to convert these into ZoneEraCooked and
-                ZoneRuleCooked classes.
+                map. We need to convert these into ZoneEra and ZoneRule classes.
             viewing_months (int): size of the window to consider when
                 determining the DST transitions (default: 14)
             debug (bool): set to True to enable logging
@@ -559,7 +394,7 @@ class ZoneSpecifier:
                 CandidateFinderOptimized class instead of CandidateFinderBasic
                 to obtain the list of candidate Transitions
         """
-        self.zone_info = ZoneInfoCooked(zone_info_data)
+        self.zone_info = zone_info
         self.viewing_months = viewing_months
         self.in_place_transitions = in_place_transitions
         self.optimize_candidates = optimize_candidates
@@ -978,8 +813,8 @@ class ZoneSpecifier:
         If viewing_months==12, this is an experimental option to see if we can
         reduce the number of candidate transitions.
         """
-        zone_eras = self.zone_info.eras
-        prev_era: Optional[ZoneEraCooked] = None  # the earliest possible
+        zone_eras = self.zone_info['eras']
+        prev_era: Optional[ZoneEra] = None  # the earliest possible
         matches: List[ZoneMatch] = []
         for zone_era in zone_eras:
             if self._era_overlaps_interval(
@@ -1020,7 +855,7 @@ class ZoneSpecifier:
             logging.info('_find_transitions_for_match(): %s', match)
 
         zone_era = match.zone_era
-        zone_policy = zone_era.zone_policy
+        zone_policy = zone_era['zone_policy']
         if zone_policy in ['-', ':']:
             return self._find_transitions_from_simple_match(match)
         else:
@@ -1085,9 +920,9 @@ class ZoneSpecifier:
         if self.debug:
             logging.info('_find_transitions_from_named_match(): %s', match)
         zone_era = match.zone_era
-        zone_policy = zone_era.zone_policy
-        assert isinstance(zone_policy, ZonePolicyCooked)
-        rules = zone_policy.rules
+        zone_policy = cast(ZonePolicy, zone_era['zone_policy'])
+        # assert isinstance(zone_policy, ZonePolicy)
+        rules = zone_policy['rules']
         finder: 'CandidateFinder'
         if self.optimize_candidates:
             finder = CandidateFinderOptimized(self.debug)
@@ -1126,7 +961,8 @@ class ZoneSpecifier:
             transitions = selector.select_active_transitions(
                 candidate_transitions, match)
         except:  # noqa: E722
-            logging.exception("Zone '%s'; year '%04d'", self.zone_info.name,
+            logging.exception("Zone '%s'; year '%04d'",
+                              self.zone_info['name'],
                               self.year)
             raise
         if self.debug:
@@ -1169,8 +1005,8 @@ class ZoneSpecifier:
 
     @staticmethod
     def _create_match(
-        prev_era: Optional[ZoneEraCooked],
-        zone_era: ZoneEraCooked,
+        prev_era: Optional[ZoneEra],
+        zone_era: ZoneEra,
         start_ym: YearMonthTuple,
         until_ym: YearMonthTuple,
     ) -> ZoneMatch:
@@ -1199,22 +1035,22 @@ class ZoneSpecifier:
                 y=MIN_YEAR, M=1, d=1, ss=0, f='w')
         else:
             start_date_time = DateTuple(
-                y=prev_era.until_year,
-                M=prev_era.until_month,
-                d=prev_era.until_day,
-                ss=prev_era.until_seconds,
-                f=prev_era.until_time_suffix)
+                y=prev_era['until_year'],
+                M=prev_era['until_month'],
+                d=prev_era['until_day'],
+                ss=prev_era['until_seconds'],
+                f=prev_era['until_time_suffix'])
         if start_date_time < DateTuple(
                 y=start_ym.y, M=start_ym.M, d=1, ss=0, f='w'):
             start_date_time = DateTuple(
                 y=start_ym.y, M=start_ym.M, d=1, ss=0, f='w')
 
         until_date_time = DateTuple(
-            y=zone_era.until_year,
-            M=zone_era.until_month,
-            d=zone_era.until_day,
-            ss=zone_era.until_seconds,
-            f=zone_era.until_time_suffix)
+            y=zone_era['until_year'],
+            M=zone_era['until_month'],
+            d=zone_era['until_day'],
+            ss=zone_era['until_seconds'],
+            f=zone_era['until_time_suffix'])
         if until_date_time > DateTuple(
                 y=until_ym.y, M=until_ym.M, d=1, ss=0, f='w'):
             until_date_time = DateTuple(
@@ -1408,8 +1244,8 @@ class ZoneSpecifier:
 
     @staticmethod
     def _era_overlaps_interval(
-        prev_era: Optional[ZoneEraCooked],
-        era: ZoneEraCooked,
+        prev_era: Optional[ZoneEra],
+        era: ZoneEra,
         start_ym: YearMonthTuple,
         until_ym: YearMonthTuple,
     ) -> bool:
@@ -1430,7 +1266,7 @@ class ZoneSpecifier:
 
     @staticmethod
     def _compare_era_to_year_month(
-        era: ZoneEraCooked,
+        era: ZoneEra,
         year: int,
         month: int,
     ) -> int:
@@ -1438,19 +1274,19 @@ class ZoneSpecifier:
         month is implicitly 1. Ignore the until_time_suffix suffix. Maybe it's
         not needed in this context?
         """
-        if era.until_year < year:
+        if era['until_year'] < year:
             return -1
-        if era.until_year > year:
+        if era['until_year'] > year:
             return 1
-        if era.until_month < month:
+        if era['until_month'] < month:
             return -1
-        if era.until_month > month:
+        if era['until_month'] > month:
             return 1
-        if era.until_day > 1:
+        if era['until_day'] > 1:
             return 1
-        if era.until_seconds < 0:
+        if era['until_seconds'] < 0:
             return -1
-        if era.until_seconds > 0:
+        if era['until_seconds'] > 0:
             return 1
         return 0
 
@@ -1463,7 +1299,7 @@ class CandidateFinder(Protocol):
     def find_candidate_transitions(
         self,
         match: ZoneMatch,
-        rules: List[ZoneRuleCooked],
+        rules: List[ZoneRule],
     ) -> List[Transition]:
         ...
 
@@ -1475,7 +1311,7 @@ class CandidateFinderBasic:
     def find_candidate_transitions(
         self,
         match: ZoneMatch,
-        rules: List[ZoneRuleCooked],
+        rules: List[ZoneRule],
     ) -> List[Transition]:
         """Get the list of candidate transitions from the 'rules' which overlap
         the whole years [start_y, end_y] (inclusive)) defined by the given
@@ -1495,8 +1331,8 @@ class CandidateFinderBasic:
 
         transitions: List[Transition] = []
         for rule in rules:
-            from_year = rule.from_year
-            to_year = rule.to_year
+            from_year = rule['from_year']
+            to_year = rule['to_year']
             years = self.get_candidate_years(from_year, to_year, start_y,
                                              end_y)
             for year in years:
@@ -1545,7 +1381,7 @@ class CandidateFinderOptimized:
     def find_candidate_transitions(
         self,
         match: ZoneMatch,
-        rules: List[ZoneRuleCooked],
+        rules: List[ZoneRule],
     ) -> List[Transition]:
         """Similar to CandidateFinderBasic.find_candidate_transitions() except
         that prior Transitions which are obviously non-candidates are filtered
@@ -1566,8 +1402,8 @@ class CandidateFinderOptimized:
         transitions: List[Transition] = []
         prior_transition: Optional[Transition] = None
         for rule in rules:
-            from_year = rule.from_year
-            to_year = rule.to_year
+            from_year = rule['from_year']
+            to_year = rule['to_year']
             years = _get_interior_years(from_year, to_year, start_y, end_y)
             if self.debug:
                 logging.info(
@@ -1875,7 +1711,7 @@ def _normalize_date_tuple(tt: DateTuple) -> DateTuple:
 
 def _create_transition_for_year(
     year: int,
-    rule: ZoneRuleCooked,
+    rule: ZoneRule,
     match: ZoneMatch,
 ) -> Transition:
     """Create the transition from the given 'rule' for the given 'year'.
@@ -2003,14 +1839,18 @@ def _compare_transition_to_match_fuzzy(
     return 1
 
 
-def _get_transition_time(year: int, rule: ZoneRuleCooked) -> DateTuple:
+def _get_transition_time(year: int, rule: ZoneRule) -> DateTuple:
     """Return the (year, month, day, seconds, suffix) of the Rule in given
     year.
     """
-    month, day = calc_day_of_month(year, rule.in_month, rule.on_day_of_week,
-                                   rule.on_day_of_month)
-    seconds = rule.at_seconds
-    suffix = rule.at_time_suffix
+    month, day = calc_day_of_month(
+        year,
+        rule['in_month'],
+        rule['on_day_of_week'],
+        rule['on_day_of_month']
+    )
+    seconds = rule['at_seconds']
+    suffix = rule['at_time_suffix']
     return DateTuple(y=year, M=month, d=day, ss=seconds, f=suffix)
 
 

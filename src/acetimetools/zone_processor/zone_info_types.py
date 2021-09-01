@@ -25,7 +25,7 @@ class ZoneRule(TypedDict):
     at_time_suffix: str  # 's', 'w', 'u'
     delta_seconds: int  # offset from Standard time in seconds
     letter: str  # Usually ('D', 'S', '-'), but sometimes longer
-                 # (e.g. 'WAT', 'CAT', 'DD', '+00', '+02', 'CST').
+                 # (e.g. 'WAT', 'CAT', 'DD', '+00', '+02', 'CST').  # noqa
 
 
 # A ZonePolicy is a policy_name and its list of rules
@@ -43,7 +43,7 @@ class ZoneEra(TypedDict):
     offset_seconds: int  # offset from UTC/GMT in seconds
     zone_policy: Union[ZonePolicy, str]  # '-', ':', or ZonePolicy
     rules_delta_seconds: int  # delta offset from UTC if zone_policy == ':'.
-                              # Always 0 if zone_policy == '-'.
+                              # Always 0 if zone_policy == '-'.  # noqa
     format: str  # abbreviation format (e.g. 'P%sT', 'E%sT', 'GMT/BST')
     until_year: int  # (exclusive) MAX_UNTIL_YEAR (10000) means 'max'
     until_month: int  # 1-12
