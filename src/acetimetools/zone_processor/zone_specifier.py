@@ -122,10 +122,6 @@ class MatchingEra:
             setattr(result, s, getattr(self, s))
         return result
 
-    def update(self, arg: Dict[str, Any]) -> None:
-        for key, value in arg.items():
-            setattr(self, key, value)
-
     def __repr__(self) -> str:
         return (
             'MatchingEra('
@@ -243,10 +239,6 @@ class Transition:
         for s in self.__slots__:
             setattr(result, s, getattr(self, s))
         return result
-
-    def update(self, arg: Dict[str, Any]) -> None:
-        for key, value in arg.items():
-            setattr(self, key, value)
 
     def __repr__(self) -> str:
         sepoch = self.start_epoch_second if self.start_epoch_second else '-'
@@ -873,9 +865,7 @@ class ZoneSpecifier:
         if self.debug:
             logging.info('_find_transitions_from_simple_match(): %s', match)
         transition = Transition(match)
-        transition.update({
-            'transition_time': match.start_date_time,
-        })
+        transition.transition_time = match.start_date_time
         transitions = [transition]
         self._update_transition_buffer_size(transitions)
         if self.debug:
@@ -1721,10 +1711,8 @@ def _create_transition_for_year(
     """
     transition_time = _get_transition_time(year, rule)
     transition = Transition(match)
-    transition.update({
-        'transition_time': transition_time,
-        'zone_rule': rule,
-    })
+    transition.transition_time = transition_time
+    transition.zone_rule = rule
     return transition
 
 
