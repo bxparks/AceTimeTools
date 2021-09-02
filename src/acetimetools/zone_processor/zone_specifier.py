@@ -877,30 +877,41 @@ class ZoneSpecifier:
         match: MatchingEra,
     ) -> List[Transition]:
         """Find the transitions of the named MatchingEra. The search for the
-        relevant Transition occurs in 2 passes:
+        relevant Transition occurs in 3 passes:
 
-        1 Find the candidate Transitions defined by the MatchingEra using the
-          *whole* years of the MatchingEra (i.e. ignoring the month, day, and
-          time fields). Whole years are used because the ZoneRules define
-          recurring rules based on whole years. This pass includes something
-          called the "most recent prior" Transition, because we need to know
-          the Transition that occurred just before the beginning of the
-          given year. In this rough pass, multiple "prior" Transitions may
-          be included as candidates.
-        2 Precisely select the Transitions which are "active", as determined
-          by the entire date fields of MatchingEra (including month, day and
-          time) fields. In this pass, only a single "most recent prior"
-          Transition will be found.
+        1. Find the candidate Transitions defined by the MatchingEra using the
+           *whole* years of the MatchingEra (i.e. ignoring the month, day, and
+           time fields).
+            * Whole years are used because the ZoneRules define recurring rules
+              based on whole years.
+            * This pass includes something called the "most recent prior"
+              Transition, because we need to know the Transition that occurred
+              just before the beginning of the given year.
+            * Multiple "prior" Transitions may be included as candidates.
+            * Two versions:
+                * class CandidateFinderBasic
+                * class CandidateFinderOptimized
+        2. Fix the transition times.
+            * Convert the transition_time to the wall time ('w') of the previous
+              rule's time offset.
+            * If the transition times are given in standard ('s') or UTC ('u')
+              time, they are normalized to 'w'.
+        3. Select the Transitions which are "active".
+            * Active is determined by the entire date and time fields of
+              MatchingEra (including month, day and time) fields.
+            * Only a single "most recent prior" Transition will be found.
+            * Two versions:
+                * class ActiveSelectorBasic
+                * class ActiveSelectorInPlace
 
-        For each pass, I implemented 2 different algorithms (for a total of
-        4 different independent combinations). The "Basic" versions are the
-        earlier versions which use simpler code, at the expense of using more
-        memory. The "Optimized" and "InPlace" versions are my subsequent
+        Two versions are implemented for Passes 1 and 3. The "Basic" versions
+        are the earlier versions which use simpler code, at the expense of using
+        more memory. The "Optimized" and "InPlace" versions are my subsequent
         improvements to those algorithms, making them use less memory and
         hopefully be faster. Using less memory is important because those
         algorithms will be reimplemenented in C++ for the Arduino
-        microcontroller environments which have limited memory (~32kB of
-        flash RAM, and ~2kB of static RAM).
+        microcontroller environments which have limited memory (~32kB of flash
+        RAM, and ~2kB of static RAM).
 
         The 'self.max_transition_buffer_size' counter and
         'self.all_candidate_transitions' list attempt to track the amount of
@@ -909,6 +920,11 @@ class ZoneSpecifier:
         """
         if self.debug:
             logging.info('_find_transitions_from_named_match(): %s', match)
+
+        # Pass 1: Find candidate transitions using whole years.
+        if self.debug:
+            logging.info(
+                '---- Pass 1: Get candidate transitions for MatchingEra')
         zone_era = match.zone_era
         zone_policy = cast(ZonePolicy, zone_era['zone_policy'])
         # assert isinstance(zone_policy, ZonePolicy)
@@ -918,18 +934,15 @@ class ZoneSpecifier:
             finder = CandidateFinderOptimized(self.debug)
         else:
             finder = CandidateFinderBasic(self.debug)
-
-        # Find candidate transitions using whole years.
-        if self.debug:
-            logging.info('---- Get candidate transitions for named MatchingEra')
         candidate_transitions = finder.find_candidate_transitions(match, rules)
         if self.debug:
             print_transitions(candidate_transitions)
         self._check_transitions_sorted(candidate_transitions)
 
-        # Fix the transitions times, converting 's' and 'u' into 'w' uniformly.
+        # Pass 2: Fix the transitions times, converting 's' and 'u' into 'w'
+        # uniformly.
         if self.debug:
-            logging.info('_fix_transition_times()')
+            logging.info('---- Pass 2: Fix transition times')
         self._fix_transition_times(candidate_transitions)
         if self.debug:
             print_transitions(candidate_transitions)
@@ -938,10 +951,10 @@ class ZoneSpecifier:
         # Update statistics on active transitions
         self._update_transition_buffer_size(candidate_transitions)
 
-        # Select only those Transitions which overlap with the actual start and
-        # until times of the MatchingEra.
+        # Pass 3: Select only those Transitions which overlap with the actual
+        # start and until times of the MatchingEra.
         if self.debug:
-            logging.info('---- Select active transitions')
+            logging.info('---- Pass 3: Select active transitions')
         selector: 'ActiveSelector'
         if self.in_place_transitions:
             selector = ActiveSelectorInPlace(self.debug)
@@ -951,9 +964,10 @@ class ZoneSpecifier:
             transitions = selector.select_active_transitions(
                 candidate_transitions, match)
         except:  # noqa: E722
-            logging.exception("Zone '%s'; year '%04d'",
-                              self.zone_info['name'],
-                              self.year)
+            logging.exception(
+                "Zone '%s'; year '%04d'",
+                self.zone_info['name'],
+                self.year)
             raise
         if self.debug:
             print_transitions(transitions)
@@ -1130,8 +1144,9 @@ class ZoneSpecifier:
     def _fix_transition_times(transitions: List[Transition]) -> None:
         """Convert the transtion['transition_time'] to the wall time ('w') of
         the previous rule's time offset. The Transition time comes from either:
-            1) The UNTIL field of the previous Zone Era entry, or
-            2) The (in_month, on_day, at_seconds) fields of the Zone Rule.
+
+        1) The UNTIL field of the previous Zone Era entry, or
+        2) The (in_month, on_day, at_seconds) fields of the Zone Rule.
 
         In most cases these times are specified as the wall clock 'w' by
         default, but a few cases use 's' (standard) or 'u' (utc). We don't need
@@ -1305,13 +1320,16 @@ class CandidateFinderBasic:
     ) -> List[Transition]:
         """Get the list of candidate transitions from the 'rules' which overlap
         the whole years [start_y, end_y] (inclusive)) defined by the given
-        MatchingEra. This list includes transitions that may become the "most
-        recent prior" transition. We use whole years because 'rules' define
-        repetitive transitions using whole years.
+        MatchingEra. This list potentially includes multiple prior transitions,
+        one of which would become the "most recent prior" transition. We use
+        whole years because 'rules' define repetitive transitions using whole
+        years.
         """
         if self.debug:
             logging.info('Basic.find_candidate_transitions()')
 
+        # If MatchEra.until_date_time is exactly Jan 1 00:00, set the end_year
+        # to the prior year.
         start_y = match.start_date_time.y
         until = match.until_date_time
         if until.M == 1 and until.d == 1 and until.ss == 0:
@@ -1323,8 +1341,8 @@ class CandidateFinderBasic:
         for rule in rules:
             from_year = rule['from_year']
             to_year = rule['to_year']
-            years = self.get_candidate_years(from_year, to_year, start_y,
-                                             end_y)
+            years = self.get_candidate_years(
+                from_year, to_year, start_y, end_y)
             for year in years:
                 _add_transition_sorted(
                     transitions,
@@ -1356,8 +1374,8 @@ class CandidateFinderBasic:
         years = _get_interior_years(from_year, to_year, start_year, end_year)
 
         # Add most recent Rule year prior to Match years.
-        prior_year = _get_most_recent_prior_year(from_year, to_year,
-                                                 start_year, end_year)
+        prior_year = _get_most_recent_prior_year(
+            from_year, to_year, start_year, end_year)
         if prior_year >= 0:
             years.append(prior_year)
 
@@ -1381,6 +1399,8 @@ class CandidateFinderOptimized:
         if self.debug:
             logging.info('Optimized.find_candidate_transitions()')
 
+        # If MatchEra.until_date_time is exactly Jan 1 00:00, set the end_year
+        # to the prior year.
         start_y = match.start_date_time.y
         end_y = match.until_date_time.y
         until = match.until_date_time
@@ -1399,36 +1419,45 @@ class CandidateFinderOptimized:
                 logging.info(
                     'find_candidate_transitions(): interior years: %s', years)
 
+            # Examine transitions in the interior years. Keep track of potential
+            # prior transition.
             for year in years:
                 transition = _create_transition_for_year(year, rule, match)
+                # Use fuzzy check to filter out transitions which cannot be
+                # candidates.
                 comp = _compare_transition_to_match_fuzzy(transition, match)
                 if comp < 0:
-                    prior_transition = self._calc_prior_transition(
+                    prior_transition = self._select_prior_transition(
                         prior_transition, transition)
                 elif comp == 1:
                     _add_transition_sorted(transitions, transition)
 
-            prior_year = _get_most_recent_prior_year(from_year, to_year,
-                                                     start_y, end_y)
+            # Explicitly examine the transition of the prior year and compare
+            # it with the other candidate prior transitions from above.
+            prior_year = _get_most_recent_prior_year(
+                from_year, to_year, start_y, end_y)
             if self.debug:
                 logging.info('find_candidate_transitions(): prior year: %s',
                              prior_year)
             if prior_year >= 0:
                 transition = _create_transition_for_year(
                     prior_year, rule, match)
-                prior_transition = self._calc_prior_transition(
+                prior_transition = self._select_prior_transition(
                     prior_transition, transition)
+
+        # Add the most recent prior transition if it exists.
         if prior_transition:
             _add_transition_sorted(transitions, prior_transition)
 
         return transitions
 
     @staticmethod
-    def _calc_prior_transition(
+    def _select_prior_transition(
         prior_transition: Optional[Transition],
         transition: Transition,
     ) -> Transition:
-        """Return the latest prior transition.
+        """Select the latest prior transition given the previous prior
+        transition and the current transition.
         """
         if prior_transition:
             if transition.transition_time > prior_transition.transition_time:
@@ -1470,28 +1499,27 @@ class ActiveSelectorBasic:
         """Select those Transitions which overlap with the MatchingEra interval
         which may not be at year boundary. Also select the latest prior
         transition before the given MatchingEra, shifting the transition time to
-        the start of the MatchingEra. The returned array of transitions is
-        likely to be unsorted again, since the latest prior transition is added
-        to the end.
+        the start of the MatchingEra.
+
+        This implementation copies the active Transitions into a new
+        'results_transitions' list.
         """
         if self.debug:
             logging.info('ActiveSelectorBasic.select_active_transitions()')
 
         # Commulative results of _process_transition()
+        results_transitions: List[Transition] = []
         results: ProcessTransitionResult = {
             'start_transition_found': None,
             'latest_prior_transition': None,
-            'transitions': []
+            'transitions': results_transitions,
         }
 
-        # Categorize each transition
+        # Categorize each transition into the 'results' object.
         for transition in transitions:
             self._process_transition(match, transition, results)
-        transitions = results['transitions']
 
-        # Add the latest prior transition. Adding this at the end of the array
-        # will likely cause the transitions to become unsorted, requiring
-        # another sorting pass.
+        # Add the latest prior transition if it exists.
         if not results.get('start_transition_found'):
             prior_transition = results.get('latest_prior_transition')
             if not prior_transition:
@@ -1503,9 +1531,9 @@ class ActiveSelectorBasic:
             prior_transition.original_transition_time = \
                 prior_transition.transition_time
             prior_transition.transition_time = match.start_date_time
-            _add_transition_sorted(transitions, prior_transition)
+            _add_transition_sorted(results_transitions, prior_transition)
 
-        return transitions
+        return results_transitions
 
     @staticmethod
     def _process_transition(
@@ -1530,11 +1558,12 @@ class ActiveSelectorBasic:
         with the MatchingEra can occur accurately.
 
         The 'results' is a map that keeps track of the processing, and contains:
-            {
-                'start_transition_found': bool,
-                'latest_prior_transition': transition,
-                'transitions': {}
-            }
+
+        {
+            'start_transition_found': bool,
+            'latest_prior_transition': transition,
+            'transitions': {}
+        }
 
         where:
 
@@ -1582,10 +1611,12 @@ class ActiveSelectorInPlace:
         transitions: List[Transition],
         match: MatchingEra,
     ) -> List[Transition]:
-        """Similar to ActiveSelectorBasic.select_active_transitions() except
-        that it does not use any additional dynamically allocated array of
-        Transitions. It uses the Transition.is_active flag to mark if a
-        Transition is active or not.
+        """Similar to ActiveSelectorBasic.select_active_transitions() except it
+        uses an inlined Transition.is_active flag to mark if a Transition is
+        active or not. The final result is returned in a new
+        'active_transitions' list, but in the C++ version, we can avoid
+        allocating an extra array by filter on the 'is_active' flag and resizing
+        the transitions array.
         """
         if self.debug:
             logging.info('ActiveSelectorInPlace.select_active_transitions()')
@@ -1623,6 +1654,8 @@ class ActiveSelectorInPlace:
             transition.is_active = True
         elif transition_compared_to_match == 0:
             transition.is_active = True
+            # This transition falls exactly on the match.start boundary.
+            # So we need to invalidate any previous prior transition candidate.
             if prior:
                 prior.is_active = False
             prior = transition
@@ -1648,12 +1681,17 @@ def _add_transition_sorted(
         transitions: List[Transition],
         transition: Transition,
 ) -> None:
-    """Add the transition to the transitions array so that it is sorted by
-    transition_time. This is not normally how this would be done in Python. This
-    is emulating the code that would be written in an Arduino C++ environment,
-    without dynamic arrays and a sort() function. This will allow this class to
-    be more easily ported to C++. The O(N^2) insertion sort algorithm should be
-    fast enough since N<=5.
+    """Add the transition to the transitions array, using an Insertion Sort
+    algorithm, so that 'transitions' array is always sorted by transition_time.
+
+    In normal Python code, we would accumulate the unsorted 'transitions' list,
+    then call 'sort()` after all the elements have been added. But this code is
+    emulating the equivalent Arduino C++ code without without dynamic arrays and
+    a sort() function. By using an incremental Insertion Sort algorithm, we can
+    convert this into C++ more easily. The O(N^2) Insertion Sort algorithm
+    should be more than fast enough since N <= ~7 (up to 4 interior transitions,
+    plus 1 in Jan of the current year, plus 1 in Jan of the following year, and
+    1 most recent prior transition.)
     """
     transitions.append(transition)
     for i in range(len(transitions) - 1, 0, -1):
@@ -1709,9 +1747,8 @@ def _create_transition_for_year(
     Transition object is a replica of the underlying Match object, with
     additional bookkeeping info.
     """
-    transition_time = _get_transition_time(year, rule)
     transition = Transition(match)
-    transition.transition_time = transition_time
+    transition.transition_time = _get_transition_time(year, rule)
     transition.zone_rule = rule
     return transition
 
@@ -1755,11 +1792,14 @@ def _compare_transition_to_match(
     match: MatchingEra,
 ) -> int:
     """Determine if transition_time applies to given range of the match.
-    To compare the Transition time to the MatchingEra time properly, the
-    transition time of the Transition should be expanded to include all 3
-    versions ('w', 's', and 'u') of the time stamp. When comparing against the
-    MatchingEra.start_date_time and MatchingEra.until_date_time, the version
-    will be determined by the suffix of those parameters.
+
+    To allow the Transition time to be compared correctly to the MatchingEra
+    time, which may be specified in the TZ database in ('w', 's', or 'u')
+    formats, the Transition.transition_time is assumed to have already
+    been expanded (through _fix_transition_times()) to include all 3 versions.
+    The MatchingEra.start_date_time and MatchingEra.until_date_time are compared
+    to the appropriate version of 'transition_time' as determined by the
+    modifier suffix of 'start_date_time' and 'until_date_time'.
 
     Return:
         * -1 if less than match
@@ -1801,7 +1841,11 @@ def _compare_transition_to_match_fuzzy(
     match: MatchingEra,
 ) -> int:
     """Like _compare_transition_to_match() except perform a fuzzy match
-    within at least one-month of the match.start or match.until.
+    within at least one-month of the match.start or match.until. This is useful
+    because unlike _compare_transition_to_match(), the Transition object does
+    not need its 'transition_time' to be "fixed" (through
+    _fix_transition_times()) to be able to use this function, so we can use this
+    function earlier in the filtering process of finding candidate transitions.
 
     A value of 0 is never returned since we cannot make a direct comparison
     to match_start.
