@@ -6,7 +6,7 @@
 
 """
 Parse the IANA TZ Database files located at the --input_dir and validate the
-internal zonedb files using the ZoneSpecifier class against pytz.
+internal zonedb files using the Python ZoneSpecifier class against pytz.
 (Previous version of this was part of tzcompiler.py. Now extracted into
 a separate script.)
 
@@ -124,10 +124,10 @@ def main() -> None:
     # Transformer flags.
     parser.add_argument(
         '--scope',
-        # basic: 241 of the simpler time zones for BasicZoneSpecifier
-        # extended: all 348 time zones for ExtendedZoneSpecifier
+        # basic: time zones for BasicZoneProcessor
+        # extended: time zones for ExtendedZoneProcessor
         choices=['basic', 'extended'],
-        help='Size of the generated database (basic|extended)',
+        help='Scope of the generated zoneinfo database (basic|extended)',
         required=True,
     )
     parser.add_argument(

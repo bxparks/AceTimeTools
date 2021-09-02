@@ -25,10 +25,10 @@ def main() -> None:
     # Scope of the extracted TZ database
     parser.add_argument(
         '--scope',
-        # basic: time zones for BasicZoneSpecifier
-        # extended: time zones for ExtendedZoneSpecifier
+        # basic: time zones for BasicZoneProcessor
+        # extended: time zones for ExtendedZoneProcessor
         choices=['basic', 'extended'],
-        help='Size of the generated database (basic|extended)',
+        help='Scope of the generated zoneinfo database (basic|extended)',
         required=True,
     )
 

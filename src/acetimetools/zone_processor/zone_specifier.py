@@ -3,9 +3,10 @@
 # MIT License
 
 """
-A Python version of the C++ ExtendedZoneSpecifier class to allow easier and
-faster iteration of its algorithms. It is too cumbersome and tedious to
-experiment and debug the C++ code in the Arduino environment.
+A early Python version of the C++ ExtendedZoneProcessor class to allow easier
+and faster iteration of its algorithms. It is too cumbersome and tedious to
+experiment and debug the C++ code in the Arduino environment. The actual Python
+implementation of ExtendedZoneProcessor is given in zone_processor.py.
 """
 
 import sys

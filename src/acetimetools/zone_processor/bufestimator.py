@@ -14,8 +14,8 @@ from .zone_info_inliner import ZoneInfoInliner
 
 
 class BufSizeEstimator:
-    """Estimate the ExtendedZoneSpecifier::TransitionStorage buffer size for
-    each zone.
+    """Estimate the buffer size of the C++
+    ExtendedZoneProcessor::TransitionStorage class for each zone.
     """
 
     def __init__(

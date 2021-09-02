@@ -148,10 +148,10 @@ def main() -> None:
     # Transformer flags.
     parser.add_argument(
         '--scope',
-        # basic: 241 of the simpler time zones for BasicZoneSpecifier
-        # extended: all 348 time zones for ExtendedZoneSpecifier
+        # basic: time zones for BasicZoneProcessor
+        # extended: time zones for ExtendedZoneProcessor
         choices=['basic', 'extended'],
-        help='Size of the generated database (basic|extended)',
+        help='Scope of the generated zoneinfo database (basic|extended)',
         required=True)
     parser.add_argument(
         '--start_year',

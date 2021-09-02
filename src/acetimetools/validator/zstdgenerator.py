@@ -4,11 +4,12 @@
 
 """
 Implements the TestDataGenerator to generate the validation test data using
-pytz. Similar to compare_pytz/tdgenerator.py but depends on the ZoneSpecifier
-class (hence the name 'zstdgenerator', 'Zone Specifier Test Data Generator') to
-determine the DST transitions because pytz does not expose that information
-natively. Pulling in ZoneSpecifier also means that it pulls in the ZoneInfo,
-ZonePolicy and many other related classes through the 'inline_zone_info' module.
+pytz. Similar to compare_pytz/tdgenerator.py but depends on the Python
+ZoneSpecifier class (hence the name 'zstdgenerator', 'Zone Specifier Test Data
+Generator') to determine the DST transitions because pytz does not expose that
+information natively. Pulling in ZoneSpecifier also means that it pulls in the
+ZoneInfo, ZonePolicy and many other related classes through the
+'inline_zone_info' module.
 
 Mostly deprecated. Used only by 'validator.py' to implement the interactive
 ZoneInfo validation exposed by 'validate.py' script.
@@ -237,8 +238,7 @@ class TestDataGenerator:
     ) -> TestItem:
         """Determine the expected date and time components for the given
         'epoch_seconds' for the given 'tz'. The 'epoch_seconds' is the
-        transition time calculated by the ZoneSpecifier class (which is the
-        Python implementation of the C++ ExtendedZoneSpecifier class).
+        transition time calculated by the ZoneSpecifier class.
 
         Return the TestItem with the following fields:
             epoch: epoch seconds from AceTime epoch (2000-01-01T00:00:00Z)
