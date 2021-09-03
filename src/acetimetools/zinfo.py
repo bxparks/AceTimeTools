@@ -6,7 +6,7 @@
 """
 The command line interface for ZoneProcessor class and zonedbpy files for
 debugging. Previous version of this was embedded directly inside
-zone_specifer.py. See the examples below.
+zone_processor.py. See the examples below.
 
 TODO: The output format should provide an easy, human-readable list of
 transitions so that we can verify that the AceTime scripts are extracting and

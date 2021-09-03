@@ -3,10 +3,9 @@
 # MIT License
 
 """
-A early Python version of the C++ ExtendedZoneProcessor class to allow easier
-and faster iteration of its algorithms. It is too cumbersome and tedious to
-experiment and debug the C++ code in the Arduino environment. The actual Python
-implementation of ExtendedZoneProcessor is given in zone_processor.py.
+A Python version of the latest C++ ExtendedZoneProcessor class to replicate its
+internal resource consumption, so that we can get an accurate maximum buffer
+size for its TransitionStorage. Derived from the ZoneSpecifier class.
 """
 
 import sys
@@ -23,8 +22,6 @@ from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from typing import cast
-from typing_extensions import Protocol
-from typing_extensions import TypedDict
 
 from acetimetools.data_types.at_types import CountAndYear
 from .common import MIN_YEAR
@@ -286,6 +283,42 @@ class Transition:
         # yapf: enable
 
 
+class TransitionStorage:
+    """A heap manager of Transition objects, equivalent to the C++
+    ExtendedZoneProcessor.TransitionStorage class. There are 4 pools of
+    Transition entries:
+
+    1) Active pool: [0, index_prior)
+    2) Prior pool: [index_prior, index_candidates), either 0 or 1 element
+    3) Candidate pool: [index_candidates, index_free)
+    4) Free pool: [index_free, len(transitions))
+
+    The 'high_water' is the largest index used by the TransitionStorage buffer,
+    so the minimum required size of buffer is 'high_water + 1'.
+
+    """
+    def __init__(self) -> None:
+        self.clear()
+
+    def clear(self) -> None:
+        """Active pool  at [0, free).
+        Free pool at [free, max).
+        Max gives the size of stack.
+        """
+        self.index_free = 0
+        self.index_max = 0  # index just after the free pool, i.e. max buf size
+
+    def push_transitions(self, delta: int) -> None:
+        """Push imaginary Transitions of size 'delta' into the stack."""
+        self.index_free += delta
+        if self.index_free > self.index_max:
+            self.index_max = self.index_free
+
+    def pop_transitions(self, delta: int) -> None:
+        """Remove imaginary Transitions of size 'delta' from stack."""
+        self.index_free -= delta
+
+
 class TransitionMatch(NamedTuple):
     """The result of a _find_transition_for_seconds().
     * fold=0 means there was no overlap with the previous transition
@@ -394,28 +427,13 @@ class ZoneProcessor:
         # List of ZoneEra which match the interval of interest.
         self.matches: List[MatchingEra] = []
 
-        # Cummulative list of all candidate Transitions across all calls to
-        # find_candidate_transitions() method for the year given to
-        # init_for_year(). It was initially thought to be useful for figuring
-        # out the buffer size needed by the C++ implementation of this class but
-        # the C++ code removes those candidate Transitions which aren't needed
-        # after each iteration of MatchingEra, and reuses the buffer consumed by
-        # those ignored Transitions, so this cummulative list is not as useful.
-        # It is useful to print out for debugging though.
-        self.all_candidate_transitions: List[Transition] = []
-
-        # List of matching (and active) Transition objects for the year given to
+        # List of active Transition objects for the year given to
         # init_for_year().
         self.transitions: List[Transition] = []
 
-        # The maximum value of (len(self.transitions) +
-        # len(candidate_transitions)) across all calls to
-        # _create_transitions_from_named_match() for the year given to
-        # init_for_year(). The C++ version of this class uses a single pool of
-        # Transitions to hold both active and candidate transitions. This value
-        # should correspond to the largest number of slots consumed in the pool
-        # by the C++ code.
-        self.max_transition_buffer_size = 0
+        # Indexes to keep track of the high water mark for the C++
+        # implementation.
+        self.transition_storage = TransitionStorage()
 
         self.debug = debug
 
@@ -497,26 +515,14 @@ class ZoneProcessor:
             return
 
         self.year = year
-        self.max_transition_buffer_size = 0
         self.matches = []
         self.transitions = []
-        self.all_candidate_transitions = []
+        self.transition_storage.clear()
 
-        if self.viewing_months == 12:
-            start_ym = YearMonthTuple(year, 1)
-            until_ym = YearMonthTuple(year + 1, 1)
-        elif self.viewing_months == 13:
-            start_ym = YearMonthTuple(year, 1)
-            until_ym = YearMonthTuple(year + 1, 2)
-        elif self.viewing_months == 14:
-            start_ym = YearMonthTuple(year - 1, 12)
-            until_ym = YearMonthTuple(year + 1, 2)
-        elif self.viewing_months == 36:
-            start_ym = YearMonthTuple(year - 1, 1)
-            until_ym = YearMonthTuple(year + 2, 1)
-        else:
-            raise Exception(
-                f'Unsupported viewing_months: {self.viewing_months}')
+        # Restrict transitions to the 14 months from Dec of the previous year
+        # until Feb of the following year.
+        start_ym = YearMonthTuple(year - 1, 12)
+        until_ym = YearMonthTuple(year + 1, 2)
 
         if self.debug:
             logging.info('==== Step 1: Finding matches')
@@ -569,7 +575,7 @@ class ZoneProcessor:
                 max_actives = CountAndYear(transition_count, year)
 
             # Max size of the transition buffer.
-            buffer_size = self.max_transition_buffer_size
+            buffer_size = self.transition_storage.index_max
             if buffer_size > max_buffer_size.number:
                 max_buffer_size = CountAndYear(buffer_size, year)
 
@@ -579,25 +585,6 @@ class ZoneProcessor:
         )
 
     # The following methods are designed to be used internally.
-
-    def _update_transition_buffer_size(
-        self,
-        candidate_transitions: List[Transition],
-    ) -> None:
-        """Update the statistics on the number of active Transitions
-        and the size of the Transition buffer that may be required in the C++
-        code.
-        """
-        total = len(candidate_transitions) + len(self.transitions)
-        if total > self.max_transition_buffer_size:
-            self.max_transition_buffer_size = total
-        if self.debug:
-            logging.info(
-                '_update_transition_buffer_size(): '
-                'max_transition_buffer_size: %s',
-                self.max_transition_buffer_size,
-            )
-        self.all_candidate_transitions.extend(candidate_transitions)
 
     def _init_for_second(self, epoch_seconds: int) -> None:
         """Initialize the Transitions from the given epoch_seconds.
@@ -776,11 +763,6 @@ class ZoneProcessor:
         day, time and timeSuffix. The start and until fields are truncated at
         the low and high end by start_ym and until_ym, respectively.
 
-        The size of the [start_ym, until_ym) is determined by the viewing_months
-        flag. Normally, viewing_months will be greater than one years, to
-        compensate for our inability to precisely determine which local 'year'
-        is associated with a given epochSecond.
-
         When the epochSeconds is converted to a year using the UTC timezone, the
         actual local DateTime could be Dec 31 of the previous year, or Jan 1 of
         the following year. Unfortunately, we don't know the local time zone
@@ -789,17 +771,11 @@ class ZoneProcessor:
         this problem, we create a [start_ym, until_ym) interval that's slightly
         larger than the current year of interest.
 
-        If viewing_months==14, we include the prior December and subsequent
-        January. This works well but often produces too many candidate
-        Transitions because it spans 3 whole years, potentially 4 years for the
-        'most recent prior year'.
-
-        If viewing_months==13, we include only the subsequent January, which
-        works because we push the year of interest to the next year if the
-        epoch_seconds is on Dec 31.
-
-        If viewing_months==12, this is an experimental option to see if we can
-        reduce the number of candidate transitions.
+        The size of the [start_ym, until_ym) is normally 14 months, from Dec of
+        the previous year until Feb of the following year. This works well but
+        often produces more candidate Transitions than absolutely necessary
+        because the interval spans at least 3 whole years, and potentially 4
+        years for the 'most recent prior year'.
         """
         zone_eras = self.zone_info['eras']
         prev_era: Optional[ZoneEra] = None  # the earliest possible
@@ -818,22 +794,13 @@ class ZoneProcessor:
 
     def _create_transitions(self, matches: List[MatchingEra]) -> None:
         """Create the relevant transitions from the matching ZoneEras.
-        This method must update self.transitions within the loop for each
-        MatchingEra, instead of collecting and returning the accumulated
-        transitions array, to allow _update_transition_buffer_size() to can
-        collect the buffer size statistics correctly using the intermediate
-        self.transitions results.
         """
         if self.debug:
             logging.info('_create_transitions()')
         for match in matches:
-            transitions_for_match = self._create_transitions_for_match(match)
-            self.transitions.extend(transitions_for_match)
+            self._create_transitions_for_match(match)
 
-    def _create_transitions_for_match(
-        self,
-        match: MatchingEra,
-    ) -> List[Transition]:
+    def _create_transitions_for_match(self, match: MatchingEra) -> None:
         """Determine if the given MatchingEra is a simple MatchingEra (contains
         an explicit DST offset) or named (references a named ZonePolicy to
         determine the DST offset). Then find the Transitions of the given match
@@ -845,34 +812,24 @@ class ZoneProcessor:
         zone_era = match.zone_era
         zone_policy = zone_era['zone_policy']
         if zone_policy in ['-', ':']:
-            return self._create_transitions_from_simple_match(match)
+            self._create_transitions_from_simple_match(match)
         else:
-            return self._create_transitions_from_named_match(match)
+            self._create_transitions_from_named_match(match)
 
-    def _create_transitions_from_simple_match(
-        self,
-        match: MatchingEra,
-    ) -> List[Transition]:
+    def _create_transitions_from_simple_match(self, match: MatchingEra) -> None:
         """The zone_policy is '-' or ':' then the Zone Era itself defines the
-        UTC offset and the abbreviation. Returns a list of one Transition
-        object, to make it compatible with the return type of
-        _create_transitions_from_named_match().
+        UTC offset and the abbreviation. Add the corresponding Transition into
+        the Active pool of TransitionStorage immediately.
         """
         if self.debug:
             logging.info('_create_transitions_from_simple_match(): %s', match)
         transition = Transition(match)
         transition.transition_time = match.start_date_time
-        transitions = [transition]
-        self._update_transition_buffer_size(transitions)
-        if self.debug:
-            print_transitions(transitions)
-        return transitions
+        self.transitions.append(transition)
+        self.transition_storage.push_transitions(1)
 
-    def _create_transitions_from_named_match(
-        self,
-        match: MatchingEra,
-    ) -> List[Transition]:
-        """Create the transitions of the named MatchingEra. The search for the
+    def _create_transitions_from_named_match(self, match: MatchingEra) -> None:
+        """Find the transitions of the named MatchingEra. The search for the
         relevant Transition occurs in 3 passes:
 
         1. Find the candidate Transitions defined by the MatchingEra using the
@@ -883,10 +840,6 @@ class ZoneProcessor:
             * This pass includes something called the "most recent prior"
               Transition, because we need to know the Transition that occurred
               just before the beginning of the given year.
-            * Multiple "prior" Transitions may be included as candidates.
-            * Two versions:
-                * class CandidateFinderBasic
-                * class CandidateFinderOptimized
         2. Fix the transition times.
             * Convert the transition_time to the wall time ('w') of the previous
               rule's time offset.
@@ -895,24 +848,6 @@ class ZoneProcessor:
         3. Select the Transitions which are "active".
             * Active is determined by the entire date and time fields of
               MatchingEra (including month, day and time) fields.
-            * Only a single "most recent prior" Transition will be found.
-            * Two versions:
-                * class ActiveSelectorBasic
-                * class ActiveSelectorInPlace
-
-        Two versions are implemented for Passes 1 and 3. The "Basic" versions
-        are the earlier versions which use simpler code, at the expense of using
-        more memory. The "Optimized" and "InPlace" versions are my subsequent
-        improvements to those algorithms, making them use less memory and
-        hopefully be faster. Using less memory is important because those
-        algorithms will be reimplemenented in C++ for the Arduino
-        microcontroller environments which have limited memory (~32kB of flash
-        RAM, and ~2kB of static RAM).
-
-        The 'self.max_transition_buffer_size' counter and
-        'self.all_candidate_transitions' list attempt to track the amount of
-        internal buffer space needed by the various algorithms. See comments in
-        __init__().
         """
         if self.debug:
             logging.info('_create_transitions_from_named_match(): %s', match)
@@ -925,15 +860,11 @@ class ZoneProcessor:
         zone_policy = cast(ZonePolicy, zone_era['zone_policy'])
         # assert isinstance(zone_policy, ZonePolicy)
         rules = zone_policy['rules']
-        finder: 'CandidateFinder'
-        if self.optimize_candidates:
-            finder = CandidateFinderOptimized(self.debug)
-        else:
-            finder = CandidateFinderBasic(self.debug)
-        candidate_transitions = finder.find_candidate_transitions(match, rules)
+        candidate_transitions = self._find_candidate_transitions(match, rules)
         if self.debug:
             print_transitions(candidate_transitions)
         self._check_transitions_sorted(candidate_transitions)
+        self.transition_storage.pop_transitions(len(candidate_transitions))
 
         # Pass 2: Fix the transitions times, converting 's' and 'u' into 'w'
         # uniformly.
@@ -944,20 +875,12 @@ class ZoneProcessor:
             print_transitions(candidate_transitions)
         self._check_transitions_sorted(candidate_transitions)
 
-        # Update statistics on active transitions
-        self._update_transition_buffer_size(candidate_transitions)
-
         # Pass 3: Select only those Transitions which overlap with the actual
         # start and until times of the MatchingEra.
         if self.debug:
             logging.info('---- Pass 3: Select active transitions')
-        selector: 'ActiveSelector'
-        if self.in_place_transitions:
-            selector = ActiveSelectorInPlace(self.debug)
-        else:
-            selector = ActiveSelectorBasic(self.debug)
         try:
-            transitions = selector.select_active_transitions(
+            transitions = self._select_active_transitions(
                 candidate_transitions, match)
         except:  # noqa: E722
             logging.exception(
@@ -975,11 +898,12 @@ class ZoneProcessor:
         if self.debug:
             print_transitions(transitions)
 
-        return transitions
+        self.transitions.extend(transitions)
+        self.transition_storage.push_transitions(len(transitions))
 
     def print_matches_and_transitions(self) -> None:
         logging.info('---- Buffer Size')
-        logging.info('Max: %s', self.max_transition_buffer_size)
+        logging.info('Max: %s', self.transition_storage.index_max)
         logging.info('---- Matches')
         for m in self.matches:
             logging.info(m)
@@ -987,8 +911,6 @@ class ZoneProcessor:
         for t in self.transitions:
             logging.info(t)
         logging.info('---- Candidate Transitions')
-        for t in self.all_candidate_transitions:
-            logging.info(t)
 
     @staticmethod
     def _check_transitions_sorted(transitions: List[Transition]) -> None:
@@ -1291,109 +1213,17 @@ class ZoneProcessor:
             return 1
         return 0
 
-
-class CandidateFinder(Protocol):
-    """Define the common methods of CandidateFinderBasic and
-    CandidateFinderOptimized for mypy type checking.
-    """
-
-    def find_candidate_transitions(
+    def _find_candidate_transitions(
         self,
         match: MatchingEra,
         rules: List[ZoneRule],
     ) -> List[Transition]:
-        ...
-
-
-class CandidateFinderBasic:
-    def __init__(self, debug: bool):
-        self.debug = debug
-
-    def find_candidate_transitions(
-        self,
-        match: MatchingEra,
-        rules: List[ZoneRule],
-    ) -> List[Transition]:
-        """Get the list of candidate transitions from the 'rules' which overlap
-        the whole years [start_y, end_y] (inclusive)) defined by the given
-        MatchingEra. This list potentially includes multiple prior transitions,
-        one of which would become the "most recent prior" transition. We use
-        whole years because 'rules' define repetitive transitions using whole
-        years.
+        """Find candidate transition while filtering out ones which are
+        obviously non-candidates. This reduces the size of the statically
+        allocated Transitions array in the C++ implementation.
         """
         if self.debug:
-            logging.info('Basic.find_candidate_transitions()')
-
-        # If MatchEra.until_date_time is exactly Jan 1 00:00, set the end_year
-        # to the prior year.
-        start_y = match.start_date_time.y
-        until = match.until_date_time
-        if until.M == 1 and until.d == 1 and until.ss == 0:
-            end_y = until.y - 1
-        else:
-            end_y = until.y
-
-        transitions: List[Transition] = []
-        for rule in rules:
-            from_year = rule['from_year']
-            to_year = rule['to_year']
-            years = self.get_candidate_years(
-                from_year, to_year, start_y, end_y)
-            for year in years:
-                _add_transition_sorted(
-                    transitions,
-                    _create_transition_for_year(year, rule, match),
-                )
-
-        return transitions
-
-    @staticmethod
-    def get_candidate_years(
-        from_year: int,
-        to_year: int,
-        start_year: int,
-        end_year: int,
-    ) -> List[int]:
-        """Return the array of years within the Rule's [from_year, to_year]
-        range which should be evaluated to obtain the transitions necessary for
-        the matched ZoneEra that spans [start_year, end_year].
-
-        1) Include all years which overlap [start_year, end_year].
-        2) Add the latest year prior to [start_year]. This is guaranteed to
-           exists because we added an anchor rule at year 0 for those zone
-           policies that need it.
-
-        If [start_year, end_year] spans a 3-year interval (which will be the
-        case for all supported values of 'viewing_months'), then the maximum
-        number of elements in 'years' will be 4.
-        """
-        years = _get_interior_years(from_year, to_year, start_year, end_year)
-
-        # Add most recent Rule year prior to Match years.
-        prior_year = _get_most_recent_prior_year(
-            from_year, to_year, start_year, end_year)
-        if prior_year >= 0:
-            years.append(prior_year)
-
-        return years
-
-
-class CandidateFinderOptimized:
-    def __init__(self, debug: bool):
-        self.debug = debug
-
-    def find_candidate_transitions(
-        self,
-        match: MatchingEra,
-        rules: List[ZoneRule],
-    ) -> List[Transition]:
-        """Similar to CandidateFinderBasic.find_candidate_transitions() except
-        that prior Transitions which are obviously non-candidates are filtered
-        out early. This reduces the size of the statically allocated Transitions
-        array in the C++ implementation.
-        """
-        if self.debug:
-            logging.info('Optimized.find_candidate_transitions()')
+            logging.info('_find_candidate_transitions()')
 
         # If MatchEra.until_date_time is exactly Jan 1 00:00, set the end_year
         # to the prior year.
@@ -1405,45 +1235,64 @@ class CandidateFinderOptimized:
         else:
             end_y = until.y
 
-        transitions: List[Transition] = []
+        # Reserve prior Transition.
         prior_transition: Optional[Transition] = None
+        self.transition_storage.push_transitions(1)
+
+        transitions: List[Transition] = []
         for rule in rules:
             from_year = rule['from_year']
             to_year = rule['to_year']
             years = _get_interior_years(from_year, to_year, start_y, end_y)
             if self.debug:
                 logging.info(
-                    'find_candidate_transitions(): interior years: %s', years)
+                    '_find_candidate_transitions(): interior years: %s', years)
 
             # Examine transitions in the interior years. Keep track of potential
             # prior transition.
             for year in years:
                 transition = _create_transition_for_year(year, rule, match)
+                self.transition_storage.push_transitions(1)  # free agent
                 # Use fuzzy check to filter out transitions which cannot be
                 # candidates.
                 comp = _compare_transition_to_match_fuzzy(transition, match)
                 if comp < 0:
                     prior_transition = self._select_prior_transition(
                         prior_transition, transition)
+                    # Free agent replaces prior transition.
+                    self.transition_storage.pop_transitions(1)
                 elif comp == 1:
+                    # Free agent becomes a candidate transition, so no need
+                    # to update the TransitionStorage buffer size.
                     _add_transition_sorted(transitions, transition)
+                else:
+                    # Remove free agent because it's not used. In the C++ code,
+                    # this is done implicitly, but in Python code, this must be
+                    # done explicitly.
+                    self.transition_storage.pop_transitions(1)
 
             # Explicitly examine the transition of the prior year and compare
             # it with the other candidate prior transitions from above.
             prior_year = _get_most_recent_prior_year(
                 from_year, to_year, start_y, end_y)
             if self.debug:
-                logging.info('find_candidate_transitions(): prior year: %s',
+                logging.info('_find_candidate_transitions(): prior year: %s',
                              prior_year)
             if prior_year >= 0:
                 transition = _create_transition_for_year(
                     prior_year, rule, match)
+                self.transition_storage.push_transitions(1)
                 prior_transition = self._select_prior_transition(
                     prior_transition, transition)
+                self.transition_storage.pop_transitions(1)
 
-        # Add the most recent prior transition if it exists.
+        # Add the most recent prior transition if it exists. Otherwise, we need
+        # to remove the reserved prior transition to match the buffer size of
+        # the C++ code. The C++ code does this implicitly.
         if prior_transition:
             _add_transition_sorted(transitions, prior_transition)
+        else:
+            self.transition_storage.pop_transitions(1)
 
         return transitions
 
@@ -1463,159 +1312,18 @@ class CandidateFinderOptimized:
         else:
             return transition
 
-
-class ProcessTransitionResult(TypedDict):
-    start_transition_found: Optional[bool]
-    latest_prior_transition: Optional[Transition]
-    transitions: List[Transition]
-
-
-class ActiveSelector(Protocol):
-    """Define the common methods of ActiveSelectorBasic and
-    ActiveSelectorInPlace for mypy type checking.
-    """
-
-    def select_active_transitions(
+    def _select_active_transitions(
         self,
         transitions: List[Transition],
         match: MatchingEra,
     ) -> List[Transition]:
-        ...
-
-
-class ActiveSelectorBasic:
-    def __init__(self, debug: bool):
-        self.debug = debug
-
-    def select_active_transitions(
-        self,
-        transitions: List[Transition],
-        match: MatchingEra,
-    ) -> List[Transition]:
-        """Select those Transitions which overlap with the MatchingEra interval
-        which may not be at year boundary. Also select the latest prior
-        transition before the given MatchingEra, shifting the transition time to
-        the start of the MatchingEra.
-
-        This implementation copies the active Transitions into a new
-        'results_transitions' list.
+        """Determine the active Transisitions using an inlined is_active flag.
+        The final result is returned in a new 'active_transitions' list, but in
+        the C++ version, we can avoid allocating an extra array by filter on the
+        'is_active' flag and resizing the transitions array.
         """
         if self.debug:
-            logging.info('ActiveSelectorBasic.select_active_transitions()')
-
-        # Commulative results of _process_transition()
-        results_transitions: List[Transition] = []
-        results: ProcessTransitionResult = {
-            'start_transition_found': None,
-            'latest_prior_transition': None,
-            'transitions': results_transitions,
-        }
-
-        # Categorize each transition into the 'results' object.
-        for transition in transitions:
-            self._process_transition(match, transition, results)
-
-        # Add the latest prior transition if it exists.
-        if not results.get('start_transition_found'):
-            prior_transition = results.get('latest_prior_transition')
-            if not prior_transition:
-                raise Exception(
-                    'Prior transition not found; should not happen')
-
-            # Adjust the transition time to be the start of the MatchingEra.
-            prior_transition = prior_transition.copy()
-            prior_transition.original_transition_time = \
-                prior_transition.transition_time
-            prior_transition.transition_time = match.start_date_time
-            _add_transition_sorted(results_transitions, prior_transition)
-
-        return results_transitions
-
-    @staticmethod
-    def _process_transition(
-        match: MatchingEra,
-        transition: Transition,
-        results: ProcessTransitionResult,
-    ) -> None:
-        """Compare the given transition to the given match, checking the
-        following situations:
-
-        1) If the Transition is outside the time range of the MatchingEra,
-           ignore the transition.
-        2) If the Transition is within the matching MatchingEra, it is added
-           to the map at results['transitions'].
-        2a) If the Transition occurs at the very start of the MatchingEra, then
-            set the flag "start_transition_found" to true.
-        3) If the Transition is earlier than the MatchingEra, then add it to the
-           'latest_prior_transition' if it is the largest prior transition.
-
-        This method assumes that the transition time of the Transition has been
-        fixed using the _fix_transition_times() method, so that the comparison
-        with the MatchingEra can occur accurately.
-
-        The 'results' is a map that keeps track of the processing, and contains:
-
-        {
-            'start_transition_found': bool,
-            'latest_prior_transition': transition,
-            'transitions': {}
-        }
-
-        where:
-
-        * If transition >= match.until:
-            * do nothing
-        * If transition within match:
-            * add transition to results['transitions']
-            * if transition == match.start
-                * set results['start_transition_found'] = True
-        * If transition < match:
-            * if not start_transition_found:
-                * set results['latest_prior_transition'] = latest
-        """
-        # Determine if the transition falls within the match range.
-        transition_compared_to_match = _compare_transition_to_match(
-            transition, match)
-        if transition_compared_to_match == 2:
-            return
-        elif transition_compared_to_match in [0, 1]:
-            _add_transition_sorted(results['transitions'], transition)
-            if transition_compared_to_match == 0:
-                results['start_transition_found'] = True
-        else:  # transition_compared_to_match < 0:
-            # If a Transition exists on the start bounary of the MatchingEra,
-            # then we don't need to search for the latest prior.
-            if results.get('start_transition_found'):
-                return
-
-            # Determine the latest prior transition
-            latest_prior_transition = results.get('latest_prior_transition')
-            if not latest_prior_transition:
-                results['latest_prior_transition'] = transition
-            else:
-                transition_time = transition.transition_time
-                if transition_time > latest_prior_transition.transition_time:
-                    results['latest_prior_transition'] = transition
-
-
-class ActiveSelectorInPlace:
-    def __init__(self, debug: bool):
-        self.debug = debug
-
-    def select_active_transitions(
-        self,
-        transitions: List[Transition],
-        match: MatchingEra,
-    ) -> List[Transition]:
-        """Similar to ActiveSelectorBasic.select_active_transitions() except it
-        uses an inlined Transition.is_active flag to mark if a Transition is
-        active or not. The final result is returned in a new
-        'active_transitions' list, but in the C++ version, we can avoid
-        allocating an extra array by filter on the 'is_active' flag and resizing
-        the transitions array.
-        """
-        if self.debug:
-            logging.info('ActiveSelectorInPlace.select_active_transitions()')
+            logging.info('_select_active_transitions()')
 
         prior: Optional[Transition] = None
         for transition in transitions:
@@ -1637,9 +1345,8 @@ class ActiveSelectorInPlace:
         transition: Transition,
         prior: Optional[Transition],
     ) -> Optional[Transition]:
-        """A version of ActiveSelectorBasic._process_transition() that does
-        not allocate new array members, rather uses an internal flag. This
-        assumes that all Transitions have been fixed using
+        """Determine if a transition is active with respect to the given match.
+        This assumes that all Transitions have been fixed using
         _fix_transition_times().
         """
         transition_compared_to_match = _compare_transition_to_match(

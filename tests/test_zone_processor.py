@@ -11,7 +11,7 @@ from acetimetools.zone_processor.zone_processor import DateTuple
 from acetimetools.zone_processor.zone_processor import Transition
 from acetimetools.zone_processor.zone_processor import MatchingEra
 from acetimetools.zone_processor.zone_processor import ZoneProcessor
-from acetimetools.zone_processor.zone_processor import CandidateFinderBasic
+from acetimetools.zone_processor.zone_processor import _get_interior_years
 from acetimetools.zone_processor.zone_processor import _compare_transition_to_match  # noqa
 from acetimetools.zone_processor.zone_processor import _compare_transition_to_match_fuzzy  # noqa
 from acetimetools.zone_processor.zone_processor import _subtract_date_tuple
@@ -21,35 +21,21 @@ from acetimetools.zone_processor.zone_info_types import ZonePolicy
 
 
 class TestZoneProcessorHelperMethods(unittest.TestCase):
-    def test_get_candidate_years(self) -> None:
-        self.assertEqual([1, 2, 3],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 1, 4, 2, 3)))
-        self.assertEqual([1, 2, 3],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 0, 4, 2, 3)))
+    def test_get_interior_years(self) -> None:
+        self.assertEqual([2, 3],
+                         sorted(_get_interior_years(1, 4, 2, 3)))
+        self.assertEqual([2, 3],
+                         sorted(_get_interior_years(0, 4, 2, 3)))
         self.assertEqual([],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 4, 5, 2, 3)))
-        self.assertEqual([2],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 0, 2, 5, 6)))
-        self.assertEqual([4, 5],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 0, 5, 5, 6)))
+                         sorted(_get_interior_years(4, 5, 2, 3)))
+        self.assertEqual([],
+                         sorted(_get_interior_years(0, 2, 5, 6)))
+        self.assertEqual([5],
+                         sorted(_get_interior_years(0, 5, 5, 6)))
         self.assertEqual([0, 1, 2],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 0, 2, 0, 2)))
-        self.assertEqual([1, 2, 3, 4],
-                         sorted(
-                             CandidateFinderBasic.get_candidate_years(
-                                 0, 4, 2, 4)))
+                         sorted(_get_interior_years(0, 2, 0, 2)))
+        self.assertEqual([2, 3, 4],
+                         sorted(_get_interior_years(0, 4, 2, 4)))
 
     def test_expand_date_tuple(self) -> None:
         self.assertEqual((DateTuple(2000, 1, 30, 10800, 'w'),

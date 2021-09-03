@@ -84,19 +84,9 @@ class BufSizeEstimator:
             # because TransitionStorage.getFreeAgent() needs one slot even if
             # it's not used.
             count_and_year = CountAndYear(
-                buffer_size_info.max_buffer_size.number + 1,
+                buffer_size_info.max_buffer_size.number,
                 buffer_size_info.max_buffer_size.year,
             )
-
-            # The estimate is off for Asia/Atyrau. ZoneProcessor returns
-            # max_buf_size[0]==4 which means 5 should be enough, but
-            # TransitionStorage.getHighWater() says that 6 is required. Not sure
-            # why.
-            if zone_name == 'Asia/Atyrau':
-                count_and_year = CountAndYear(
-                    count_and_year.number + 1,
-                    count_and_year.year,
-                )
 
             buf_sizes[zone_name] = count_and_year
 
