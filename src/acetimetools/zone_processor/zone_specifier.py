@@ -415,7 +415,7 @@ class ZoneSpecifier:
 
         # The maximum value of (len(self.transitions) +
         # len(candidate_transitions)) across all calls to
-        # _find_transitions_from_named_match() for the year given to
+        # _create_transitions_from_named_match() for the year given to
         # init_for_year(). The C++ version of this class uses a single pool of
         # Transitions to hold both active and candidate transitions. This value
         # should correspond to the largest number of slots consumed in the pool
@@ -484,7 +484,7 @@ class ZoneSpecifier:
           and the given window size (e.g. 13, 14, 36 months). These
           are called MatchingEraes.
         * Find the list of Transitions corresponding to the MatchingEraes
-          using _find_transitions_for_match().
+          using _create_transitions_for_match().
         * Convert the transition times of the Transition objects into
           start and until times according to the UTC offset of each
           Transition.
@@ -528,8 +528,8 @@ class ZoneSpecifier:
         self.matches = self._find_matches(start_ym, until_ym)
 
         if self.debug:
-            logging.info('==== Step 2: Finding (raw) transitions')
-        self._find_transitions(self.matches)
+            logging.info('==== Step 2: Creating (raw) transitions')
+        self._create_transitions(self.matches)
         if self.debug:
             print_transitions(self.transitions)
 
@@ -821,8 +821,8 @@ class ZoneSpecifier:
             prev_era = zone_era
         return matches
 
-    def _find_transitions(self, matches: List[MatchingEra]) -> None:
-        """Find the relevant transitions from the matching ZoneEras.
+    def _create_transitions(self, matches: List[MatchingEra]) -> None:
+        """Create the relevant transitions from the matching ZoneEras.
         This method must update self.transitions within the loop for each
         MatchingEra, instead of collecting and returning the accumulated
         transitions array, to allow _update_transition_buffer_size() to can
@@ -830,12 +830,12 @@ class ZoneSpecifier:
         self.transitions results.
         """
         if self.debug:
-            logging.info('_find_transitions()')
+            logging.info('_create_transitions()')
         for match in matches:
-            transitions_for_match = self._find_transitions_for_match(match)
+            transitions_for_match = self._create_transitions_for_match(match)
             self.transitions.extend(transitions_for_match)
 
-    def _find_transitions_for_match(
+    def _create_transitions_for_match(
         self,
         match: MatchingEra,
     ) -> List[Transition]:
@@ -845,26 +845,26 @@ class ZoneSpecifier:
         using the appropriate algorithm.
         """
         if self.debug:
-            logging.info('_find_transitions_for_match(): %s', match)
+            logging.info('_create_transitions_for_match(): %s', match)
 
         zone_era = match.zone_era
         zone_policy = zone_era['zone_policy']
         if zone_policy in ['-', ':']:
-            return self._find_transitions_from_simple_match(match)
+            return self._create_transitions_from_simple_match(match)
         else:
-            return self._find_transitions_from_named_match(match)
+            return self._create_transitions_from_named_match(match)
 
-    def _find_transitions_from_simple_match(
+    def _create_transitions_from_simple_match(
         self,
         match: MatchingEra,
     ) -> List[Transition]:
         """The zone_policy is '-' or ':' then the Zone Era itself defines the
         UTC offset and the abbreviation. Returns a list of one Transition
         object, to make it compatible with the return type of
-        _find_transitions_from_named_match().
+        _create_transitions_from_named_match().
         """
         if self.debug:
-            logging.info('_find_transitions_from_simple_match(): %s', match)
+            logging.info('_create_transitions_from_simple_match(): %s', match)
         transition = Transition(match)
         transition.transition_time = match.start_date_time
         transitions = [transition]
@@ -873,11 +873,11 @@ class ZoneSpecifier:
             print_transitions(transitions)
         return transitions
 
-    def _find_transitions_from_named_match(
+    def _create_transitions_from_named_match(
         self,
         match: MatchingEra,
     ) -> List[Transition]:
-        """Find the transitions of the named MatchingEra. The search for the
+        """Create the transitions of the named MatchingEra. The search for the
         relevant Transition occurs in 3 passes:
 
         1. Find the candidate Transitions defined by the MatchingEra using the
@@ -920,7 +920,7 @@ class ZoneSpecifier:
         __init__().
         """
         if self.debug:
-            logging.info('_find_transitions_from_named_match(): %s', match)
+            logging.info('_create_transitions_from_named_match(): %s', match)
 
         # Pass 1: Find candidate transitions using whole years.
         if self.debug:
