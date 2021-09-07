@@ -8,7 +8,7 @@ from collections import OrderedDict
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
 from acetimetools.data_types.at_types import CountAndYear
-from .zone_specifier import ZoneSpecifier
+from .zone_processor import ZoneProcessor
 from .zone_info_types import ZoneInfoMap
 from .zone_info_types import ZonePolicyMap
 from .zone_info_inliner import ZoneInfoInliner
@@ -40,18 +40,18 @@ class BufSizeEstimator:
 
     def estimate(self) -> BufSizeInfo:
         """Calculate the (dict) of {full_name -> buf_size} where buf_size is one
-        more than the estimate from ZoneSpecifier.get_buffer_sizes(). Also
+        more than the estimate from ZoneProcessor.get_buffer_sizes(). Also
         return the maximum.
         """
         # Generate internal zone_infos and zone_policies to be used by
-        # ZoneSpecifier.
+        # ZoneProcessor.
         zone_info_inliner = ZoneInfoInliner(self.zones_map, self.policies_map)
         zone_infos, zone_policies = zone_info_inliner.generate_zonedb()
         logging.info(
             'InlinedZoneInfo: Zones %d; Policies %d',
             len(zone_infos), len(zone_policies))
 
-        # Calculate buffer sizes using a ZoneSpecifier.
+        # Calculate buffer sizes using a ZoneProcessor.
         buf_sizes = self.calculate_buf_sizes(zone_infos, zone_policies)
         max_buf_size = max([cy.number for cy in buf_sizes.values()])
         logging.info('Found max_buffer_size=%d', max_buf_size)
@@ -71,11 +71,11 @@ class BufSizeEstimator:
     ) -> BufSizeMap:
         buf_sizes: BufSizeMap = {}
         for zone_name, zone_info in zone_infos.items():
-            zone_specifier = ZoneSpecifier(zone_info)
+            zone_processor = ZoneProcessor(zone_info)
 
             # get_buffer_sizes() returns a BufferSizeInfo(NamedTuple) composed
             # of max_actives(count, year) and max_buffer_size(count, year).
-            buffer_size_info = zone_specifier.get_buffer_sizes(
+            buffer_size_info = zone_processor.get_buffer_sizes(
                 start_year=self.start_year,
                 until_year=self.until_year,
             )
@@ -88,7 +88,7 @@ class BufSizeEstimator:
                 buffer_size_info.max_buffer_size.year,
             )
 
-            # The estimate is off for Asia/Atyrau. ZoneSpecifier returns
+            # The estimate is off for Asia/Atyrau. ZoneProcessor returns
             # max_buf_size[0]==4 which means 5 should be enough, but
             # TransitionStorage.getHighWater() says that 6 is required. Not sure
             # why.

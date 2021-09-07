@@ -25,7 +25,7 @@
 #         'zone_registry.{h,cpp} files for Arduino.
 #   * python
 #       * Generate the 'zone_infos.py', 'zone_policies.py' files for
-#         `zone_specifier.py` class in Python.
+#         `zone_processor.py` class in Python.
 #   * json
 #       * Generate the 'zonedb.json'.
 #   * zonelist

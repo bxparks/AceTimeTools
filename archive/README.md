@@ -5,20 +5,20 @@ Deprecated code, but might be useful later.
 ## Test Data Generator
 
 The `arvalgenerator.py`, `pyvalgenerator.py`, and `tdgenerator.py` modules
-use the `zone_specifier.py` and `pytz` to generate the `validation_*`
+use the `zone_processor.py` and `pytz` to generate the `validation_*`
 unit test files, for both Arduino and Python.
 
-For the Arduino vaidation files, this pipeline has been replaced with
+For the Arduino validation files, this pipeline has been replaced with
 `compare_pytz` module.
 
-For the Python test files, we no longer do unit testing for the `ZoneSpecifier`
+For the Python test files, we no longer do unit testing for the `ZoneProcessor`
 class.
 
 ```
         inline_zone_info.py
                |
                v
-            zone_specifier.py
+            zone_processor.py
                     |
                     |     pytz
                     |     /

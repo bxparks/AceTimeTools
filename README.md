@@ -37,11 +37,11 @@ A number of scripts are exposed at the top level:
       tools
 * `validate.py`
     * an interactive validator of the `tzcompiler.py` processing pipeline
-    * validates `ZoneSpecifier` (the Python version of the `ZoneProcessor`
+    * validates `ZoneProcessor` (the Python version of the `ZoneProcessor`
       class in AceTime)
     * uses the `pytz` library as validation generator
 * `zinfo.py`
-    * an interactive command line interface to the `ZoneSpecifier` Python class
+    * an interactive command line interface to the `ZoneProcessor` Python class
       using a pre-compiled zoneinfo files in `tools/zonedbpy/` directory.
 
 ## TZ Compiler (tzcompiler.py)
@@ -77,7 +77,7 @@ transformer               v
   |                       |  bufestimator.BufSizeEstimator.calculate_buf_sizes()
   |                       |                \
   |                       |                 v   (ZoneInfoMap)
-zone_processor            |              zone_specifier.get_buffer_sizes()
+zone_processor            |              zone_processor.get_buffer_sizes()
   |                       |                 /   (BufferSizeInfo)
   |                       |                /
   |                       |               v  (BufSizeMap)
@@ -186,7 +186,7 @@ zones.txt
 
 The `validate.py` script allows us to validate the processing of the TZ Database
 through the Python implementation of the AceTime `ZoneProcessor` classes. The
-Python implementation is called `ZoneSpecifier` (a previous naming convention
+Python implementation is called `ZoneProcessor` (a previous naming convention
 used in the C++ version which did not make it over the Python world). This
 functionality was previously inside `tzcompiler.py` itself before it was
 extracted out into `validate.py` to reduce the complexity of the `tzcompiler.py`
@@ -206,9 +206,9 @@ this
      inline_zone_info.py
          /        \
         /          v
-       /         zone_specifier.py   pytz
+       /         zone_processor.py   pytz
       v               \               /
-zone_specifier.py      v             v
+zone_processor.py      v             v
          \            zstdgenerator.py
           \           /
            v         v

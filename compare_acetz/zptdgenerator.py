@@ -4,7 +4,7 @@
 
 """
 Implements the TestDataGenerator to generate the validation test data using
-acetz, which uses Python ZoneSpecifier class. Pulling in ZoneSpecifier also
+acetz, which uses Python ZoneProcessor class. Pulling in ZoneProcessor also
 means that it pulls in the data structures defined by zonedbpy.
 """
 
@@ -17,8 +17,8 @@ from datetime import tzinfo, datetime, timezone, timedelta
 
 from acetimetools import acetz
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
-from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
-from acetimetools.zone_processor.zone_specifier import DateTuple
+from acetimetools.zone_processor.zone_processor import ZoneProcessor
+from acetimetools.zone_processor.zone_processor import DateTuple
 from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
 from acetimetools.zonedbpy.zone_infos import ZONE_INFO_MAP
 from acetimetools.data_types.validation_types import (
@@ -28,7 +28,7 @@ from acetimetools.data_types.validation_types import (
 
 class TestDataGenerator:
     """Generate the validation test data for all  zones specified by the
-    'zone_infos'. The Transitions are extracted from the ZoneSpecifier and the
+    'zone_infos'. The Transitions are extracted from the ZoneProcessor and the
     UTC offsets determined by acetz.
     """
 
@@ -79,15 +79,15 @@ class TestDataGenerator:
             return None
 
         tz = acetz.gettz(zone_name)
-        zone_specifier = ZoneSpecifier(zone_info)
+        zone_processor = ZoneProcessor(zone_info)
         return self._create_transition_test_items(
-            zone_name, tz, zone_specifier)
+            zone_name, tz, zone_processor)
 
     def _create_transition_test_items(
         self,
         zone_name: str,
         tz: tzinfo,
-        zone_specifier: ZoneSpecifier
+        zone_processor: ZoneProcessor
     ) -> List[TestItem]:
         """Create a TestItem for the tz for each zone, for each year from
         start_year to until_year, exclusive. The following test samples are
@@ -109,15 +109,15 @@ class TestDataGenerator:
         items_map: Dict[int, TestItem] = {}
         for year in range(self.start_year, self.until_year):
             # Skip start_year when viewing months is 36, because it needs data
-            # for (start_year - 3), but ZoneSpecifier won't generate data for
+            # for (start_year - 3), but ZoneProcessor won't generate data for
             # years that old.
             if self.viewing_months == 36 and year == self.start_year:
                 continue
 
             # Add samples just before and just after the DST transition.
-            zone_specifier.init_for_year(year)
-            for transition in zone_specifier.transitions:
-                # Some Transitions from ZoneSpecifier are in previous or post
+            zone_processor.init_for_year(year)
+            for transition in zone_processor.transitions:
+                # Some Transitions from ZoneProcessor are in previous or post
                 # years (e.g. viewing_months = [14, 36]), so skip those.
                 start = transition.start_date_time
                 transition_year = start.y
@@ -185,7 +185,7 @@ class TestDataGenerator:
     ) -> TestItem:
         """Determine the expected date and time components for the given
         'epoch_seconds' for the given 'tz'. The 'epoch_seconds' is the
-        transition time calculated by the ZoneSpecifier class.
+        transition time calculated by the ZoneProcessor class.
 
         Return the TestItem with the following fields:
             epoch: epoch seconds from AceTime epoch (2000-01-01T00:00:00Z)

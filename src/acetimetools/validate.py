@@ -6,7 +6,7 @@
 
 """
 Parse the IANA TZ Database files located at the --input_dir and validate the
-internal zonedb files using the Python ZoneSpecifier class against pytz.
+internal zonedb files using the Python ZoneProcessor class against pytz.
 (Previous version of this was part of tzcompiler.py. Now extracted into
 a separate script.)
 
@@ -34,7 +34,7 @@ Flags:
         --validation_start_year
         --validation_until_year
 
-    ZoneSpecifier:
+    ZoneProcessor:
 
         --viewing_months
         --debug_specifier
@@ -114,7 +114,7 @@ def validate(
 def main() -> None:
     # Configure command line flags.
     parser = argparse.ArgumentParser(
-        description='Validate TZ zone files with ZoneSpecifier.'
+        description='Validate TZ zone files with ZoneProcessor.'
     )
 
     # Extractor flags.
@@ -217,7 +217,7 @@ def main() -> None:
         help='Enable debug output from Validator',
         action="store_true")
 
-    # ZoneSpecifier flags
+    # ZoneProcessor flags
     parser.add_argument(
         '--viewing_months',
         help='Number of months to use for calculations (13, 14, 36)',
@@ -225,7 +225,7 @@ def main() -> None:
         default=14)
     parser.add_argument(
         '--debug_specifier',
-        help='Enable debug output from ZoneSpecifier',
+        help='Enable debug output from ZoneProcessor',
         action="store_true")
     parser.add_argument(
         '--in_place_transitions',
@@ -244,12 +244,12 @@ def main() -> None:
     # validation_until_year cannot be greater than 2038.
     parser.add_argument(
         '--validation_start_year',
-        help='Start year of ZoneSpecifier validation (default: start_year)',
+        help='Start year of ZoneProcessor validation (default: start_year)',
         type=int,
         default=0)
     parser.add_argument(
         '--validation_until_year',
-        help='Until year of ZoneSpecifier validation (default: 2038)',
+        help='Until year of ZoneProcessor validation (default: 2038)',
         type=int,
         default=0)
 
@@ -337,7 +337,7 @@ def main() -> None:
     tresult = transformer.get_data()
 
     # Generate internal versions of zone_infos and zone_policies
-    # so that ZoneSpecifier can be created.
+    # so that ZoneProcessor can be created.
     logging.info('======== Generating inlined zone_infos and zone_policies')
     zone_info_inliner = ZoneInfoInliner(tresult.zones_map, tresult.policies_map)
     zone_infos, zone_policies = zone_info_inliner.generate_zonedb()

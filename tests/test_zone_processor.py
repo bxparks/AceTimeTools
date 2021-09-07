@@ -7,20 +7,20 @@ import unittest
 from datetime import datetime
 
 from acetimetools.zonedbpy import zone_infos
-from acetimetools.zone_processor.zone_specifier import DateTuple
-from acetimetools.zone_processor.zone_specifier import Transition
-from acetimetools.zone_processor.zone_specifier import MatchingEra
-from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
-from acetimetools.zone_processor.zone_specifier import CandidateFinderBasic
-from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match  # noqa
-from acetimetools.zone_processor.zone_specifier import _compare_transition_to_match_fuzzy  # noqa
-from acetimetools.zone_processor.zone_specifier import _subtract_date_tuple
-from acetimetools.zone_processor.zone_specifier import _normalize_date_tuple
+from acetimetools.zone_processor.zone_processor import DateTuple
+from acetimetools.zone_processor.zone_processor import Transition
+from acetimetools.zone_processor.zone_processor import MatchingEra
+from acetimetools.zone_processor.zone_processor import ZoneProcessor
+from acetimetools.zone_processor.zone_processor import CandidateFinderBasic
+from acetimetools.zone_processor.zone_processor import _compare_transition_to_match  # noqa
+from acetimetools.zone_processor.zone_processor import _compare_transition_to_match_fuzzy  # noqa
+from acetimetools.zone_processor.zone_processor import _subtract_date_tuple
+from acetimetools.zone_processor.zone_processor import _normalize_date_tuple
 from acetimetools.zone_processor.zone_info_types import ZoneInfo
 from acetimetools.zone_processor.zone_info_types import ZonePolicy
 
 
-class TestZoneSpecifierHelperMethods(unittest.TestCase):
+class TestZoneProcessorHelperMethods(unittest.TestCase):
     def test_get_candidate_years(self) -> None:
         self.assertEqual([1, 2, 3],
                          sorted(
@@ -55,7 +55,7 @@ class TestZoneSpecifierHelperMethods(unittest.TestCase):
         self.assertEqual((DateTuple(2000, 1, 30, 10800, 'w'),
                           DateTuple(2000, 1, 30, 7200, 's'),
                           DateTuple(2000, 1, 30, 0, 'u')),
-                         ZoneSpecifier._expand_date_tuple(
+                         ZoneProcessor._expand_date_tuple(
                              DateTuple(2000, 1, 30, 10800, 'w'),
                              offset_seconds=7200,
                              delta_seconds=3600))
@@ -63,7 +63,7 @@ class TestZoneSpecifierHelperMethods(unittest.TestCase):
         self.assertEqual((DateTuple(2000, 1, 30, 10800, 'w'),
                           DateTuple(2000, 1, 30, 7200, 's'),
                           DateTuple(2000, 1, 30, 0, 'u')),
-                         ZoneSpecifier._expand_date_tuple(
+                         ZoneProcessor._expand_date_tuple(
                              DateTuple(2000, 1, 30, 7200, 's'),
                              offset_seconds=7200,
                              delta_seconds=3600))
@@ -71,7 +71,7 @@ class TestZoneSpecifierHelperMethods(unittest.TestCase):
         self.assertEqual((DateTuple(2000, 1, 30, 10800, 'w'),
                           DateTuple(2000, 1, 30, 7200, 's'),
                           DateTuple(2000, 1, 30, 0, 'u')),
-                         ZoneSpecifier._expand_date_tuple(
+                         ZoneProcessor._expand_date_tuple(
                              DateTuple(2000, 1, 30, 0, 'u'),
                              offset_seconds=7200,
                              delta_seconds=3600))
@@ -188,17 +188,17 @@ class TestCompareTransitionToMatch(unittest.TestCase):
                          _compare_transition_to_match_fuzzy(transition, match))
 
 
-class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
+class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
     def test_Los_Angeles(self) -> None:
         """America/Los_Angela uses a simple US rule.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Los_Angeles),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2000)
+        zone_processor.init_for_year(2000)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(1, len(matches))
 
         self.assertEqual(
@@ -208,7 +208,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[0].zone_era['zone_policy'])
         self.assertEqual('US', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -240,13 +240,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         """America/Indianapolis/Petersbug moved from central to eastern time in
         1977, then switched back in 2006, then switched back again in 2007.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Indiana_Petersburg),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2006)
+        zone_processor.init_for_year(2006)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -262,7 +262,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[1].zone_era['zone_policy'])
         self.assertEqual('US', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -293,13 +293,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_London(self) -> None:
         """Europe/London uses a EU which has a 'u' in the AT field.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_London),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2000)
+        zone_processor.init_for_year(2000)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(1, len(matches))
 
         self.assertEqual(
@@ -309,7 +309,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[0].zone_era['zone_policy'])
         self.assertEqual('EU', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -341,13 +341,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         """America/Winnipeg uses 'Rule Winn' until 2006 which has an 's' suffix
         in the Rule.AT field.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Winnipeg),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2005)
+        zone_processor.init_for_year(2005)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -364,7 +364,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[1].zone_era['zone_policy'])
         self.assertEqual('Canada', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(4, len(transitions))
 
         self.assertEqual(
@@ -403,13 +403,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Moscow(self) -> None:
         """Europe/Moscow uses 's' in the Zone UNTIL field.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Moscow),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2011)
+        zone_processor.init_for_year(2011)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -425,7 +425,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
             DateTuple(2012, 2, 1, 0, 'w'), matches[1].until_date_time)
         self.assertEqual('-', matches[1].zone_era['zone_policy'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(2, len(transitions))
 
         self.assertEqual(
@@ -448,13 +448,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Famagusta(self) -> None:
         """Asia/Famagusta uses 'u' in the Zone UNTIL field.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Asia_Famagusta),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2017)
+        zone_processor.init_for_year(2017)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -470,7 +470,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[1].zone_era['zone_policy'])
         self.assertEqual('EUAsia', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(2, len(transitions))
 
         self.assertEqual(
@@ -493,13 +493,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Santo_Domingo(self) -> None:
         """America/Santo_Domingo uses 2 ZoneEra changes in year 2000.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Santo_Domingo),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2000)
+        zone_processor.init_for_year(2000)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(3, len(matches))
 
         self.assertEqual(
@@ -521,7 +521,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
             DateTuple(2001, 2, 1, 0, 'w'), matches[2].until_date_time)
         self.assertEqual('-', matches[2].zone_era['zone_policy'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -552,13 +552,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Moncton(self) -> None:
         """America/Moncton transitioned DST at 00:01 through 2006.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Moncton),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2006)
+        zone_processor.init_for_year(2006)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -575,7 +575,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[1].zone_era['zone_policy'])
         self.assertEqual('Canada', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(4, len(transitions))
 
         self.assertEqual(
@@ -614,13 +614,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Istanbul(self) -> None:
         """Europe/Istanbul uses an 'hh:mm' offset in the RULES field in 2015.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Istanbul),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2015)
+        zone_processor.init_for_year(2015)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(3, len(matches))
 
         self.assertEqual(
@@ -643,7 +643,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[2].zone_era['zone_policy'])
         self.assertEqual('EU', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(4, len(transitions))
 
         self.assertEqual(
@@ -683,13 +683,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Dublin(self) -> None:
         """Europe/Dublin uses negative DST during Winter.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Dublin),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2000)
+        zone_processor.init_for_year(2000)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(1, len(matches))
 
         self.assertEqual(
@@ -699,7 +699,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[0].zone_era['zone_policy'])
         self.assertEqual('Eire', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -732,13 +732,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         going from Thursday 29th December 2011 23:59:59 Hours to Saturday 31st
         December 2011 00:00:00 Hours.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Pacific_Apia),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2011)
+        zone_processor.init_for_year(2011)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -755,7 +755,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[1].zone_era['zone_policy'])
         self.assertEqual('WS', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(4, len(transitions))
 
         self.assertEqual(
@@ -802,13 +802,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         Oct 1 23:59:18 2020) adds an additional ZoneEra line for 2010, changing
         this from 2 to 3. Antarctica/Macquarie stays on AEDT all year in 2010.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Antarctica_Macquarie),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2010)
+        zone_processor.init_for_year(2010)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(3, len(matches))
 
         # Match 0
@@ -834,7 +834,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         zone_policy = cast(ZonePolicy, matches[2].zone_era['zone_policy'])
         self.assertEqual('AT', zone_policy['name'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         # Transition 0
@@ -866,13 +866,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         rules (which itself uses 'u' in the UNTIL fields), then uses 's' time to
         switch to Moscow time.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Simferopol),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2014)
+        zone_processor.init_for_year(2014)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(3, len(matches))
 
         self.assertEqual(
@@ -894,7 +894,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
             DateTuple(2015, 2, 1, 0 * 3600, 'w'), matches[2].until_date_time)
         self.assertEqual('-', matches[2].zone_era['zone_policy'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(3, len(transitions))
 
         self.assertEqual(
@@ -926,13 +926,13 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
     def test_Kamchatka(self) -> None:
         """Asia/Kamchatka uses 's' in the Zone UNTIL and Rule AT fields.
         """
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Asia_Kamchatka),
             viewing_months=14,
         )
-        zone_specifier.init_for_year(2011)
+        zone_processor.init_for_year(2011)
 
-        matches = zone_specifier.matches
+        matches = zone_processor.matches
         self.assertEqual(2, len(matches))
 
         self.assertEqual(
@@ -948,7 +948,7 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
             DateTuple(2012, 2, 1, 0 * 3600, 'w'), matches[1].until_date_time)
         self.assertEqual('-', matches[1].zone_era['zone_policy'])
 
-        transitions = zone_specifier.transitions
+        transitions = zone_processor.transitions
         self.assertEqual(2, len(transitions))
 
         self.assertEqual(
@@ -969,19 +969,19 @@ class TestZoneSpecifierMatchesAndTransitions(unittest.TestCase):
         self.assertEqual(0 * 3600, transitions[1].delta_seconds)
 
 
-class TestZoneSpecifierGetTransition(unittest.TestCase):
+class TestZoneProcessorGetTransition(unittest.TestCase):
     def test_get_transition_for_datetime(self) -> None:
-        zone_specifier = ZoneSpecifier(
+        zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Los_Angeles),
             viewing_months=14,
         )
 
         # Just after a DST transition
         dt = datetime(2000, 4, 2, 3, 0, 0)
-        transition = zone_specifier.get_transition_for_datetime(dt)
+        transition = zone_processor.get_transition_for_datetime(dt)
         self.assertIsNotNone(transition)
 
         # DST gap does not exist, but a transition should be returned.
         dt = datetime(2000, 4, 2, 2, 59, 59)
-        transition = zone_specifier.get_transition_for_datetime(dt)
+        transition = zone_processor.get_transition_for_datetime(dt)
         self.assertIsNotNone(transition)

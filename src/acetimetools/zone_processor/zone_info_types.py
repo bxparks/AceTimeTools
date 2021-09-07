@@ -3,7 +3,7 @@
 # MIT License
 
 """
-Data structures required by ZoneSpecifier class. Created inline by
+Data structures required by ZoneProcessor class. Created inline by
 ZoneInfoInliner. Written out to 'zone_policies.py' and 'zone_infos.py' by
 pygenerator.py
 """
