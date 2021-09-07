@@ -22,7 +22,7 @@ from acetimetools.transformer.transformer import normalize_raw
 
 class PythonGenerator:
     """Generate Python files for zone_infos.py and zone_policies.py which are
-    used by the ZoneSpecifier class. Unlike the Arduino version, the Python
+    used by the ZoneProcessor class. Unlike the Arduino version, the Python
     implementation does not support the 'Link' zone names.
     """
 

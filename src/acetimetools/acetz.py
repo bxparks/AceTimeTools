@@ -8,20 +8,20 @@ from datetime import datetime, tzinfo, timedelta, timezone
 
 from .zonedbpy import zone_infos
 from .zone_processor.common import SECONDS_SINCE_UNIX_EPOCH
-from .zone_processor.zone_specifier import ZoneSpecifier
+from .zone_processor.zone_processor import ZoneProcessor
 from .zone_processor.zone_info_types import ZoneInfo
 
 __version__ = '0.1'
 
 
 class acetz(tzinfo):
-    """An implementation of datetime.tzinfo using the ZoneSpecifier class
+    """An implementation of datetime.tzinfo using the ZoneProcessor class
     from AceTime/tools.
     """
 
     def __init__(self, zone_info: ZoneInfo):
         self.zone_info = zone_info
-        self.zs = ZoneSpecifier(zone_info, use_python_transition=True)
+        self.zs = ZoneProcessor(zone_info, use_python_transition=True)
 
     def utcoffset(self, dt: Optional[datetime]) -> timedelta:
         assert dt
@@ -92,7 +92,7 @@ class acetz(tzinfo):
 
         return newdt
 
-    def zone_specifier(self) -> ZoneSpecifier:
+    def zone_processor(self) -> ZoneProcessor:
         return self.zs
 
 

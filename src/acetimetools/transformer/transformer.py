@@ -323,7 +323,7 @@ class Transformer:
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too old, i.e. before (self.start_year-1).
         For start_year 2000, and viewing_months>13,
-        ZoneSpecifier.init_for_year() could be called with 1999.
+        ZoneProcessor.init_for_year() could be called with 1999.
         """
         results: ZonesMap = {}
         count = 0
@@ -353,7 +353,7 @@ class Transformer:
 
         TODO: If a zone era is removed because it is too far in the future, it
         is no longer guaranteed that the last zone era ends with MAX_UNTIL_YEAR.
-        If the ZoneSpecifier code is called with a year greater than
+        If the ZoneProcessor code is called with a year greater than
         self.until_year, it may cause a loop to crash.
         """
         results: ZonesMap = {}
@@ -401,7 +401,7 @@ class Transformer:
         self, zones_map: ZonesMap,
     ) -> ZonesMap:
         """Remove zones which have month, day or time in the UNTIL field.
-        These are not supported by BasicZoneSpecifier.
+        These are not supported by BasicZoneProcessor.
         """
         results: ZonesMap = {}
         removed_zones: CommentsMap = {}
@@ -1017,7 +1017,7 @@ class Transformer:
             self.start_year.
 
         If start_year == 2000, this will pick up rules for 1998. This is because
-        if viewing_months == 13, then ZoneSpecifier.init_for_year() could be
+        if viewing_months == 13, then ZoneProcessor.init_for_year() could be
         called with 1999, which then needs rules for 1998 to extract the "most
         recent prior" Transition before Jan 1, 1999.
 
@@ -1272,9 +1272,9 @@ class Transformer:
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
         """Remove rules where the transition occurs on the first day of the
-        year (Jan 1). That situation is not supported by BasicZoneSpecifier. On
+        year (Jan 1). That situation is not supported by BasicZoneProcessor. On
         the other hand, a transition at the end of the year (Dec 31) is
-        supported by BasicZoneSpecifier.
+        supported by BasicZoneProcessor.
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
@@ -1712,7 +1712,7 @@ def calc_day_of_month(
 ) -> Tuple[int, int]:
     """Return the actual (month, day) of expressions such as
     (on_day_of_week >= on_day_of_month), (on_day_of_week <= on_day_of_month), or
-    (lastMon) See BasicZoneSpecifier::calcStartDayOfMonth(). Shifts into
+    (lastMon) See BasicZoneProcessor::calcStartDayOfMonth(). Shifts into
     previous or next month can occur.
 
     Return (13, xx) if a shift to the next year occurs

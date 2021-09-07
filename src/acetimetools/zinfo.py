@@ -4,9 +4,9 @@
 #
 # MIT License
 """
-The command line interface for ZoneSpecifier class and zonedbpy files for
+The command line interface for ZoneProcessor class and zonedbpy files for
 debugging. Previous version of this was embedded directly inside
-zone_specifer.py. See the examples below.
+zone_processor.py. See the examples below.
 
 TODO: The output format should provide an easy, human-readable list of
 transitions so that we can verify that the AceTime scripts are extracting and
@@ -55,8 +55,8 @@ from datetime import datetime
 
 from acetimetools.zonedbpy import zone_infos
 from acetimetools.zone_processor.zone_info_types import ZoneInfo
-from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
-from acetimetools.zone_processor.zone_specifier import to_utc_string
+from acetimetools.zone_processor.zone_processor import ZoneProcessor
+from acetimetools.zone_processor.zone_processor import to_utc_string
 
 
 def main() -> None:
@@ -107,8 +107,8 @@ def main() -> None:
         logging.error("Zone '%s' not found", args.zone)
         sys.exit(1)
 
-    # Create the ZoneSpecifier for zone
-    zone_specifier = ZoneSpecifier(
+    # Create the ZoneProcessor for zone
+    zone_processor = ZoneProcessor(
         zone_info=zone_info,
         viewing_months=args.viewing_months,
         debug=args.debug,
@@ -116,20 +116,20 @@ def main() -> None:
         optimize_candidates=args.optimize_candidates)
 
     if args.year:
-        zone_specifier.init_for_year(args.year)
+        zone_processor.init_for_year(args.year)
         if args.debug:
             logging.info('==== Final matches and transitions')
-        zone_specifier.print_matches_and_transitions()
+        zone_processor.print_matches_and_transitions()
     elif args.date:
         dt: datetime = datetime.strptime(args.date, "%Y-%m-%dT%H:%M")
         if args.transition:
-            transition = zone_specifier.get_transition_for_datetime(dt)
+            transition = zone_processor.get_transition_for_datetime(dt)
             if transition:
                 logging.info(transition)
             else:
                 logging.error('Transition not found')
         else:
-            offset_info = zone_specifier.get_timezone_info_for_datetime(dt)
+            offset_info = zone_processor.get_timezone_info_for_datetime(dt)
             if not offset_info:
                 logging.info('Invalid time')
             else:

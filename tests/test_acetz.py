@@ -15,16 +15,16 @@ stream_handler = logging.StreamHandler(sys.stdout)
 logger.addHandler(stream_handler)
 
 
-def print_zs_at_dt(tz: acetz, dt: datetime) -> None:
-    zs = tz.zone_specifier()
-    zs.init_for_year(dt.year)
-    zs.print_matches_and_transitions()
+def print_zp_at_dt(tz: acetz, dt: datetime) -> None:
+    zp = tz.zone_processor()
+    zp.init_for_year(dt.year)
+    zp.print_matches_and_transitions()
     unix_seconds = int(dt.timestamp())
     epoch_seconds = unix_seconds - SECONDS_SINCE_UNIX_EPOCH
-    info = zs.get_timezone_info_for_seconds(epoch_seconds)
+    info = zp.get_timezone_info_for_seconds(epoch_seconds)
     if info:
         print(
-            f"print_zs_at_dt(): epoch_seconds={epoch_seconds} "
+            f"print_zp_at_dt(): epoch_seconds={epoch_seconds} "
             f"total_offset={info.total_offset} "
             f"utc_offset={info.utc_offset} "
             f"dst_offset={info.dst_offset} "
@@ -33,7 +33,7 @@ def print_zs_at_dt(tz: acetz, dt: datetime) -> None:
         )
     else:
         print(
-            f"print_zs_at_dt(): epoch_seconds={epoch_seconds} "
+            f"print_zp_at_dt(): epoch_seconds={epoch_seconds} "
             " transition not found"
         )
 
@@ -70,7 +70,7 @@ class TestLosAngeles(unittest.TestCase):
         unix_seconds = epoch_seconds + SECONDS_SINCE_UNIX_EPOCH
         dtu = datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
-        # print_zs_at_dt(tz, dtu)
+        # print_zp_at_dt(tz, dtu)
 
         # Date from epoch seconds.
         dtt = dtu.astimezone(tz)
@@ -275,7 +275,7 @@ class TestTunis(unittest.TestCase):
         unix_seconds = epoch_seconds + SECONDS_SINCE_UNIX_EPOCH
         dtu = datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
-        # print_zs_at_dt(tz, dtu)
+        # print_zp_at_dt(tz, dtu)
 
         # Date from epoch seconds.
         dtt = dtu.astimezone(tz)
@@ -318,7 +318,7 @@ class TestSydney(unittest.TestCase):
         unix_seconds = epoch_seconds + SECONDS_SINCE_UNIX_EPOCH
         dtu = datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
-        # print_zs_at_dt(tz, dtu)
+        # print_zp_at_dt(tz, dtu)
 
         # Date from epoch seconds.
         dtt = dtu.astimezone(tz)

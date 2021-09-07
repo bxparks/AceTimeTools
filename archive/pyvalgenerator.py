@@ -38,7 +38,7 @@ from tdgenerator import TestItem
 # numZones: {numZones}
 #
 # The 'total' and 'dst' offset columns are in minutes, not seconds. The
-# transition 'epoch' was determined by ZoneSpecifier using the TZ Data (version
+# transition 'epoch' was determined by ZoneProcessor using the TZ Data (version
 # {tz_version}). The expected 'total' and 'dst' offsets come from
 # TestDataGenerator which uses the data from pytz (version {pytz_version}) that
 # was installed when the generating script was run.

@@ -3,7 +3,7 @@
 # MIT License
 
 """
-Common constants and functions used by zone_specifier.py. Most of were copied
+Common constants and functions used by zone_processor.py. Most of were copied
 from transformer/transformer.py, in preparation for them to be moved into a new
 AceTimePython project, while avoiding circular dependendence between
 AceTimeTools and AceTimePython. The unit tests are in tests/test_transformer.py.
@@ -46,7 +46,7 @@ def calc_day_of_month(
 ) -> Tuple[int, int]:
     """Return the actual (month, day) of expressions such as
     (on_day_of_week >= on_day_of_month), (on_day_of_week <= on_day_of_month), or
-    (lastMon) See BasicZoneSpecifier::calcStartDayOfMonth(). Shifts into
+    (lastMon) See BasicZoneProcessor::calcStartDayOfMonth(). Shifts into
     previous or next month can occur.
 
     Return (13, xx) if a shift to the next year occurs

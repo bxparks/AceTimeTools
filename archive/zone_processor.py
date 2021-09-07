@@ -307,7 +307,7 @@ def _to_offset_info(transition: Transition, fold: int) -> OffsetInfo:
     )
 
 
-class ZoneSpecifier:
+class ZoneProcessor:
     """Extract DST transition information for a given ZoneInfo. The
     DST transition information can be retrieved using the following methods:
 
@@ -333,17 +333,17 @@ class ZoneSpecifier:
     init_for_year() for high level explanation of the internal algorithm.
 
     Usage:
-        zone_specifier = ZoneSpecifier(zone_info [, viewing_months, debug])
+        zone_processor = ZoneProcessor(zone_info [, viewing_months, debug])
 
         # Validate matches and transitions
-        zone_specifier.init_for_year(args.year)
-        zone_specifier.print_matches_and_transitions()
+        zone_processor.init_for_year(args.year)
+        zone_processor.print_matches_and_transitions()
 
         # Get OffsetInfo for an epoch_seconds.
-        info = zone_specifier.get_timezone_info_for_seconds(epoch_seconds)
+        info = zone_processor.get_timezone_info_for_seconds(epoch_seconds)
 
         # Get OffsetInfo for a datetime.
-        info = zone_specifier.get_timezone_info_for_datetime(dt)
+        info = zone_processor.get_timezone_info_for_datetime(dt)
 
     Note:
         The viewing_months parameter determines the month interval to use to
@@ -437,7 +437,7 @@ class ZoneSpecifier:
     ) -> Optional[Transition]:
         """Return Transition for the given datetime.
 
-        TODO: Used only in zinfo.py and test_zone_specifier.py. I think this
+        TODO: Used only in zinfo.py and test_zone_processor.py. I think this
         could be replaced by get_timezone_info_for_datetime().
         """
         self.init_for_year(dt.year)
@@ -1131,7 +1131,7 @@ class ZoneSpecifier:
             is_after_first = True
 
         # Finally, fix the last transition's until time
-        (udt, udts, udtu) = ZoneSpecifier._expand_date_tuple(
+        (udt, udts, udtu) = ZoneProcessor._expand_date_tuple(
             transition.until_date_time, transition.offset_seconds,
             transition.delta_seconds)
         transition.until_date_time = udt
@@ -1163,7 +1163,7 @@ class ZoneSpecifier:
                 transition.transition_time,
                 transition.transition_time_s,
                 transition.transition_time_u,
-            ) = ZoneSpecifier._expand_date_tuple(
+            ) = ZoneProcessor._expand_date_tuple(
                 transition.transition_time,
                 prev.offset_seconds,
                 prev.delta_seconds,
@@ -1259,9 +1259,9 @@ class ZoneSpecifier:
         """
         return (
             (prev_era is None
-                or ZoneSpecifier._compare_era_to_year_month(
+                or ZoneProcessor._compare_era_to_year_month(
                     prev_era, until_ym.y, until_ym.M) < 0)
-            and ZoneSpecifier._compare_era_to_year_month(
+            and ZoneProcessor._compare_era_to_year_month(
                 era, start_ym.y, start_ym.M) > 0
         )
 

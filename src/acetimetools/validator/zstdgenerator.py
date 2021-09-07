@@ -5,9 +5,9 @@
 """
 Implements the TestDataGenerator to generate the validation test data using
 pytz. Similar to compare_pytz/tdgenerator.py but depends on the Python
-ZoneSpecifier class (hence the name 'zstdgenerator', 'Zone Specifier Test Data
+ZoneProcessor class (hence the name 'zstdgenerator', 'Zone Specifier Test Data
 Generator') to determine the DST transitions because pytz does not expose that
-information natively. Pulling in ZoneSpecifier also means that it pulls in the
+information natively. Pulling in ZoneProcessor also means that it pulls in the
 ZoneInfo, ZonePolicy and many other related classes through the
 'inline_zone_info' module.
 
@@ -27,8 +27,8 @@ from datetime import tzinfo
 import pytz
 
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
-from acetimetools.zone_processor.zone_specifier import ZoneSpecifier
-from acetimetools.zone_processor.zone_specifier import DateTuple
+from acetimetools.zone_processor.zone_processor import ZoneProcessor
+from acetimetools.zone_processor.zone_processor import DateTuple
 from acetimetools.zone_processor.zone_info_types import ZoneInfo
 from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
 from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
@@ -53,12 +53,12 @@ TestData = Dict[str, List[TestItem]]
 
 class TestDataGenerator:
     """Generate the validation test data using the Transitions determined by
-    ZoneSpecifier and the UTC offsets determined by pytz. The ZoneSpecifier
+    ZoneProcessor and the UTC offsets determined by pytz. The ZoneProcessor
     is used to determine the transitions (because pytz does not provide easy
     access to the list of transitions). Pytz is used to calculate the expected
     UTC offset and datetime components.
 
-    The updated module 'compare_pytz' eliminates the need for ZoneSpecifier and
+    The updated module 'compare_pytz' eliminates the need for ZoneProcessor and
     uses only pytz to extract both the transitions and UTC offsets. The cost is
     that compare_pytz runs a lot slower.
     """
@@ -108,7 +108,7 @@ class TestDataGenerator:
     ) -> Optional[List[TestItem]]:
         """Create the TestItems for a specific zone.
         """
-        zone_specifier = ZoneSpecifier(zone_info)
+        zone_processor = ZoneProcessor(zone_info)
         try:
             tz = pytz.timezone(zone_name)
         except pytz.UnknownTimeZoneError:
@@ -117,7 +117,7 @@ class TestDataGenerator:
             return None
 
         return self._create_transition_test_items(
-            zone_name, tz, zone_specifier)
+            zone_name, tz, zone_processor)
 
     @staticmethod
     def _add_test_item(items_map: Dict[int, TestItem], item: TestItem) -> None:
@@ -141,7 +141,7 @@ class TestDataGenerator:
         self,
         zone_name: str,
         tz: tzinfo,
-        zone_specifier: ZoneSpecifier
+        zone_processor: ZoneProcessor
     ) -> List[TestItem]:
         """Create a TestItem for the tz for each zone, for each year from
         start_year to until_year, exclusive. The following test samples are
@@ -163,15 +163,15 @@ class TestDataGenerator:
         items_map: Dict[int, TestItem] = {}
         for year in range(self.start_year, self.until_year):
             # Skip start_year when viewing months is 36, because it needs data
-            # for (start_year - 3), but ZoneSpecifier won't generate data for
+            # for (start_year - 3), but ZoneProcessor won't generate data for
             # years that old.
             if self.viewing_months == 36 and year == self.start_year:
                 continue
 
             # Add samples just before and just after the DST transition.
-            zone_specifier.init_for_year(year)
-            for transition in zone_specifier.transitions:
-                # Some Transitions from ZoneSpecifier are in previous or post
+            zone_processor.init_for_year(year)
+            for transition in zone_processor.transitions:
+                # Some Transitions from ZoneProcessor are in previous or post
                 # years (e.g. viewing_months = [14, 36]), so skip those.
                 start = transition.start_date_time
                 transition_year = start.y
@@ -238,7 +238,7 @@ class TestDataGenerator:
     ) -> TestItem:
         """Determine the expected date and time components for the given
         'epoch_seconds' for the given 'tz'. The 'epoch_seconds' is the
-        transition time calculated by the ZoneSpecifier class.
+        transition time calculated by the ZoneProcessor class.
 
         Return the TestItem with the following fields:
             epoch: epoch seconds from AceTime epoch (2000-01-01T00:00:00Z)
