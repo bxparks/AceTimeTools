@@ -36,10 +36,7 @@ Flags:
 
     ZoneProcessor:
 
-        --viewing_months
         --debug_specifier
-        --in_place_transitions
-        --optimize_candidates
 
     Validator:
 
@@ -74,12 +71,9 @@ def validate(
     until_year: int,
     validate_buffer_size: bool,
     validate_test_data: bool,
-    viewing_months: int,
     validate_dst_offset: bool,
     debug_validator: bool,
     debug_specifier: bool,
-    in_place_transitions: bool,
-    optimize_candidates: bool,
 ) -> None:
 
     # Set the default to set both --validate_buffer_size and
@@ -91,7 +85,6 @@ def validate(
     validator = Validator(
         zone_infos=zone_infos,
         zone_policies=zone_policies,
-        viewing_months=viewing_months,
         validate_dst_offset=validate_dst_offset,
         debug_validator=debug_validator,
         debug_specifier=debug_specifier,
@@ -99,8 +92,7 @@ def validate(
         year=year,
         start_year=start_year,
         until_year=until_year,
-        in_place_transitions=in_place_transitions,
-        optimize_candidates=optimize_candidates)
+    )
 
     if validate_buffer_size:
         logging.info('======== Validating transition buffer sizes')
@@ -219,22 +211,9 @@ def main() -> None:
 
     # ZoneProcessor flags
     parser.add_argument(
-        '--viewing_months',
-        help='Number of months to use for calculations (13, 14, 36)',
-        type=int,
-        default=14)
-    parser.add_argument(
         '--debug_specifier',
         help='Enable debug output from ZoneProcessor',
         action="store_true")
-    parser.add_argument(
-        '--in_place_transitions',
-        help='Use in-place Transition array to determine Active Transitions',
-        action="store_true")
-    parser.add_argument(
-        '--optimize_candidates',
-        help='Optimize the candidate transitions',
-        action='store_true')
 
     # TestDataGenerator flag.
     #
@@ -367,12 +346,9 @@ def main() -> None:
         until_year=validation_until_year,
         validate_buffer_size=args.validate_buffer_size,
         validate_test_data=args.validate_test_data,
-        viewing_months=args.viewing_months,
         validate_dst_offset=args.validate_dst_offset,
         debug_validator=args.debug_validator,
         debug_specifier=args.debug_specifier,
-        in_place_transitions=args.in_place_transitions,
-        optimize_candidates=args.optimize_candidates,
     )
 
     logging.info('======== Finished processing TZ Data files.')

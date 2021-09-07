@@ -44,7 +44,7 @@ Examples:
     $ ./zinfo.py --zone Australia/Darwin --year 2006
 
     # America/Darwin for the year 2006.
-    $ ./zinfo.py --zone America/Adak --year 2000 --viewing_months 13 --debug
+    $ ./zinfo.py --zone America/Adak --year 2000 --debug
 """
 
 import sys
@@ -63,36 +63,11 @@ def main() -> None:
     # Configure command line flags.
     parser = argparse.ArgumentParser(description='Zone Agent.')
     parser.add_argument(
-        '--viewing_months',
-        help='Number of months to use for calculations (12, 13, 14, 36)',
-        type=int,
-        default=14)
-    parser.add_argument(
         '--transition',
         help='Print the transition instead of timezone info',
         action='store_true')
     parser.add_argument(
         '--debug', help='Print debugging info', action='store_true')
-    parser.add_argument(
-        '--in_place_transitions',
-        help='Use in-place Transition array to determine Active Transitions',
-        action="store_true",
-        default=True)
-    parser.add_argument(
-        '--no_in_place_transitions',
-        help='Disable --in_place_transitions',
-        action="store_false",
-        dest='in_place_transitions')
-    parser.add_argument(
-        '--optimize_candidates',
-        help='Optimize the candidate transitions',
-        action='store_true',
-        default=True)
-    parser.add_argument(
-        '--no_optimize_candidates',
-        help='Disable --optimize_candidates',
-        action='store_false',
-        dest='optimize_candidates')
     parser.add_argument('--zone', help='Name of time zone', required=True)
     parser.add_argument('--year', help='Year of interest', type=int)
     parser.add_argument('--date', help='DateTime of interest')
@@ -110,10 +85,8 @@ def main() -> None:
     # Create the ZoneProcessor for zone
     zone_processor = ZoneProcessor(
         zone_info=zone_info,
-        viewing_months=args.viewing_months,
         debug=args.debug,
-        in_place_transitions=args.in_place_transitions,
-        optimize_candidates=args.optimize_candidates)
+    )
 
     if args.year:
         zone_processor.init_for_year(args.year)

@@ -180,7 +180,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Los_Angeles),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2000)
 
@@ -228,7 +227,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Indiana_Petersburg),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2006)
 
@@ -281,7 +279,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_London),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2000)
 
@@ -329,7 +326,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Winnipeg),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2005)
 
@@ -391,7 +387,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Moscow),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2011)
 
@@ -436,7 +431,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Asia_Famagusta),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2017)
 
@@ -481,7 +475,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Santo_Domingo),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2000)
 
@@ -540,7 +533,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Moncton),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2006)
 
@@ -602,7 +594,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Istanbul),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2015)
 
@@ -671,7 +662,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Dublin),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2000)
 
@@ -720,7 +710,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Pacific_Apia),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2011)
 
@@ -790,7 +779,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Antarctica_Macquarie),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2010)
 
@@ -854,7 +842,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Europe_Simferopol),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2014)
 
@@ -914,7 +901,6 @@ class TestZoneProcessorMatchesAndTransitions(unittest.TestCase):
         """
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_Asia_Kamchatka),
-            viewing_months=14,
         )
         zone_processor.init_for_year(2011)
 
@@ -959,7 +945,6 @@ class TestZoneProcessorGetTransition(unittest.TestCase):
     def test_get_transition_for_datetime(self) -> None:
         zone_processor = ZoneProcessor(
             cast(ZoneInfo, zone_infos.ZONE_INFO_America_Los_Angeles),
-            viewing_months=14,
         )
 
         # Just after a DST transition

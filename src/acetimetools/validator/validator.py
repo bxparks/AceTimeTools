@@ -48,7 +48,6 @@ class Validator:
         self,
         zone_infos: ZoneInfoMap,
         zone_policies: ZonePolicyMap,
-        viewing_months: int,
         validate_dst_offset: bool,
         debug_validator: bool,
         debug_specifier: bool,
@@ -56,8 +55,6 @@ class Validator:
         year: int,
         start_year: int,
         until_year: int,
-        in_place_transitions: bool,
-        optimize_candidates: bool,
     ):
         """
         Args:
@@ -73,12 +70,9 @@ class Validator:
             year: validate only this year
             start_year: start year of validation
             until_year: until year of validation
-            in_place_transitions: see ZoneProcessor.in_place_transitions
-            optimize_candidates: see ZoneProcessor.optimize_candidates
         """
         self.zone_infos = zone_infos
         self.zone_policies = zone_policies
-        self.viewing_months = viewing_months
         self.validate_dst_offset = validate_dst_offset
         self.debug_validator = debug_validator
         self.debug_specifier = debug_specifier
@@ -86,8 +80,6 @@ class Validator:
         self.year = year
         self.start_year = start_year
         self.until_year = until_year
-        self.in_place_transitions = in_place_transitions
-        self.optimize_candidates = optimize_candidates
 
     # The following are public methods.
 
@@ -118,10 +110,8 @@ class Validator:
 
             zone_processor = ZoneProcessor(
                 zone_info=zone_info,
-                viewing_months=self.viewing_months,
                 debug=self.debug_specifier,
-                in_place_transitions=self.in_place_transitions,
-                optimize_candidates=self.optimize_candidates)
+            )
 
             transition_stats[zone_name] = zone_processor.get_buffer_sizes(
                 self.start_year, self.until_year)
@@ -183,10 +173,8 @@ class Validator:
         zone_info = self.zone_infos[zone_name]
         zone_processor = ZoneProcessor(
             zone_info=zone_info,
-            viewing_months=self.viewing_months,
             debug=self.debug_specifier,
-            in_place_transitions=self.in_place_transitions,
-            optimize_candidates=self.optimize_candidates)
+        )
 
         num_errors = 0
         for item in items:

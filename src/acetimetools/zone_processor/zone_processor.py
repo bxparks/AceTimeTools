@@ -354,11 +354,9 @@ class ZoneProcessor:
     at the given epoch_seconds or 'datetime'.
 
     Both get_timezone_info_for_seconds() and get_timezone_info_for_datetime()
-    call init_for_year() using a window size (e.g. 12, 13, 14 or 36 months)
-    around the closest 'year' to the given argument. (The 'closest' year could
-    be (year-1) if the datetime was on Jan 1 of the following year in UTC time).
-    The window size can be specified using the 'viewing_months' parameter in the
-    constructor.
+    call init_for_year() using a window size of 14 months around the closest
+    'year' to the given argument. The 'closest' year could be (year-1) if the
+    datetime was on Jan 1 of the following year in UTC time.
 
     The init_for_year() method calculates the relevant Transitions for the given
     year and caches results. Subsequent queries for different epoch_seconds or
@@ -366,7 +364,7 @@ class ZoneProcessor:
     init_for_year() for high level explanation of the internal algorithm.
 
     Usage:
-        zone_processor = ZoneProcessor(zone_info [, viewing_months, debug])
+        zone_processor = ZoneProcessor(zone_info [, debug])
 
         # Validate matches and transitions
         zone_processor.init_for_year(args.year)
@@ -377,25 +375,12 @@ class ZoneProcessor:
 
         # Get OffsetInfo for a datetime.
         info = zone_processor.get_timezone_info_for_datetime(dt)
-
-    Note:
-        The viewing_months parameter determines the month interval to use to
-        calculate the transitions:
-
-        * 12 = [year-Jan, (year+1)-Jan) (experimental)
-        * 13 = [year-Jan, (year+1)-Feb) (works)
-        * 14 = [(year-1)-Dec, (year+1)-Feb) (works, and well tested)
-        * 36 = [(year-1)-Jan, (year+2)-Jan) (not well tested,
-               seems to mostly work except for 2000)
     """
 
     def __init__(
             self,
             zone_info: ZoneInfo,
-            viewing_months: int = 14,
             debug: bool = False,
-            in_place_transitions: bool = True,
-            optimize_candidates: bool = True,
             use_python_transition: bool = False,
     ):
         """Constructor.
@@ -404,21 +389,11 @@ class ZoneProcessor:
             zone_info (dict): one of the ZONE_INFO_xxx constants from
                 zone_infos.py. It can contain a reference to a zone_policy_data
                 map. We need to convert these into ZoneEra and ZoneRule classes.
-            viewing_months (int): size of the window to consider when
-                determining the DST transitions (default: 14)
             debug (bool): set to True to enable logging
-            in_place_transitions (bool): set to True to use
-                ActiveSelectorInPlace class instead of ActiveSelectorBasic
-                to determine the Transitions which overlap with the time
-                interval specified by MatchingEra
-            optimize_candidates (bool): set to True to use
-                CandidateFinderOptimized class instead of CandidateFinderBasic
-                to obtain the list of candidate Transitions
+            use_python_transition: set True to create Transitions which
+              conform to the Python datetime library
         """
         self.zone_info = zone_info
-        self.viewing_months = viewing_months
-        self.in_place_transitions = in_place_transitions
-        self.optimize_candidates = optimize_candidates
         self.use_python_transition = use_python_transition
 
         # Used by init_*() to indicate the current year of interest.
@@ -592,24 +567,7 @@ class ZoneProcessor:
         ldt = datetime.utcfromtimestamp(
             epoch_seconds + SECONDS_SINCE_UNIX_EPOCH)
 
-        if self.viewing_months < 14:
-            if ldt.month == 1 and ldt.day == 1:
-                year = ldt.year - 1
-            else:
-                year = ldt.year
-        else:
-            # If viewing_months >= 14, then this shift to the nearest whole
-            # year on Jan 1 or Dec 31 does not seem necessary since the unit
-            # tests all pass without this.
-            #
-            # if ldt.month == 12 and ldt.day == 31:
-            #    year = ldt.year + 1
-            # elif ldt.month == 1 and ldt.day == 1:
-            #    year = ldt.year - 1
-            # else:
-            #    year = ldt.year
-
-            year = ldt.year
+        year = ldt.year
 
         self.init_for_year(year)
 
