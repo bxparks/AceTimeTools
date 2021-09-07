@@ -237,8 +237,14 @@ def merge_comments(target: CommentsMap, new: CommentsMap) -> None:
 # Data types used by bufestimator.py
 # -----------------------------------------------------------------------------
 
-# zoneName -> bufSize
-BufSizeMap = Dict[str, int]
+class CountAndYear(NamedTuple):
+    """A tuple that holds a count and the year which it is related to."""
+    number: int
+    year: int
+
+
+# zoneName -> CountAndYear
+BufSizeMap = Dict[str, CountAndYear]
 
 
 class BufSizeInfo(TypedDict):

@@ -26,6 +26,7 @@ from typing import cast
 from typing_extensions import Protocol
 from typing_extensions import TypedDict
 
+from acetimetools.data_types.at_types import CountAndYear
 from .common import MIN_YEAR
 from .common import SECONDS_SINCE_UNIX_EPOCH
 from .common import seconds_to_hms
@@ -62,12 +63,6 @@ class OffsetInfo(NamedTuple):
     dst_offset: int  # seconds
     abbrev: str  # short abbreviations
     fold: int  # same meaning as datetime.fold
-
-
-class CountAndYear(NamedTuple):
-    """A tuple that holds a count and the year which it is related to."""
-    number: int
-    year: int
 
 
 class BufferSizeInfo(NamedTuple):

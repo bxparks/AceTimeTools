@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
+from acetimetools.data_types.at_types import CountAndYear
 from .zone_specifier import ZoneSpecifier
 from .zone_info_types import ZoneInfoMap
 from .zone_info_types import ZonePolicyMap
@@ -52,7 +53,7 @@ class BufSizeEstimator:
 
         # Calculate buffer sizes using a ZoneSpecifier.
         buf_sizes = self.calculate_buf_sizes(zone_infos, zone_policies)
-        max_buf_size = max(buf_sizes.values())
+        max_buf_size = max([cy.number for cy in buf_sizes.values()])
         logging.info('Found max_buffer_size=%d', max_buf_size)
 
         # Sort by zone_name
@@ -82,15 +83,21 @@ class BufSizeEstimator:
             # The TransitionStorage size should be one more than the estimate
             # because TransitionStorage.getFreeAgent() needs one slot even if
             # it's not used.
-            buf_size = buffer_size_info.max_buffer_size.number + 1
+            count_and_year = CountAndYear(
+                buffer_size_info.max_buffer_size.number + 1,
+                buffer_size_info.max_buffer_size.year,
+            )
 
             # The estimate is off for Asia/Atyrau. ZoneSpecifier returns
             # max_buf_size[0]==4 which means 5 should be enough, but
             # TransitionStorage.getHighWater() says that 6 is required. Not sure
             # why.
             if zone_name == 'Asia/Atyrau':
-                buf_size += 1
+                count_and_year = CountAndYear(
+                    count_and_year.number + 1,
+                    count_and_year.year,
+                )
 
-            buf_sizes[zone_name] = buf_size
+            buf_sizes[zone_name] = count_and_year
 
         return buf_sizes

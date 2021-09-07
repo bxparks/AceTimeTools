@@ -731,7 +731,7 @@ extern const {scope}::ZoneInfo kZone{zoneNormalizedName}; // {zoneFullName}
 const uint32_t kZoneId{zoneNormalizedName} = 0x{zoneId:08x}; // {zoneFullName}
 """
         ZONE_INFOS_H_BUF_SIZE = """\
-const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  // {zoneFullName}
+const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  // {zoneFullName} in {bufYear}
 """
         info_items = ''
         info_zone_ids = ''
@@ -751,7 +751,8 @@ const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  // {zoneFullName}
             info_buf_sizes += ZONE_INFOS_H_BUF_SIZE.format(
                 zoneNormalizedName=normalized_name,
                 zoneFullName=zone_name,
-                bufSize=self.buf_sizes[zone_name],
+                bufSize=self.buf_sizes[zone_name].number,
+                bufYear=self.buf_sizes[zone_name].year,
             )
 
         ZONE_INFOS_H_LINK_ITEM = """\
