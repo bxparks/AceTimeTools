@@ -50,7 +50,7 @@ class Validator:
         zone_policies: ZonePolicyMap,
         validate_dst_offset: bool,
         debug_validator: bool,
-        debug_specifier: bool,
+        debug_processor: bool,
         zone_name: str,
         year: int,
         start_year: int,
@@ -65,7 +65,7 @@ class Validator:
             validate_dst_offset: validate DST offset against Python in
                 addition to total UTC offset
             debug_validator: enable debugging output for Validator
-            debug_specifier: enable debugging output for ZoneProcessor
+            debug_processor: enable debugging output for ZoneProcessor
             zone_name: validate only this zone
             year: validate only this year
             start_year: start year of validation
@@ -75,7 +75,7 @@ class Validator:
         self.zone_policies = zone_policies
         self.validate_dst_offset = validate_dst_offset
         self.debug_validator = debug_validator
-        self.debug_specifier = debug_specifier
+        self.debug_processor = debug_processor
         self.zone_name = zone_name
         self.year = year
         self.start_year = start_year
@@ -110,7 +110,7 @@ class Validator:
 
             zone_processor = ZoneProcessor(
                 zone_info=zone_info,
-                debug=self.debug_specifier,
+                debug=self.debug_processor,
             )
 
             transition_stats[zone_name] = zone_processor.get_buffer_sizes(
@@ -173,7 +173,7 @@ class Validator:
         zone_info = self.zone_infos[zone_name]
         zone_processor = ZoneProcessor(
             zone_info=zone_info,
-            debug=self.debug_specifier,
+            debug=self.debug_processor,
         )
 
         num_errors = 0
@@ -192,7 +192,7 @@ class Validator:
                 f'unix {unix_seconds}'
             )
 
-            if self.debug_specifier:
+            if self.debug_processor:
                 logging.info(header)
 
             info = zone_processor.get_timezone_info_for_seconds(item.epoch)
@@ -213,12 +213,12 @@ class Validator:
                 f'Expected({utc_string})'
             )
             if is_matched:
-                if self.debug_specifier:
+                if self.debug_processor:
                     logging.info(body)
                     zone_processor.print_matches_and_transitions()
             else:
                 num_errors += 1
-                if not self.debug_specifier:
+                if not self.debug_processor:
                     logging.error(header)
                 logging.error(body)
                 zone_processor.print_matches_and_transitions()

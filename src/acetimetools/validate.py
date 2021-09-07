@@ -36,7 +36,7 @@ Flags:
 
     ZoneProcessor:
 
-        --debug_specifier
+        --debug_processor
 
     Validator:
 
@@ -73,7 +73,7 @@ def validate(
     validate_test_data: bool,
     validate_dst_offset: bool,
     debug_validator: bool,
-    debug_specifier: bool,
+    debug_processor: bool,
 ) -> None:
 
     # Set the default to set both --validate_buffer_size and
@@ -87,7 +87,7 @@ def validate(
         zone_policies=zone_policies,
         validate_dst_offset=validate_dst_offset,
         debug_validator=debug_validator,
-        debug_specifier=debug_specifier,
+        debug_processor=debug_processor,
         zone_name=zone,
         year=year,
         start_year=start_year,
@@ -211,7 +211,7 @@ def main() -> None:
 
     # ZoneProcessor flags
     parser.add_argument(
-        '--debug_specifier',
+        '--debug_processor',
         help='Enable debug output from ZoneProcessor',
         action="store_true")
 
@@ -348,7 +348,7 @@ def main() -> None:
         validate_test_data=args.validate_test_data,
         validate_dst_offset=args.validate_dst_offset,
         debug_validator=args.debug_validator,
-        debug_specifier=args.debug_specifier,
+        debug_processor=args.debug_processor,
     )
 
     logging.info('======== Finished processing TZ Data files.')
