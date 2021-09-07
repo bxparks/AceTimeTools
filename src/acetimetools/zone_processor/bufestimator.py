@@ -2,12 +2,12 @@
 #
 # MIT License
 
+from typing import List, Tuple
 import logging
 from collections import OrderedDict
 
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeInfo, BufSizeMap
-from acetimetools.data_types.at_types import CountAndYear
 from .zone_processor import ZoneProcessor
 from .zone_info_types import ZoneInfoMap
 from .zone_info_types import ZonePolicyMap
@@ -51,10 +51,23 @@ class BufSizeEstimator:
             'InlinedZoneInfo: Zones %d; Policies %d',
             len(zone_infos), len(zone_policies))
 
-        # Calculate buffer sizes using a ZoneProcessor.
+        # Calculate expected buffer sizes for each zone using a ZoneProcessor.
         buf_sizes = self.calculate_buf_sizes(zone_infos, zone_policies)
+
+        # Determine the maximum buffer size, the zone(s) which generate that
+        # size, and the year which that occurs.
         max_buf_size = max([cy.number for cy in buf_sizes.values()])
+        # item[0]: str = key = zone name
+        # item[1]: CountAndYear = max buffer size and year
+        max_buf_zones: List[Tuple[str, int]] = [
+            (item[0], item[1].year) for item in filter(
+                lambda item: item[1].number == max_buf_size,
+                buf_sizes.items()
+            )
+        ]
         logging.info('Found max_buffer_size=%d', max_buf_size)
+        for item in max_buf_zones:
+            logging.info('  %s in %d', item[0], item[1])
 
         # Sort by zone_name
         buf_sizes = OrderedDict(sorted(buf_sizes.items()))
@@ -69,6 +82,7 @@ class BufSizeEstimator:
         zone_infos: ZoneInfoMap,
         zone_policies: ZonePolicyMap,
     ) -> BufSizeMap:
+
         buf_sizes: BufSizeMap = {}
         for zone_name, zone_info in zone_infos.items():
             zone_processor = ZoneProcessor(zone_info)
@@ -80,14 +94,7 @@ class BufSizeEstimator:
                 until_year=self.until_year,
             )
 
-            # The TransitionStorage size should be one more than the estimate
-            # because TransitionStorage.getFreeAgent() needs one slot even if
-            # it's not used.
-            count_and_year = CountAndYear(
-                buffer_size_info.max_buffer_size.number,
-                buffer_size_info.max_buffer_size.year,
-            )
-
-            buf_sizes[zone_name] = count_and_year
+            # Currently, we just care about the max buffer size.
+            buf_sizes[zone_name] = buffer_size_info.max_buffer_size
 
         return buf_sizes
