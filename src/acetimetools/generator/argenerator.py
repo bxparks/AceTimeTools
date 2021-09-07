@@ -731,7 +731,8 @@ extern const {scope}::ZoneInfo kZone{zoneNormalizedName}; // {zoneFullName}
 const uint32_t kZoneId{zoneNormalizedName} = 0x{zoneId:08x}; // {zoneFullName}
 """
         ZONE_INFOS_H_BUF_SIZE = """\
-const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  // {zoneFullName} in {bufYear}
+const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  \
+// {zoneFullName} in {bufYear}
 """
         info_items = ''
         info_zone_ids = ''
