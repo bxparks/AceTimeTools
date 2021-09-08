@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
-from acetimetools.acetz import gettz as agettz, acetz
+from acetimetools.zone_processor.acetz import gettz as agettz, acetz
 
 
 # Enable logging during unittests.

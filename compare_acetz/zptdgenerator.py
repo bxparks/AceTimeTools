@@ -15,8 +15,8 @@ from typing import cast
 import logging
 from datetime import tzinfo, datetime, timezone, timedelta
 
-from acetimetools import acetz
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
+from acetimetools.zone_processor import acetz
 from acetimetools.zone_processor.zone_processor import ZoneProcessor
 from acetimetools.zone_processor.zone_processor import DateTuple
 from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
