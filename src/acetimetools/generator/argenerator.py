@@ -162,16 +162,20 @@ namespace {dbNamespace} {{
 
 //---------------------------------------------------------------------------
 // Supported zone policies: {numPolicies}
-//
+//---------------------------------------------------------------------------
+
 {policyItems}
 
 //---------------------------------------------------------------------------
 // Unsupported zone policies: {numRemovedPolicies}
-//
+//---------------------------------------------------------------------------
+
 {removedPolicyItems}
 
+//---------------------------------------------------------------------------
 // Notable zone policies: {numNotablePolicies}
-//
+//---------------------------------------------------------------------------
+
 {notablePolicyItems}
 
 }}
@@ -509,6 +513,8 @@ extern const internal::ZoneContext kZoneContext;
 
 {infoItems}
 
+// Zone Ids
+
 {zoneIds}
 
 //---------------------------------------------------------------------------
@@ -517,14 +523,14 @@ extern const internal::ZoneContext kZoneContext;
 
 {linkItems}
 
+// Zone Ids
+
 {linkIds}
 
 //---------------------------------------------------------------------------
-// Estimated size of the Transition buffer in ExtendedZoneProcessor for each
-// zone. Used only in the AceTimeValidation/Extended*Test tests for
-// ExtendedZoneProcessor. This used to be included in the ZoneInfo data struct
-// above, but it is used only for tests, so pulling them out to these constants
-// means that they take up no permanent storage space.
+// Maximum size of the Transition buffer in ExtendedZoneProcessor for each zone
+// over the given years. Used only in the AceTimeValidation/Extended*Test tests
+// for ExtendedZoneProcessor.
 //---------------------------------------------------------------------------
 
 {bufSizes}

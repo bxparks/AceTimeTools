@@ -39,8 +39,10 @@ class PythonGenerator:
 #
 # DO NOT EDIT
 
-# numPolicies: {numPolicies}
+#---------------------------------------------------------------------------
+# Supported zone policies: {numPolicies}
 # numRules: {numRules}
+#---------------------------------------------------------------------------
 
 {policyItems}
 
@@ -51,21 +53,15 @@ ZONE_POLICY_MAP = {{
 }}
 
 #---------------------------------------------------------------------------
+# Unsupported zone policies: {numRemovedPolicies}
+#---------------------------------------------------------------------------
 
-# The following zone policies are not supported in the current version of
-# AceTime.
-#
-# numPolicies: {numRemovedPolicies}
-#
 {removedPolicyItems}
 
 #---------------------------------------------------------------------------
+# Notable zone policies: {numNotablePolicies}
+#---------------------------------------------------------------------------
 
-# The following zone policies may have inaccuracies due to the following
-# reasons:
-#
-# numPolicies: {numNotablePolicies}
-#
 {notablePolicyItems}
 
 """
@@ -127,8 +123,10 @@ ZONE_POLICY_{policyName} = {{
 
 from .zone_policies import *
 
-# numInfos: {numInfos}
+#---------------------------------------------------------------------------
+# Supported zones: {numInfos}
 # numEras: {numEras}
+#---------------------------------------------------------------------------
 
 {infoItems}
 
@@ -139,19 +137,15 @@ ZONE_INFO_MAP = {{
 }}
 
 #---------------------------------------------------------------------------
+# Unsuported zones: {numRemovedInfos}
+#---------------------------------------------------------------------------
 
-# The following zones are not supported in the current version of AceTime.
-#
-# numInfos: {numRemovedInfos}
-#
 {removedInfoItems}
 
 #---------------------------------------------------------------------------
+# Notable zones: {numNotableInfos}
+#---------------------------------------------------------------------------
 
-# The following zones may have inaccuracies due to the following reasons:
-#
-# numInfos: {numNotableInfos}
-#
 {notableInfoItems}
 """
 
