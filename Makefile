@@ -6,8 +6,12 @@
 
 all: mypy flake8 tests
 
+# The '../AceTimePython/src/acetime' is added because MyPy complains about not
+# finding the typing info when AceTimePython is installed using 'pip3 install'.
+# Seems like typing info is not being installed by pip3.
 mypy:
-	mypy --strict src tests compare_acetz compare_pytz compare_dateutil
+	mypy --strict src tests compare_acetz compare_pytz compare_dateutil \
+		../AceTimePython/src/acetime
 
 tests:
 	python3 -m unittest

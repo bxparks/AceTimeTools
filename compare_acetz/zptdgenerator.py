@@ -15,12 +15,13 @@ from typing import cast
 import logging
 from datetime import tzinfo, datetime, timezone, timedelta
 
+import acetime.version
+import acetime.acetz
+from acetime.zone_processor import ZoneProcessor
+from acetime.zone_processor import DateTuple
+from acetime.zone_info_types import ZoneInfoMap
+from acetime.zonedbpy.zone_infos import ZONE_INFO_MAP
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
-from acetimetools.zone_processor import acetz
-from acetimetools.zone_processor.zone_processor import ZoneProcessor
-from acetimetools.zone_processor.zone_processor import DateTuple
-from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
-from acetimetools.zonedbpy.zone_infos import ZONE_INFO_MAP
 from acetimetools.data_types.validation_types import (
     TestItem, TestData, ValidationData
 )
@@ -59,7 +60,7 @@ class TestDataGenerator:
             'start_year': self.start_year,
             'until_year': self.until_year,
             'source': 'acetz',
-            'version': str(acetz.__version__),
+            'version': str(acetime.version.__version__),
             'tz_version': 'unknown',
             'has_valid_abbrev': True,
             'has_valid_dst': True,
@@ -78,7 +79,7 @@ class TestDataGenerator:
             logging.error(f"Zone '{zone_name}' not found in acetz package")
             return None
 
-        tz = acetz.gettz(zone_name)
+        tz = acetime.acetz.gettz(ZONE_INFO_MAP, zone_name)
         zone_processor = ZoneProcessor(zone_info)
         return self._create_transition_test_items(
             zone_name, tz, zone_processor)

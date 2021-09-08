@@ -9,8 +9,8 @@ from collections import OrderedDict
 
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeMap, CountAndYear
-from .zone_processor import ZoneProcessor
-from .zone_info_types import ZoneInfoMap
+from acetime.zone_processor import ZoneProcessor
+from acetime.zone_info_types import ZoneInfoMap
 from .zone_info_inliner import ZoneInfoInliner
 
 

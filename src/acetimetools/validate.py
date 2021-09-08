@@ -53,12 +53,12 @@ Examples:
 import argparse
 import logging
 
+from acetime.zone_info_types import ZoneInfoMap
+from acetime.zone_info_types import ZonePolicyMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.zone_processor.zone_info_inliner import ZoneInfoInliner
-from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
-from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
 from acetimetools.validator.validator import Validator
 
 

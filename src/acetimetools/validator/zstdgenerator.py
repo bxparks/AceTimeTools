@@ -26,12 +26,12 @@ import datetime
 from datetime import tzinfo
 import pytz
 
-from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
-from acetimetools.zone_processor.zone_processor import ZoneProcessor
-from acetimetools.zone_processor.zone_processor import DateTuple
-from acetimetools.zone_processor.zone_info_types import ZoneInfo
-from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
-from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
+from acetime.common import SECONDS_SINCE_UNIX_EPOCH
+from acetime.zone_processor import ZoneProcessor
+from acetime.zone_processor import DateTuple
+from acetime.zone_info_types import ZoneInfo
+from acetime.zone_info_types import ZoneInfoMap
+from acetime.zone_info_types import ZonePolicyMap
 
 
 class TestItem(NamedTuple):
