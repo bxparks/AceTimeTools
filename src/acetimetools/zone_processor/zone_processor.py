@@ -306,13 +306,13 @@ class TransitionStorage:
         Max gives the size of stack.
         """
         self.index_free = 0
-        self.index_max = 0  # index just after the free pool, i.e. max buf size
+        self.index_beyond = 0  # index beyond the free pool, i.e. max buf size
 
     def push_transitions(self, delta: int) -> None:
         """Push imaginary Transitions of size 'delta' into the stack."""
         self.index_free += delta
-        if self.index_free > self.index_max:
-            self.index_max = self.index_free
+        if self.index_free > self.index_beyond:
+            self.index_beyond = self.index_free
 
     def pop_transitions(self, delta: int) -> None:
         """Remove imaginary Transitions of size 'delta' from stack."""
@@ -550,7 +550,7 @@ class ZoneProcessor:
                 max_actives = CountAndYear(transition_count, year)
 
             # Max size of the transition buffer.
-            buffer_size = self.transition_storage.index_max
+            buffer_size = self.transition_storage.index_beyond
             if buffer_size > max_buffer_size.number:
                 max_buffer_size = CountAndYear(buffer_size, year)
 
@@ -861,7 +861,7 @@ class ZoneProcessor:
 
     def print_matches_and_transitions(self) -> None:
         logging.info('---- Buffer Size')
-        logging.info('Max: %s', self.transition_storage.index_max)
+        logging.info('Max: %s', self.transition_storage.index_beyond)
         logging.info('---- Matches')
         for m in self.matches:
             logging.info(m)
