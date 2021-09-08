@@ -57,8 +57,8 @@ from typing_extensions import Protocol
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import create_zone_info_database
-from acetimetools.data_types.at_types import BufSizeInfo
 from acetimetools.zone_processor.bufestimator import BufSizeEstimator
+from acetimetools.zone_processor.bufestimator import calculate_max_buf_size
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
@@ -69,9 +69,8 @@ from acetimetools.generator.jsongenerator import JsonGenerator
 
 
 # The value of `ExtendedZoneProcessor.kMaxTransitions` which determines the
-# buffer size in the TransitionStorage class. The value of
-# BufSizeInfo['max_buf_size'] calculated by BufSizeEstimator must be equal or
-# smaller than this constant.
+# buffer size in the TransitionStorage class. The value returned by
+# calculate_max_buf_size() must be equal or smaller than this constant.
 EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS = 8
 
 
@@ -392,12 +391,13 @@ def main() -> None:
         start_year=args.start_year,
         until_year=args.until_year,
     )
-    buf_size_info: BufSizeInfo = estimator.estimate()
+    buf_size_map = estimator.calculate_buf_size_map()
+    max_buf_size = calculate_max_buf_size(buf_size_map)
 
     # Check if the estimated buffer size is too big
-    if buf_size_info['max_buf_size'] > EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS:
+    if max_buf_size > EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS:
         msg = (
-            f"Max buffer size={buf_size_info['max_buf_size']} "
+            f"Max buffer size={max_buf_size} "
             f"is larger than ExtendedZoneProcessor.kMaxTransitions="
             f"{EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS}"
         )
@@ -418,7 +418,8 @@ def main() -> None:
         delta_granularity=delta_granularity,
         strict=args.strict,
         tresult=tresult,
-        buf_size_info=buf_size_info,
+        buf_size_map=buf_size_map,
+        max_buf_size=max_buf_size,
     )
 
     if args.action == 'zonedb':

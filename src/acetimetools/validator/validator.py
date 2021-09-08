@@ -10,7 +10,7 @@ TODO: Should this be rewritten as a python test? If this is not run in a
 continuous integration pipeline, it's too easy to bitrot.
 """
 
-from typing import List, Dict
+from typing import List
 import logging
 from datetime import datetime
 
@@ -19,7 +19,6 @@ from acetimetools.zone_processor.zone_info_types import ZoneInfoMap
 from acetimetools.zone_processor.zone_info_types import ZonePolicyMap
 from acetimetools.zone_processor.zone_processor import ZoneProcessor
 from acetimetools.zone_processor.zone_processor import to_utc_string
-from acetimetools.zone_processor.zone_processor import BufferSizeInfo
 from .zstdgenerator import TestDataGenerator
 from .zstdgenerator import TestData
 from .zstdgenerator import TestItem
@@ -30,9 +29,6 @@ class Validator:
     as extracted and transformed by Extractor and Transformer. Provides
     2 validation methods:
 
-        * validate_buffer_size(): to determine the sizes of various internal
-          buffers using the ZoneProcessor. The resulting buffer size gives
-          insights into the corresponding buffer sizes of the C++ classes.
         * validate_test_data(): to compare the DST transitions between
           those determined by pztz (through TestDataGenerator) and those
           determined by ZoneProcessor
@@ -40,7 +36,6 @@ class Validator:
     Usage:
         # For validation against pytz golden test data
         validator = Validator(zone_infos, zone_policies, ...)
-        validator.validate_buffer_size()
         validator.validate_test_data()
     """
 
@@ -82,55 +77,6 @@ class Validator:
         self.until_year = until_year
 
     # The following are public methods.
-
-    def validate_buffer_size(self) -> None:
-        """Find the maximum number of actual transitions and the maximum number
-        of candidate transitions required for each zone, across a range of
-        years.
-        """
-        # map of {zoneName -> (numTransitions, year)}
-        transition_stats: Dict[str, BufferSizeInfo] = {}
-
-        # If 'self.year' is defined, clobber the range of validation years.
-        if self.year is not None:
-            self.start_year = self.year
-            self.until_year = self.year + 1
-        logging.info(
-            'Calculating transitions from [%s, %s)',
-            self.start_year,
-            self.until_year,
-        )
-
-        # Calculate the buffer sizes for every Zone in zone_infos.
-        for zone_name, zone_info in sorted(self.zone_infos.items()):
-            if self.zone_name and zone_name != self.zone_name:
-                continue
-            if self.debug_validator:
-                logging.info('Validating zone %s', zone_name)
-
-            zone_processor = ZoneProcessor(
-                zone_info=zone_info,
-                debug=self.debug_processor,
-            )
-
-            transition_stats[zone_name] = zone_processor.get_buffer_sizes(
-                self.start_year, self.until_year)
-
-        logging.info('Zone Name: #NumTransitions (year); #MaxBufSize (year)')
-        transition_stats_by_descending_count = sorted(
-            transition_stats.items(),
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        for zone_name, count_record in transition_stats_by_descending_count:
-            logging.info(
-                '{zone_name}: %d (%04d); %d (%04d)',
-                zone_name,
-                count_record.max_actives.count,
-                count_record.max_actives.year,
-                count_record.max_buffer_size.count,
-                count_record.max_buffer_size.year,
-            )
 
     def validate_test_data(self) -> None:
         """Compare Python and AceTime offsets by generating TestDataGenerator.

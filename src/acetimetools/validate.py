@@ -69,18 +69,10 @@ def validate(
     year: int,
     start_year: int,
     until_year: int,
-    validate_buffer_size: bool,
-    validate_test_data: bool,
     validate_dst_offset: bool,
     debug_validator: bool,
     debug_processor: bool,
 ) -> None:
-
-    # Set the default to set both --validate_buffer_size and
-    # --validate_test_data if neither flags are given explicitly.
-    if not validate_buffer_size and not validate_test_data:
-        validate_buffer_size = True
-        validate_test_data = True
 
     validator = Validator(
         zone_infos=zone_infos,
@@ -94,13 +86,8 @@ def validate(
         until_year=until_year,
     )
 
-    if validate_buffer_size:
-        logging.info('======== Validating transition buffer sizes')
-        validator.validate_buffer_size()
-
-    if validate_test_data:
-        logging.info('======== Validating test data')
-        validator.validate_test_data()
+    logging.info('======== Validating test data')
+    validator.validate_test_data()
 
 
 def main() -> None:
@@ -191,14 +178,6 @@ def main() -> None:
         help='Year to validate (default: start_year, until_year)',
         type=int,
     )
-    parser.add_argument(
-        '--validate_buffer_size',
-        help='Validate the transition buffer size',
-        action="store_true")
-    parser.add_argument(
-        '--validate_test_data',
-        help='Validate the TestDataGenerator with pytz',
-        action="store_true")
     parser.add_argument(
         '--validate_dst_offset',
         # Not enabled by default because pytz DST seems to be buggy.
@@ -344,8 +323,6 @@ def main() -> None:
         year=args.year,
         start_year=validation_start_year,
         until_year=validation_until_year,
-        validate_buffer_size=args.validate_buffer_size,
-        validate_test_data=args.validate_test_data,
         validate_dst_offset=args.validate_dst_offset,
         debug_validator=args.debug_validator,
         debug_processor=args.debug_processor,

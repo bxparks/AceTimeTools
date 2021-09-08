@@ -247,12 +247,6 @@ class CountAndYear(NamedTuple):
 BufSizeMap = Dict[str, CountAndYear]
 
 
-class BufSizeInfo(TypedDict):
-    """Return type of BufSizeEstimator.estimate()."""
-    buf_sizes: BufSizeMap
-    max_buf_size: int  # maximum of all bufSize
-
-
 # -----------------------------------------------------------------------------
 # The master ZoneInfo database which can be rendered into different forms by
 # various generators (e.g. JSON, or Arduino C++).
@@ -316,7 +310,8 @@ def create_zone_info_database(
     delta_granularity: int,
     strict: bool,
     tresult: TransformerResult,
-    buf_size_info: BufSizeInfo,
+    buf_size_map: BufSizeMap,
+    max_buf_size: int,
 ) -> ZoneInfoDatabase:
     """Return an instance of ZoneInfoDatabase from the various ingrediants."""
 
@@ -350,8 +345,8 @@ def create_zone_info_database(
         'notable_policies': _sort_comments(tresult.notable_policies),
 
         # Data from BufSizeEstimator
-        'buf_sizes': buf_size_info['buf_sizes'],
-        'max_buf_size': buf_size_info['max_buf_size'],
+        'buf_sizes': buf_size_map,
+        'max_buf_size': max_buf_size,
 
         # Data from ArduinoTransformer
         'zone_ids': tresult.zone_ids,

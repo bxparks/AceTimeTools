@@ -56,36 +56,36 @@ Python packages     Python files/classes/data
                       TZDB files
   .------>                |
   |                       v
-extractor            extractor.Extractor.parse()
+extractor            Extractor.parse()
   |                       |     (PoliciesMap, ZonesMap, LinksMap)
   |                       |
   +------>                v     (TransformerResult)
-  |                 transformer.Transformer.transform()
+  |                 Transformer.transform()
   |                       |
   |                       |     (TransformerResult)
 transformer               v
-  |                 artransformer.ArduinoTransformer.transform()
+  |                 ArduinoTransformer.transform()
   |                       | \   (TransformerResult)
   +------>                |  \
   |                       |   v     (ZonesMap, PoliciesMap)
-  |                       |  bufestimator.BufSizeEstimator.estimate()
-  |                       |        \
-  |                       |         v    (ZonesMap, PoliciesMap)
-  |                       |  inline_zone_info.ZoneInfoInliner.generate_zonedb()
-  |                       |          \      (ZoneInfoMap, ZonePolicyMap)
-  |                       |           v
-  |                       |  bufestimator.BufSizeEstimator.calculate_buf_sizes()
-  |                       |                \
-  |                       |                 v   (ZoneInfoMap)
-zone_processor            |              zone_processor.get_buffer_sizes()
-  |                       |                 /   (BufferSizeInfo)
-  |                       |                /
-  |                       |               v  (BufSizeMap)
-  |                       |  bufestimator.BufSizeEstimator.estimate()
-  |                       |       /   (BufSizeInfo)
-  +------>                |      /
-  |                       v     v
-  |             at_types.create_zone_info_database()
+  |                       |  BufSizeEstimator.calculate_buf_size_map()
+  |                       |                 |
+  |                       |                 v    (ZonesMap, PoliciesMap)
+  |                       |         ZoneInfoInliner.generate_zonedb()
+  |                       |                 |    (ZoneInfoMap, ZonePolicyMap)
+zone_processor            |                 v
+  |                       |     BufSizeEstimator._calculate_buf_sizes_per_zone()
+  |                       |           /     \
+  |                       |          /       v
+  |                       |         /       ZoneProcessor.get_buffer_sizes()
+  |                       |        /        /
+  |                       |       /        v  (BufSizeMap)
+  |                       |      /  BufSizeEstimator.calculate_max_buf_size()
+  |                       |     /      / (int)
+  |                       |    /      /
+  +------>                |   /      /
+  |                       v  v      v
+  |             create_zone_info_database()
 data_types                |     (ZoneInfoDatabase)
   |                       v
   |                ZoneInfoDatabase

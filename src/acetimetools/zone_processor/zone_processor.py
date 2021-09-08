@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 from typing import Union
 from typing import cast
 
-from acetimetools.data_types.at_types import CountAndYear
 from .common import MIN_YEAR
 from .common import SECONDS_SINCE_UNIX_EPOCH
 from .common import seconds_to_hms
@@ -63,11 +62,11 @@ class OffsetInfo(NamedTuple):
 
 
 class BufferSizeInfo(NamedTuple):
-    """A tuple containings the maximum active transitions and the year which
-    that occurred, and the max_buffer_size of TransitionStorage and its year.
+    """A tuple containings the number of active transitions and the current
+    buffer_size of TransitionStorage.
     """
-    max_actives: CountAndYear
-    max_buffer_size: CountAndYear
+    active_size: int
+    buffer_size: int
 
 
 ACETIME_EPOCH = datetime(2000, 1, 1)  # in UTC
@@ -529,34 +528,13 @@ class ZoneProcessor:
         if self.debug:
             print_transitions(self.transitions)
 
-    def get_buffer_sizes(
-        self,
-        start_year: int,
-        until_year: int,
-    ) -> BufferSizeInfo:
-        """Find the maximum number of actual transitions and the maximum number
-        of candidate transitions across the given start_year and until_year.
-        This is useful for determining that buffer size of the C++ version
-        of this code which uses static sizes for the Transition buffers.
+    def get_buffer_sizes(self) -> BufferSizeInfo:
+        """Return the number of active transitions and the transition buffer
+        size that was required to obtain them.
         """
-        max_actives = CountAndYear(0, 0)
-        max_buffer_size = CountAndYear(0, 0)
-        for year in range(start_year, until_year):
-            self.init_for_year(year)
-
-            # Number of active transitions.
-            transition_count = len(self.transitions)
-            if transition_count > max_actives.number:
-                max_actives = CountAndYear(transition_count, year)
-
-            # Max size of the transition buffer.
-            buffer_size = self.transition_storage.index_beyond
-            if buffer_size > max_buffer_size.number:
-                max_buffer_size = CountAndYear(buffer_size, year)
-
         return BufferSizeInfo(
-            max_actives=max_actives,
-            max_buffer_size=max_buffer_size,
+            active_size=len(self.transitions),
+            buffer_size=self.transition_storage.index_beyond,
         )
 
     # The following methods are designed to be used internally.
