@@ -45,8 +45,6 @@ class TestDataGenerator:
         self.sampling_interval = timedelta(hours=sampling_interval)
         self.zone_infos = zone_infos
 
-        self.viewing_months = 14
-
     def create_test_data(self, zones: List[str]) -> None:
         test_data: TestData = {}
         for zone_name in zones:
@@ -91,8 +89,12 @@ class TestDataGenerator:
         zone_processor: ZoneProcessor
     ) -> List[TestItem]:
         """Create a TestItem for the tz for each zone, for each year from
-        start_year to until_year, exclusive. The following test samples are
-        created:
+        start_year to until_year, exclusive. The 'zone_processor' object is used
+        as a shortcut to generate the list of transitions, so it needs to be a
+        different object than the zone processor embedded inside the 'tz'
+        object.
+
+        The following test samples are created:
 
         * One test point for each month, on the first of the month.
         * One test point for Dec 31, 23:00 for each year.
@@ -109,27 +111,23 @@ class TestDataGenerator:
         """
         items_map: Dict[int, TestItem] = {}
         for year in range(self.start_year, self.until_year):
-            # Skip start_year when viewing months is 36, because it needs data
-            # for (start_year - 3), but ZoneProcessor won't generate data for
-            # years that old.
-            if self.viewing_months == 36 and year == self.start_year:
-                continue
 
             # Add samples just before and just after the DST transition.
             zone_processor.init_for_year(year)
             for transition in zone_processor.transitions:
-                # Some Transitions from ZoneProcessor are in previous or post
-                # years (e.g. viewing_months = [14, 36]), so skip those.
+                # Skip if the start year of the Transition does not match the
+                # year of interest. This may happen since we use generate
+                # transitions over a 14-month interval.
                 start = transition.start_date_time
                 transition_year = start.y
                 if transition_year != year:
                     continue
 
-                # If viewing_months== (13 or 36), don't look at Transitions at
-                # the beginning of the year since those have been already added.
-                if self.viewing_months in [13, 36]:
-                    if start.M == 1 and start.d == 1 and start.ss == 0:
-                        continue
+                # Skip if the UTC year bleed under or over the boundaries.
+                if transition.transition_time_u.y < self.start_year:
+                    continue
+                if transition.transition_time_u.y >= self.until_year:
+                    continue
 
                 epoch_seconds = transition.start_epoch_second
 
