@@ -72,6 +72,13 @@ def main() -> None:
         help='Ignore the --blacklist flag, useful for debugging',
     )
 
+    # Skip validation of bufSize.
+    parser.add_argument(
+        '--skip_validation_buf_size',
+        action='store_true',
+        help='Skip validation of TransitionStorage buffer size',
+    )
+
     # Whether to use a zoneId or zoneInfo as the zone key.
     parser.add_argument(
         '--zone_key_type',
@@ -124,6 +131,7 @@ def main() -> None:
         db_namespace=args.db_namespace,
         validation_data=validation_data,
         blacklist=blacklist,
+        skip_validation_buf_size=args.skip_validation_buf_size,
         zone_key_type=args.zone_key_type,
         test_class=args.test_class,
         test_class_include_dir=args.test_class_include_dir,

@@ -53,6 +53,7 @@ class ArduinoValidationGenerator:
         db_namespace: str,
         validation_data: ValidationData,
         blacklist: Dict[str, str],
+        skip_validation_buf_size: bool,
         zone_key_type: str,
         test_class: str,
         test_class_include_dir: str,
@@ -62,6 +63,7 @@ class ArduinoValidationGenerator:
         self.db_namespace = db_namespace
         self.validation_data = validation_data
         self.blacklist = blacklist
+        self.skip_validation_buf_size = skip_validation_buf_size,
         self.zone_key_type = zone_key_type
         self.test_class = test_class
         self.test_class_include_dir = test_class_include_dir
@@ -274,6 +276,7 @@ using namespace ace_time::{self.db_namespace};
                 has_valid_dst,
                 self.blacklist.get(zone_name),
             )
+
             (
                 abbrev_validation_scope,
                 abbrev_validation_comment,
@@ -288,7 +291,20 @@ using namespace ace_time::{self.db_namespace};
                 else f'0x{hash_name(zone_name):08x}'
             )
 
-            test_case = f"""\
+            if self.skip_validation_buf_size:
+                test_case = f"""\
+testF({self.test_class}, {normalized_name}) {{
+  assertValid(
+    {zone_key},
+    &kValidationData{normalized_name},
+    {dst_validation_scope} /*dstValidationScope{dst_validation_comment}*/,
+    {abbrev_validation_scope} \
+/*abbrevValidationScope{abbrev_validation_comment}*/
+  );
+}}
+"""
+            else:
+                test_case = f"""\
 testF({self.test_class}, {normalized_name}) {{
   assertValid(
     {zone_key},
