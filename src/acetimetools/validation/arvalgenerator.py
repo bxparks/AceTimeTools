@@ -63,7 +63,7 @@ class ArduinoValidationGenerator:
         self.db_namespace = db_namespace
         self.validation_data = validation_data
         self.blacklist = blacklist
-        self.skip_validation_buf_size = skip_validation_buf_size,
+        self.skip_validation_buf_size = skip_validation_buf_size
         self.zone_key_type = zone_key_type
         self.test_class = test_class
         self.test_class_include_dir = test_class_include_dir
