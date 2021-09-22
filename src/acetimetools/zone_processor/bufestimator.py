@@ -109,11 +109,15 @@ def _calculate_buf_sizes_per_zone(
         zone_processor = ZoneProcessor(zone_info)
 
         # Calculate max_actives(count, year) and max_buffer_size(count, year).
-        max_buffer_size_info = _find_max_buffer_sizes(
-            zone_processor,
-            start_year=start_year,
-            until_year=until_year,
-        )
+        try:
+            max_buffer_size_info = _find_max_buffer_sizes(
+                zone_processor,
+                start_year=start_year,
+                until_year=until_year,
+            )
+        except:  # noqa E722
+            logging.info(f'*** Error processing {zone_name}')
+            raise
 
         # Currently, we just care about the max buffer size, not the max
         # active size.
