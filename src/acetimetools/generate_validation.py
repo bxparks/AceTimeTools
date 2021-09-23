@@ -123,6 +123,12 @@ def main() -> None:
     else:
         blacklist = {}
 
+    # No need to validate buf size in 'basic' mode because TransitionStorage
+    # buffer is not used in BasicZoneProcessor.
+    skip_validation_buf_size = (
+        args.skip_validation_buf_size or args.scope == 'basic'
+    )
+
     # Generate the validation_*.{h, cpp} files
     generator = ArduinoValidationGenerator(
         invocation=invocation,
@@ -131,7 +137,7 @@ def main() -> None:
         db_namespace=args.db_namespace,
         validation_data=validation_data,
         blacklist=blacklist,
-        skip_validation_buf_size=args.skip_validation_buf_size,
+        skip_validation_buf_size=skip_validation_buf_size,
         zone_key_type=args.zone_key_type,
         test_class=args.test_class,
         test_class_include_dir=args.test_class_include_dir,
