@@ -192,12 +192,9 @@ ZONE_INFO_{zoneNormalizedName} = {{
 from .zone_infos import *
 
 # Supported Zones: {numInfos}
-ZONE_INFO_MAP = {{
+ZONE_REGISTRY = {{
 {infoMapItems}
 }}
-"""
-
-    ZONE_INFO_MAP_ITEM = """\
 """
 
     ZONE_INFOS_FILE_NAME = 'zone_infos.py'

@@ -77,7 +77,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     # Find the zone.
-    zone_info = cast(ZoneInfo, zone_registry.ZONE_INFO_MAP.get(args.zone))
+    zone_info = cast(ZoneInfo, zone_registry.ZONE_REGISTRY.get(args.zone))
     if not zone_info:
         logging.error("Zone '%s' not found", args.zone)
         sys.exit(1)
