@@ -392,7 +392,7 @@ ZONE_INFO_{link_normalized_name} = {{
         removed_link_items = ''
         for link_name, reason in sorted(removed_links.items()):
             removed_link_items += f"""\
-# {link_name} ({infoReason})
+# {link_name} ({reason})
 """
         return removed_link_items
 
@@ -400,7 +400,7 @@ ZONE_INFO_{link_normalized_name} = {{
         notable_link_items = ''
         for link_name, reason in sorted(notable_links.items()):
             notable_link_items += f"""\
-# {link_name} ({infoReason})
+# {link_name} ({reason})
 """
         return notable_link_items
 
