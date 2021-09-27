@@ -54,7 +54,7 @@ from typing import cast
 from datetime import datetime
 
 from acetime.zone_info_types import ZoneInfo
-from acetime.zonedbpy import zone_infos
+from acetime.zonedbpy import zone_registry
 from acetime.zone_processor import ZoneProcessor
 from acetime.zone_processor import to_utc_string
 
@@ -77,7 +77,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     # Find the zone.
-    zone_info = cast(ZoneInfo, zone_infos.ZONE_INFO_MAP.get(args.zone))
+    zone_info = cast(ZoneInfo, zone_registry.ZONE_INFO_MAP.get(args.zone))
     if not zone_info:
         logging.error("Zone '%s' not found", args.zone)
         sys.exit(1)

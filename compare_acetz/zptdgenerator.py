@@ -20,7 +20,7 @@ import acetime.acetz
 from acetime.zone_processor import ZoneProcessor
 from acetime.zone_processor import DateTuple
 from acetime.zone_info_types import ZoneInfoMap
-from acetime.zonedbpy.zone_infos import ZONE_INFO_MAP
+from acetime.zonedbpy.zone_registry import ZONE_INFO_MAP
 from acetimetools.data_types.at_types import SECONDS_SINCE_UNIX_EPOCH
 from acetimetools.data_types.validation_types import (
     TestItem, TestData, ValidationData
