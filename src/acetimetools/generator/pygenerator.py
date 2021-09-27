@@ -76,14 +76,6 @@ ZONE_POLICY_{policyName} = {{
 
 """
 
-    ZONE_REMOVED_POLICY_ITEM = """\
-# {policyName} ({policyReason})
-"""
-
-    ZONE_NOTABLE_POLICY_ITEM = """\
-# {policyName} ({policyReason})
-"""
-
     ZONE_RULE_ITEM = """\
     # {raw_line}
     {{
@@ -169,14 +161,6 @@ ZONE_INFO_{zoneNormalizedName} = {{
 
 """
 
-    ZONE_REMOVED_INFO_ITEM = """\
-# {zoneFullName} ({infoReason})
-"""
-
-    ZONE_NOTABLE_INFO_ITEM = """\
-# {zoneFullName} ({infoReason})
-"""
-
     ZONE_ERA_ITEM = """\
     # {raw_line}
     {{
@@ -214,7 +198,6 @@ ZONE_INFO_MAP = {{
 """
 
     ZONE_INFO_MAP_ITEM = """\
-    '{zoneFullName}': ZONE_INFO_{zoneNormalizedName}, # {zoneFullName}
 """
 
     ZONE_INFOS_FILE_NAME = 'zone_infos.py'
@@ -316,11 +299,9 @@ ZONE_INFO_MAP = {{
     ) -> str:
         removed_policy_items = ''
         for name, reason in sorted(removed_policies.items()):
-            removed_policy_items += (
-                self.ZONE_REMOVED_POLICY_ITEM.format(
-                    policyName=normalize_name(name),
-                    policyReason=reason)
-            )
+            removed_policy_items += f"""\
+# {normalize_name(name)} ({reason})
+"""
         return removed_policy_items
 
     def _generate_notable_policy_items(
@@ -328,11 +309,9 @@ ZONE_INFO_MAP = {{
     ) -> str:
         notable_policy_items = ''
         for name, reason in sorted(notable_policies.items()):
-            notable_policy_items += (
-                self.ZONE_NOTABLE_POLICY_ITEM.format(
-                    policyName=normalize_name(name),
-                    policyReason=reason)
-            )
+            notable_policy_items += f"""\
+# {normalize_name(name)} ({reason})
+"""
         return notable_policy_items
 
     # ------------------------------------------------------------------------
@@ -396,21 +375,23 @@ ZONE_INFO_{link_normalized_name} = {{
     def _generate_removed_info_items(self, removed_zones: CommentsMap) -> str:
         removed_info_items = ''
         for zone_name, reason in sorted(removed_zones.items()):
-            removed_info_items += self.ZONE_REMOVED_INFO_ITEM.format(
-                zoneFullName=zone_name, infoReason=reason)
+            removed_info_items += f"""\
+# {zone_name} ({reason})
+"""
         return removed_info_items
 
     def _generate_notable_info_items(self, notable_zones: CommentsMap) -> str:
         notable_info_items = ''
         for zone_name, reason in sorted(notable_zones.items()):
-            notable_info_items += self.ZONE_NOTABLE_INFO_ITEM.format(
-                zoneFullName=zone_name, infoReason=reason)
+            notable_info_items += f"""\
+# {zone_name} ({reason})
+"""
         return notable_info_items
 
     def _generate_removed_link_items(self, removed_links: CommentsMap) -> str:
         removed_link_items = ''
         for link_name, reason in sorted(removed_links.items()):
-            removed_link_items += """\
+            removed_link_items += f"""\
 # {link_name} ({infoReason})
 """
         return removed_link_items
@@ -418,7 +399,7 @@ ZONE_INFO_{link_normalized_name} = {{
     def _generate_notable_link_items(self, notable_links: CommentsMap) -> str:
         notable_link_items = ''
         for link_name, reason in sorted(notable_links.items()):
-            notable_link_items += """\
+            notable_link_items += f"""\
 # {link_name} ({infoReason})
 """
         return notable_link_items
@@ -477,7 +458,7 @@ ZONE_INFO_{link_normalized_name} = {{
         for zone_name, zones in sorted(
                 zones_map.items(),
                 key=lambda x: normalize_name(x[0])):
-            info_map_items += self.ZONE_INFO_MAP_ITEM.format(
-                zoneNormalizedName=normalize_name(zone_name),
-                zoneFullName=zone_name)
+            info_map_items += f"""\
+    '{zone_name}': ZONE_INFO_{normalize_name(zone_name)},
+"""
         return info_map_items
