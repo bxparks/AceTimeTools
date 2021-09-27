@@ -14,5 +14,8 @@
         * Links in this implementation are "fat" links.
         * They are identical to zones, preserving their zone names.
         * In fact, the runtime cannot distinguish between a Zone and a Link.
+    * Zone Registry
+        * Rename `zone_registry.ZONE_INFO_MAP` to `ZONE_REGISTRY`.
+        * Add `ZONE_AND_LINK_REGISTRY` that contains both zones and links.
 * (2021-08-25)
     * Initial `git subtree split` from AceTime project.

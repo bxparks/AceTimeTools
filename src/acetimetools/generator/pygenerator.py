@@ -191,9 +191,14 @@ ZONE_INFO_{zoneNormalizedName} = {{
 
 from .zone_infos import *
 
-# Supported Zones: {numInfos}
+# Supported Zones: {numZones}
 ZONE_REGISTRY = {{
-{infoMapItems}
+{zoneItems}
+}}
+
+# Supported Zones and Links: {numZonesAndLinks}
+ZONE_AND_LINK_REGISTRY = {{
+{zoneAndLinkItems}
 }}
 """
 
@@ -438,24 +443,44 @@ ZONE_INFO_{link_normalized_name} = {{
     # ------------------------------------------------------------------------
 
     def _generate_registry(self) -> str:
-        info_map_items = self._generate_info_map_items(self.zones_map)
+        zone_items = self._generate_zone_registry_items(self.zones_map)
+        zone_and_link_items = self._generate_zone_and_link_registry_items(
+            self.zones_map,
+            self.links_map,
+        )
 
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
             tz_files=self.tz_files,
-            numInfos=len(self.zones_map),
-            infoMapItems=info_map_items,
+            numZones=len(self.zones_map),
+            zoneItems=zone_items,
+            numZonesAndLinks=len(self.zones_map) + len(self.links_map),
+            zoneAndLinkItems=zone_and_link_items,
         )
 
-    def _generate_info_map_items(self, zones_map: ZonesMap) -> str:
-        """Generate a map of (zone_name -> zoneInfo), shorted by name.
+    def _generate_zone_registry_items(self, zones_map: ZonesMap) -> str:
+        """Generate a map of (zone_name -> zoneInfo), sorted by name.
         """
-        info_map_items = ''
-        for zone_name, zones in sorted(
-                zones_map.items(),
-                key=lambda x: normalize_name(x[0])):
-            info_map_items += f"""\
+        zone_items = ''
+        for zone_name, zones in sorted(zones_map.items()):
+            zone_items += f"""\
     '{zone_name}': ZONE_INFO_{normalize_name(zone_name)},
 """
-        return info_map_items
+        return zone_items
+
+    def _generate_zone_and_link_registry_items(
+        self,
+        zones_map: ZonesMap,
+        links_map: LinksMap,
+    ) -> str:
+        """Generate a map of (zone_name -> zoneInfo), for all zones and links,
+        sorted by name.
+        """
+        zones_and_links = list(zones_map.keys()) + list(links_map.keys())
+        zone_and_link_items = ''
+        for zone_and_link_name in sorted(zones_and_links):
+            zone_and_link_items += f"""\
+    '{zone_and_link_name}': ZONE_INFO_{normalize_name(zone_and_link_name)},
+"""
+        return zone_and_link_items
