@@ -13,6 +13,7 @@ from typing import Tuple
 from acetimetools.data_types.at_types import ZoneEraRaw
 from acetimetools.data_types.at_types import ZoneRuleRaw
 from acetimetools.data_types.at_types import ZonesMap
+from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
@@ -121,6 +122,12 @@ from .zone_policies import *
 {infoItems}
 
 #---------------------------------------------------------------------------
+# Supported links: {numLinks}
+#---------------------------------------------------------------------------
+
+{linkItems}
+
+#---------------------------------------------------------------------------
 # Unsuported zones: {numRemovedInfos}
 #---------------------------------------------------------------------------
 
@@ -131,6 +138,18 @@ from .zone_policies import *
 #---------------------------------------------------------------------------
 
 {notableInfoItems}
+
+#---------------------------------------------------------------------------
+# Unsuported links: {numRemovedLinks}
+#---------------------------------------------------------------------------
+
+{removedLinkItems}
+
+#---------------------------------------------------------------------------
+# Notable links: {numNotableLinks}
+#---------------------------------------------------------------------------
+
+{notableLinkItems}
 """
 
     ZONE_INFO_ITEM = """\
@@ -142,6 +161,7 @@ from .zone_policies import *
 ZONE_ERAS_{zoneNormalizedName} = [
 {eraItems}
 ]
+
 ZONE_INFO_{zoneNormalizedName} = {{
     'name': '{zoneFullName}',
     'eras': ZONE_ERAS_{zoneNormalizedName}
@@ -212,10 +232,13 @@ ZONE_INFO_MAP = {{
         self.tz_files = wrapped_tzfiles
         self.tz_version = zidb['tz_version']
         self.zones_map = zidb['zones_map']
+        self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
         self.removed_zones = zidb['removed_zones']
+        self.removed_links = zidb['removed_links']
         self.removed_policies = zidb['removed_policies']
         self.notable_zones = zidb['notable_zones']
+        self.notable_links = zidb['notable_links']
         self.notable_policies = zidb['notable_policies']
 
     def generate_files(self, output_dir: str) -> None:
@@ -318,11 +341,15 @@ ZONE_INFO_MAP = {{
 
     def _generate_infos(self) -> str:
         (num_eras, info_items) = self._generate_info_items(self.zones_map)
-        info_map_items = self._generate_info_map_items(self.zones_map)
+        link_items = self._generate_link_items(self.links_map)
         removed_info_items = self._generate_removed_info_items(
             self.removed_zones)
         notable_info_items = self._generate_notable_info_items(
             self.notable_zones)
+        removed_link_items = self._generate_removed_link_items(
+            self.removed_links)
+        notable_link_items = self._generate_notable_link_items(
+            self.notable_links)
 
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
@@ -331,11 +358,17 @@ ZONE_INFO_MAP = {{
             numInfos=len(self.zones_map),
             numEras=num_eras,
             infoItems=info_items,
-            infoMapItems=info_map_items,
+            numLinks=len(self.links_map),
+            linkItems=link_items,
             numRemovedInfos=len(self.removed_zones),
             removedInfoItems=removed_info_items,
             numNotableInfos=len(self.notable_zones),
-            notableInfoItems=notable_info_items)
+            notableInfoItems=notable_info_items,
+            numRemovedLinks=len(self.removed_links),
+            removedLinkItems=removed_link_items,
+            numNotableLinks=len(self.notable_links),
+            notableLinkItems=notable_link_items,
+        )
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
         info_items = ''
@@ -344,6 +377,21 @@ ZONE_INFO_MAP = {{
             info_items += self._generate_info_item(name, eras)
             num_eras += len(eras)
         return (num_eras, info_items)
+
+    def _generate_link_items(self, links_map: LinksMap) -> str:
+        link_items = ''
+        for link_name, zone_name in sorted(links_map.items()):
+            link_normalized_name = normalize_name(link_name)
+            zone_normalized_name = normalize_name(zone_name)
+            link_items += f"""\
+# Link name: {link_name} -> {zone_name}
+ZONE_INFO_{link_normalized_name} = {{
+    'name': '{link_name}',
+    'eras': ZONE_ERAS_{zone_normalized_name}
+}}
+
+"""
+        return link_items
 
     def _generate_removed_info_items(self, removed_zones: CommentsMap) -> str:
         removed_info_items = ''
@@ -358,6 +406,22 @@ ZONE_INFO_MAP = {{
             notable_info_items += self.ZONE_NOTABLE_INFO_ITEM.format(
                 zoneFullName=zone_name, infoReason=reason)
         return notable_info_items
+
+    def _generate_removed_link_items(self, removed_links: CommentsMap) -> str:
+        removed_link_items = ''
+        for link_name, reason in sorted(removed_links.items()):
+            removed_link_items += """\
+# {link_name} ({infoReason})
+"""
+        return removed_link_items
+
+    def _generate_notable_link_items(self, notable_links: CommentsMap) -> str:
+        notable_link_items = ''
+        for link_name, reason in sorted(notable_links.items()):
+            notable_link_items += """\
+# {link_name} ({infoReason})
+"""
+        return notable_link_items
 
     def _generate_info_item(
         self, zone_name: str, eras: List[ZoneEraRaw],
