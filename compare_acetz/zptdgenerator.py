@@ -16,7 +16,7 @@ import logging
 from datetime import tzinfo, datetime, timezone, timedelta
 
 import acetime.version
-import acetime.acetz
+from acetime.acetz import ZoneManager
 from acetime.zone_processor import ZoneProcessor
 from acetime.zone_processor import DateTuple
 from acetime.zone_info_types import ZoneInfoMap
@@ -44,6 +44,7 @@ class TestDataGenerator:
         self.until_year = until_year
         self.sampling_interval = timedelta(hours=sampling_interval)
         self.zone_infos = zone_infos
+        self.zone_manager = ZoneManager(zone_infos)
 
     def create_test_data(self, zones: List[str]) -> None:
         test_data: TestData = {}
@@ -77,7 +78,7 @@ class TestDataGenerator:
             logging.error(f"Zone '{zone_name}' not found in acetz package")
             return None
 
-        tz = acetime.acetz.gettz(ZONE_REGISTRY, zone_name)
+        tz = self.zone_manager.gettz(zone_name)
         zone_processor = ZoneProcessor(zone_info)
         return self._create_transition_test_items(
             zone_name, tz, zone_processor)
