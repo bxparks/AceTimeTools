@@ -8,7 +8,7 @@ the [AceTime](https://github.com/bxparks/AceTime) Arduino library. These tools
 used to be in the AceTime project itself, but was extracted into a separate repo
 to support other languages and environments.
 
-**Version**: (2021-08-25, initial split from AceTime)
+**Version**: v0.1 (2021-10-06)
 
 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
@@ -27,6 +27,7 @@ A number of scripts are exposed at the top level:
 * test validation data generators using third party libraries
     * `compare_pytz` - generate test data using `pytz`
     * `compare_dateutil` - generate test data using `python-dateutil`
+    * `compare_acetz` - generate test data using `AceTimePython` library
     * `compare_java` - generate test data using Java's `java.time` library
     * `compare_cpp` - generate test data using Howard Hinnant `date` library
     * `compare_noda` - generate test data using the Noda Time library
@@ -41,8 +42,9 @@ A number of scripts are exposed at the top level:
       class in AceTime)
     * uses the `pytz` library as validation generator
 * `zinfo.py`
-    * an interactive command line interface to the `ZoneProcessor` Python class
-      using a pre-compiled zoneinfo files in `tools/zonedbpy/` directory.
+    * an interactive command line interface to the `zone_processor.py` Python
+      module using a pre-compiled zoneinfo files in
+      `AceTimePython/src/acetime/zonedbpy/` directory.
 
 ## TZ Compiler (tzcompiler.py)
 
@@ -116,6 +118,7 @@ expected results from these 3rd party libraries:
 
 * `compare_pytz` - Python `pytz` library
 * `compare_dateutil` - Python `python-dateutil` library
+* `compare_acetz` - AceTimePython library
 * `compare_java` - Java JDK11 `java.time` library
 * `compare_cpp` - C++ Hinnant Date library
 * `compare_noda` - Noda Time library
@@ -209,9 +212,9 @@ this
        /         zone_processor.py   pytz
       v               \               /
 zone_processor.py      v             v
-         \            zstdgenerator.py
-          \           /
-           v         v
+        \             zstdgenerator.py
+         \            /
+          v          v
           validator.py
 ```
 
@@ -223,44 +226,36 @@ zone_processor.py      v             v
     * `$ git clone https://github.com/eggert/tz`
 * [Hinnant Date](https://github.com/HowardHinnant/date) as a sibling directory
     * See [compare_cpp](compare_cpp)
+* [AceTimePython](https://github.com/bxparks/AceTimePython)
 
 ## Usage
 
 In the following:
 
 * `$ACE_TIME` is the location of the AceTime project
+* `$ACE_TIME_PYTHON` is the location of the AceTimePython project
 * `$TOOLS` is the location of the AceTimeTools project
 * `$VALIDATION` is the location of the AceTimeValidation project
 
 ### Generating ZoneDB Files
 
-To generate the `zonedb::` files in `src/ace_time/zonedb`, the `--action zonedb`
-option is used:
+**AceTime**
 
 ```
 $ cd $ACE_TIME/src/ace_time/zonedb
-$ $TOOLS/tzcompiler.sh --tag 2019a --action zonedb --language arduino
---scope basic --start_year 2000 --until_year 2050
-```
+$ vi Makefile # Update the TZ_VERSION variable
+$ make
 
-This has been captured in the `Makefile`, so you can also just type:
-```
-$ cd $ACE_TIME/src/ace_time/zonedb
+$ cd $ACE_TIME/src/ace_time/zonedbx
+$ vi Makefile # Update the TZ_VERSION
 $ make
 ```
 
-To generate the `zonedbx::` files in `src/ace_time/zonedbx`, run the following
-commands:
+**AceTimePython**
 
 ```
-$ cd $ACE_TIME/src/ace_time/zonedbx
-$ $TOOLS/tzcompiler.sh --tag 2019a --action zonedb \
---language arduino --scope extended --start_year 2000 --until_year 2050
-```
-
-This has been captured in the `Makefile`, so you can also just type:
-```
-$ cd $ACE_TIME/src/ace_time/zonedbx
+$ cd $ACE_TIME_PYTHON/src/acetime/zonedbpy
+$ vi Makefile # Update the TZ_VERSION variable
 $ make
 ```
 
