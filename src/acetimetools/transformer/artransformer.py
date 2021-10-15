@@ -11,7 +11,6 @@ from typing import Tuple
 from collections import OrderedDict, Counter
 import itertools
 import logging
-
 from acetimetools.transformer.transformer import hash_name
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
@@ -459,16 +458,26 @@ def _to_letter_index(
 def _generate_zone_ids(
     zones_map: ZonesMap,
 ) -> Dict[str, int]:
-    """Generate {zoneName -> zoneId} map of zones."""
+    """Generate {zoneName -> zoneId} map of zones. Must not be 0x00 because
+    0x00 is used as an error return code in certain methods of the C++ code.
+    """
     ids: Dict[str, int] = {name: hash_name(name) for name in zones_map.keys()}
+    for k, v in ids.items():
+        if v == 0:
+            raise Exception(f"zoneId of {k} is 0x{v:x}")
     return OrderedDict(sorted(ids.items()))
 
 
 def _generate_link_ids(
     links_map: LinksMap,
 ) -> Dict[str, int]:
-    """Generate {linkName -> linkId} map of links."""
+    """Generate {linkName -> linkId} map of links. Must not be 0x00 because
+    0x00 is used as an error return code in certain methods of the C++ code.
+    """
     ids: Dict[str, int] = {name: hash_name(name) for name in links_map.keys()}
+    for k, v in ids.items():
+        if v == 0:
+            raise Exception(f"zoneId of {k} is {v}")
     return OrderedDict(sorted(ids.items()))
 
 
