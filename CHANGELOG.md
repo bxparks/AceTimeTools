@@ -3,6 +3,9 @@
 * Unreleased
     * Validate that the zoneId and linkId cannot be 0x00, because 0x00
       is used as an error return code in certain parts of the AceTime C++ code.
+    * Remove obsolete `sys.path` hack from `compare_acetz`, `compare_dateutil`,
+      and `compare_pytz`. No longer needed after extracting `acetz` class into
+      the separate AceTimePython project which is installed through `pip`.
 * v0.1 (2021-10-06)
     * Extract `zone_processor.py` and `acetz.py` to new
       [AceTimePython](https://github.com/bxparks/AceTimePython) library.
