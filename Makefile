@@ -9,9 +9,14 @@ all: mypy flake8 tests
 # The '../AceTimePython/src/acetime' is added because MyPy complains about not
 # finding the typing info when AceTimePython is installed using 'pip3 install'.
 # Seems like typing info is not being installed by pip3.
+#
+# If I try to check everything in a single mypy command, I get import errors in
+# the compare_xxx directories. So I use 2 mypy commands, using the -m flag for
+# each of the compare_xxx tools. But I'm not really sure that I understand what
+# the problem is and why that solution works.
 mypy:
-	mypy --strict src tests compare_acetz compare_pytz compare_dateutil \
-		../AceTimePython/src/acetime
+	mypy --strict src tests ../AceTimePython/src/acetime
+	mypy --strict -m compare_acetz -m compare_pytz -m compare_dateutil
 
 tests:
 	python3 -m unittest
