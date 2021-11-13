@@ -93,6 +93,7 @@ class ArduinoGenerator:
             notable_links=zidb['notable_links'],
             notable_policies=zidb['notable_policies'],
             buf_sizes=zidb['buf_sizes'],
+            max_buf_size=zidb['max_buf_size'],
             zone_ids=zidb['zone_ids'],
             link_ids=zidb['link_ids'],
             formats_map=zidb['formats_map'],
@@ -531,6 +532,8 @@ extern const internal::ZoneContext kZoneContext;
 // Maximum size of the Transition buffer in ExtendedZoneProcessor for each zone
 // over the given years. Used only in the AceTimeValidation/Extended*Test tests
 // for ExtendedZoneProcessor.
+//
+// MaxBufSize: {maxBufSize}
 //---------------------------------------------------------------------------
 
 {bufSizes}
@@ -698,6 +701,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         notable_links: CommentsMap,
         notable_policies: CommentsMap,
         buf_sizes: BufSizeMap,
+        max_buf_size: int,
         zone_ids: Dict[str, int],
         link_ids: Dict[str, int],
         formats_map: IndexMap,
@@ -721,6 +725,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         self.notable_links = notable_links
         self.notable_policies = notable_policies
         self.buf_sizes = buf_sizes
+        self.max_buf_size = max_buf_size
         self.zone_ids = zone_ids
         self.link_ids = link_ids
         self.formats_map = formats_map
@@ -837,6 +842,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
             bufSizes=info_buf_sizes,
+            maxBufSize=self.max_buf_size,
         )
 
     def generate_infos_cpp(self) -> str:
