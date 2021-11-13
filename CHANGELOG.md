@@ -6,6 +6,15 @@
     * Remove obsolete `sys.path` hack from `compare_acetz`, `compare_dateutil`,
       and `compare_pytz`. No longer needed after extracting `acetz` class into
       the separate AceTimePython project which is installed through `pip`.
+    * Update GitHub workflows from Ubuntu 18.04 to 20.04, and add Python 3.9 and
+      3.10 to the test matrix.
+    * Update various `compare_{xxx}` binaries so that test samples are generated
+      on the *second* of each month instead of the first. This prevents Jan 1,
+      2000 from mapping to a negative epochSeconds, which converts to a UTC date
+      in 1999, which can cause the estimated `max_buf_size` from
+      `BufSizeEstimator` to be different than the actual maximum buf size
+      observed by `ExtendedZoneProcessor`.
+    * Add `max_buf_size` to the generated `zonedb*/zone_infos.h` files.
 * v0.1 (2021-10-06)
     * Extract `zone_processor.py` and `acetz.py` to new
       [AceTimePython](https://github.com/bxparks/AceTimePython) library.
