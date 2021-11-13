@@ -296,7 +296,7 @@ $ make validation_data.cpp
 ```
 and
 ```
-$ cd $VALIDATION/BasicPythonTest/
+$ cd $VALIDATION/BasicPytzTest/
 $ make validation_data.cpp
 ```
 
