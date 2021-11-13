@@ -96,8 +96,18 @@ class TestDataGenerator():
 
         for year in range(self.start_year, self.until_year):
             for month in range(1, 13):
-                # Add a sample test point on the first of each month
-                dt_wall = datetime(year, month, 1, 0, 0, 0)
+                # Add a sample test point on the *second* of each month instead
+                # of the first of the month. This prevents Jan 1, 2000 from
+                # being converted to a negative epoch seconds for certain
+                # timezones, which gets converted into a UTC date in 1999 when
+                # ExtendedZoneProcessor is used to convert the epoch seconds
+                # back to a ZonedDateTime. The UTC date in 1999 causes the
+                # actual max buffer size of ExtendedZoneProcessor to become
+                # different than the one predicted by BufSizeEstimator (which
+                # samples whole years from 2000 until 2050), and causes the
+                # AceTimeValidation/ExtendedPytzTest to fail on the buffer size
+                # check.
+                dt_wall = datetime(year, month, 2, 0, 0, 0)
                 dt_local = tz.localize(dt_wall)
                 dt_local = tz.normalize(dt_local)
                 item = self._create_test_item(dt_local, 'S')

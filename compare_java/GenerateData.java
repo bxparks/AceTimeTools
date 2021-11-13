@@ -237,9 +237,15 @@ public class GenerateData {
     ZonedDateTime untilDateTime = ZonedDateTime.ofInstant(untilInstant, zoneId);
 
     for (int year = startDateTime.getYear(); year < untilDateTime.getYear(); year++) {
-      // Add the 1st of every month of every year.
+      // Add a sample test point on the *second* of each month instead of the first of the month.
+      // This prevents Jan 1, 2000 from being converted to a negative epoch seconds for certain
+      // timezones, which gets converted into a UTC date in 1999 when ExtendedZoneProcessor is used
+      // to convert the epoch seconds back to a ZonedDateTime. The UTC date in 1999 causes the
+      // actual max buffer size of ExtendedZoneProcessor to become different than the one predicted
+      // by BufSizeEstimator (which samples whole years from 2000 until 2050), and causes the
+      // AceTimeValidation/ExtendedJavaTest to fail on the buffer size check.
       for (int month = 1; month <= 12; month++) {
-        LocalDateTime localDateTime = LocalDateTime.of(year, month, 1, 0, 0, 0);
+        LocalDateTime localDateTime = LocalDateTime.of(year, month, 2, 0, 0, 0);
         ZonedDateTime zonedDateTime = ZonedDateTime.of(localDateTime, zoneId);
         addTestItem(testItems, zonedDateTime.toInstant(), zoneId, 'S');
       }

@@ -143,9 +143,18 @@ class TestDataGenerator:
                     tz, epoch_seconds, 'B')
                 self._add_test_item(items_map, test_item)
 
-            # Add one sample test point on the first of each month
+            # Add a sample test point on the *second* of each month instead of
+            # the first of the month. This prevents Jan 1, 2000 from being
+            # converted to a negative epoch seconds for certain timezones, which
+            # gets converted into a UTC date in 1999 when ExtendedZoneProcessor
+            # is used to convert the epoch seconds back to a ZonedDateTime. The
+            # UTC date in 1999 causes the actual max buffer size of
+            # ExtendedZoneProcessor to become different than the one predicted
+            # by BufSizeEstimator (which samples whole years from 2000 until
+            # 2050), and can cause the AceTimeValidation/ExtendedAcetzTest to
+            # fail on the buffer size check.
             for month in range(1, 13):
-                tt = DateTuple(y=year, M=month, d=1, ss=0, f='w')
+                tt = DateTuple(y=year, M=month, d=2, ss=0, f='w')
                 test_item = self._create_test_item_from_datetime(
                     tz, tt, type='S')
                 self._add_test_item(items_map, test_item)

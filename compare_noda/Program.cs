@@ -245,10 +245,17 @@ namespace compare_noda
 
             for (int year = startDt.Year; year < untilDt.Year; year++)
             {
-                // Add the 1st of every month of every year.
+                // Add a sample test point on the *second* of each month instead of the first of the
+                // month. This prevents Jan 1, 2000 from being converted to a negative epoch seconds
+                // for certain timezones, which gets converted into a UTC date in 1999 when
+                // ExtendedZoneProcessor is used to convert the epoch seconds back to a
+                // ZonedDateTime. The UTC date in 1999 causes the actual max buffer size of
+                // ExtendedZoneProcessor to become different than the one predicted by
+                // BufSizeEstimator (which samples whole years from 2000 until 2050), and causes the
+                // AceTimeValidation/ExtendedNodaTest to fail on the buffer size check.
                 for (int month = 1; month <= 12; month++)
                 {
-                    ZonedDateTime zdt = new LocalDateTime(year, month, 1, 0, 0).InZoneLeniently(tz);
+                    ZonedDateTime zdt = new LocalDateTime(year, month, 2, 0, 0).InZoneLeniently(tz);
                     AddTestItem(testItems, tz, zdt.ToInstant(), 'S');
                 }
 

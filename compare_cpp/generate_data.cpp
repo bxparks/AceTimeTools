@@ -174,15 +174,26 @@ void addMonthlySamples(TestData& testData, const time_zone& tz,
     const string& zoneName, int startYear, int untilYear) {
 
   for (int y = startYear; y < untilYear; y++) {
-    // Add the 1st of every month...
     for (int m = 1; m <= 12; m++) {
       char type = 'S';
 
-      // ...unless that day is ambiguous, in which case the Hinnant date
-      // library throws an exception. Unfortunately, I cannot understand
-      // the documentation to figure out how to do what I want, so just punt
-      // and use the next day.
-      for (int d = 1; d < 29; d++) {
+      // Add a sample test point on the *second* of each month instead of the
+      // first of the month. This prevents Jan 1, 2000 from being converted to a
+      // negative epoch seconds for certain timezones, which gets converted into
+      // a UTC date in 1999 when ExtendedZoneProcessor is used to convert the
+      // epoch seconds back to a ZonedDateTime. The UTC date in 1999 causes the
+      // actual max buffer size of ExtendedZoneProcessor to become different
+      // than the one predicted by BufSizeEstimator (which samples whole years
+      // from 2000 until 2050), and causes the
+      // AceTimeValidation/ExtendedHinnantDateTest to fail on the buffer size
+      // check.
+      //
+      // But if that day of the month (with the time of 00:00) is ambiguous, the
+      // Hinnant date library throws an exception. Unfortunately, I cannot
+      // understand the documentation to figure out how to do what I want, so
+      // just punt and use the next day. Use a loop to try every subsequent day
+      // of month up to the 28th (which exists in all months).
+      for (int d = 2; d <= 28; d++) {
         local_days ld = local_days{month(m)/d/year(y)};
         try {
           zoned_time<seconds> zdt = make_zoned(&tz, ld + seconds(0));
@@ -193,7 +204,8 @@ void addMonthlySamples(TestData& testData, const time_zone& tz,
           // One day sample is enough, so break as soon as we get one.
           break;
         } catch (...) {
-          // Set type to 'T' to indicate that the 1st was invalid.
+          // Set type to 'T' to indicate that the initial attempted day of month
+          // was invalid, so this is the alternate.
           type = 'T';
         }
       }
