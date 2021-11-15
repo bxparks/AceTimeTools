@@ -1,4 +1,29 @@
 #!/usr/bin/env python3
+#
+# Copyright 2020 Brian T. Park
+#
+# MIT License
+
+"""
+List the UTC offset transitions for the given zone using the Python dateutil
+package.
+
+Usage:
+$ list_transitions.py [-h] [--sampling_interval SAMPLING_INTERVAL]
+    zone_name start_year [until_year]
+
+Find the DST transitions
+
+positional arguments:
+  zone_name             Zone name (e.g. America/Los_Angeles
+  start_year            Year to list the transitions
+  until_year            Year to list the transitions
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --sampling_interval SAMPLING_INTERVAL
+                        Sampling interval in hours (default 22)
+"""
 
 import argparse
 import logging
