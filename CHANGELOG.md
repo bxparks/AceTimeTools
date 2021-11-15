@@ -15,6 +15,8 @@
       `BufSizeEstimator` to be different than the actual maximum buf size
       observed by `ExtendedZoneProcessor`.
     * Add `max_buf_size` to the generated `zonedb*/zone_infos.h` files.
+    * Add `compare_zoneinfo` which generates validation data using the Python
+      3.9 zoneinfo package.
 * v0.1 (2021-10-06)
     * Extract `zone_processor.py` and `acetz.py` to new
       [AceTimePython](https://github.com/bxparks/AceTimePython) library.

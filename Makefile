@@ -16,7 +16,11 @@ all: mypy flake8 tests
 # the problem is and why that solution works.
 mypy:
 	mypy --strict src tests ../AceTimePython/src/acetime
-	mypy --strict -m compare_acetz -m compare_pytz -m compare_dateutil
+	mypy --strict \
+		-m compare_acetz \
+		-m compare_pytz \
+		-m compare_dateutil \
+		-m compare_zoneinfo
 
 tests:
 	python3 -m unittest
@@ -110,6 +114,7 @@ compares:
 	$(MAKE) -C compare_dateutil
 	$(MAKE) -C compare_java
 	$(MAKE) -C compare_pytz
+	$(MAKE) -C compare_zoneinfo
 	# TODO: Add C# compilation test
 	# $(MAKE) -C compare_noda
 
@@ -119,8 +124,10 @@ clean:
 	rm -f zones.txt zonedb.json zonedbx.json validation_data.json \
 		validation_data.h validation_data.cpp validation_tests.cpp
 	rm -rf $(TZ_VERSION)
-	$(MAKE) -C compare_pytz clean
+	$(MAKE) -C compare_acetz clean
+	$(MAKE) -C compare_cpp clean
 	$(MAKE) -C compare_dateutil clean
 	$(MAKE) -C compare_java clean
-	$(MAKE) -C compare_cpp clean
 	$(MAKE) -C compare_noda clean
+	$(MAKE) -C compare_pytz clean
+	$(MAKE) -C compare_zoneinfo clean
