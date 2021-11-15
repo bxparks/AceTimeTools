@@ -321,11 +321,13 @@ testF({self.test_class}, {normalized_name}) {{
 
 
 def _get_validation_scope(
-    is_valid: bool,
+    has_valid_abbrev: bool,
     blacklist_policy: Optional[str],
 ) -> Tuple[str, str]:
-    """Determine the validationScope for DST and abbreviations."""
-    if not is_valid:
+    """Determine the validationScope for DST and abbreviations.
+    Returns tuple of the C++ ValidationScope and a human-readable comment.
+    """
+    if not has_valid_abbrev:
         return 'ValidationScope::kNone', ' INVALID'
 
     if not blacklist_policy:
