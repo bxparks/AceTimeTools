@@ -447,8 +447,14 @@ int main(int argc, const char* const* argv) {
 
   // Process the zones on the STDIN
   vector<string> zones = readZones();
+
+  fprintf(stderr, "Generating validation data\n");
   TestData testData = processZones(zones);
   sortTestData(testData);
+
+  fprintf(stderr, "Writing validation data\n");
   printJson(testData);
+
+  fprintf(stderr, "Done\n");
   return 0;
 }
