@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+    * Move `compare_xxx` scripts to `AceTimeValidation` repo.
+    * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
+    * Deprecate and archive `acetimetools/validator` to `archive/`.
 * v0.2 (2021-12-02)
     * Validate that the zoneId and linkId cannot be 0x00, because 0x00
       is used as an error return code in certain parts of the AceTime C++ code.
