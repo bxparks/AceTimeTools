@@ -53,8 +53,8 @@ Examples:
 import argparse
 import logging
 
-from acetime.zone_info_types import ZoneInfoMap
-from acetime.zone_info_types import ZonePolicyMap
+from acetime.zonedb_types import ZoneInfoMap
+from acetime.zonedb_types import ZonePolicyMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer

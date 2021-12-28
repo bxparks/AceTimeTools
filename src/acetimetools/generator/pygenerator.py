@@ -41,7 +41,7 @@ class PythonGenerator:
 # DO NOT EDIT
 
 from typing import List
-from ..zone_info_types import (
+from ..zonedb_types import (
     ZoneRule,
     ZonePolicy,
 )
@@ -111,7 +111,7 @@ ZONE_POLICY_{policyName}: ZonePolicy = {{
 # DO NOT EDIT
 
 from typing import List
-from ..zone_info_types import (
+from ..zonedb_types import (
     ZoneEra,
     ZoneInfo,
 )
@@ -201,7 +201,7 @@ ZONE_INFO_{zoneNormalizedName}: ZoneInfo = {{
 #
 # DO NOT EDIT
 
-from ..zone_info_types import ZoneInfoMap
+from ..zonedb_types import ZoneInfoMap
 from .zone_infos import *
 
 # Supported Zones: {numZones}

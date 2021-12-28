@@ -32,10 +32,10 @@ from .common import SECONDS_SINCE_UNIX_EPOCH
 from .common import seconds_to_hms
 from .common import hms_to_seconds
 from .common import calc_day_of_month
-from .zone_info_types import ZoneRule
-from .zone_info_types import ZonePolicy
-from .zone_info_types import ZoneEra
-from .zone_info_types import ZoneInfo
+from .zonedb_types import ZoneRule
+from .zonedb_types import ZonePolicy
+from .zonedb_types import ZoneEra
+from .zonedb_types import ZoneInfo
 
 
 class DateTuple(NamedTuple):

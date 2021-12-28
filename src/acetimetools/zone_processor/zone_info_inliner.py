@@ -15,11 +15,11 @@ from typing import Union
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.transformer.transformer import normalize_name
-from acetime.zone_info_types import ZoneRule
-from acetime.zone_info_types import ZonePolicy
-from acetime.zone_info_types import ZonePolicyMap
-from acetime.zone_info_types import ZoneEra
-from acetime.zone_info_types import ZoneInfoMap
+from acetime.zonedb_types import ZoneRule
+from acetime.zonedb_types import ZonePolicy
+from acetime.zonedb_types import ZonePolicyMap
+from acetime.zonedb_types import ZoneEra
+from acetime.zonedb_types import ZoneInfoMap
 
 
 class ZoneInfoInliner:

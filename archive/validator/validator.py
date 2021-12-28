@@ -15,8 +15,8 @@ import logging
 from datetime import datetime
 
 from acetime.common import SECONDS_SINCE_UNIX_EPOCH
-from acetime.zone_info_types import ZoneInfoMap
-from acetime.zone_info_types import ZonePolicyMap
+from acetime.zonedb_types import ZoneInfoMap
+from acetime.zonedb_types import ZonePolicyMap
 from acetime.zone_processor import ZoneProcessor
 from acetime.zone_processor import to_utc_string
 from .zstdgenerator import TestDataGenerator
