@@ -32,9 +32,9 @@
         * Remove `__slots__` in `zone_processor.py` and make it compatible
           with mypy type checking.
     * Circular dependency between projects:
-        * `AceTimePython/zonedbpy/*` files requires
+        * `AceTimePython/src/acetime/zonedb/*` files require
           `AceTimeTools/pygenerator.py` to generate its zoneinfo files, which
-          is consumed by `AceTimePython/acetz.py`.
+          is consumed by `AceTimePython/src/acetime/acetz.py`.
         * `AceTimeTools/{zinfo.py,bufestimator.py,compare_acetz} requires
           `AceTimePython/zone_processor.py`
     * `pygenerator.py`

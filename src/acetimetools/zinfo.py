@@ -4,7 +4,7 @@
 #
 # MIT License
 """
-The command line interface for ZoneProcessor class and zonedbpy files for
+The command line interface for ZoneProcessor class and zonedb files for
 debugging. Previous version of this was embedded directly inside
 zone_processor.py. See the examples below.
 
@@ -54,7 +54,7 @@ from typing import cast
 from datetime import datetime
 
 from acetime.zone_info_types import ZoneInfo
-from acetime.zonedbpy import zone_registry
+from acetime.zonedb import zone_registry
 from acetime.zone_processor import ZoneProcessor
 from acetime.zone_processor import to_utc_string
 

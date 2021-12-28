@@ -27,7 +27,7 @@ A number of scripts are exposed at the top level:
 * `zinfo.py`
     * an interactive command line interface to the `zone_processor.py` Python
       module using a pre-compiled zoneinfo files in
-      `AceTimePython/src/acetime/zonedbpy/` directory.
+      `AceTimePython/src/acetime/zonedb/` directory.
 
 ## TZ Compiler (tzcompiler.py)
 
@@ -126,7 +126,7 @@ $ make
 **AceTimePython**
 
 ```
-$ cd $ACE_TIME_PYTHON/src/acetime/zonedbpy
+$ cd $ACE_TIME_PYTHON/src/acetime/zonedb
 $ vi Makefile # Update the TZ_VERSION variable
 $ make
 ```

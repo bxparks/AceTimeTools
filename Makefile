@@ -21,12 +21,12 @@ tests:
 # vim, so change the line-length.
 flake8:
 	flake8 . \
-		--exclude=archive,zonedbpy \
-		--count \
+		--exclude=archive \
 		--ignore W503 \
+		--max-line-length=80 \
 		--show-source \
 		--statistics \
-		--max-line-length=80
+		--count
 
 #------------------------------------------------------------------------------
 # Rules for manual testing.
