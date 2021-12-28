@@ -40,6 +40,16 @@ class PythonGenerator:
 #
 # DO NOT EDIT
 
+from typing import List
+from ..zone_info_types import (
+    ZoneRule,
+    ZonePolicy,
+    ZonePolicyMap,
+    ZoneEra,
+    ZoneInfo,
+    ZoneInfoMap,
+)
+
 #---------------------------------------------------------------------------
 # Supported zone policies: {numPolicies}
 # numRules: {numRules}
@@ -66,10 +76,10 @@ class PythonGenerator:
 # Policy name: {policyName}
 # Rule count: {numRules}
 #---------------------------------------------------------------------------
-ZONE_RULES_{policyName} = [
+ZONE_RULES_{policyName}: List[ZoneRule] = [
 {ruleItems}
 ]
-ZONE_POLICY_{policyName} = {{
+ZONE_POLICY_{policyName}: ZonePolicy = {{
     'name': '{policyName}',
     'rules': ZONE_RULES_{policyName}
 }}
@@ -103,6 +113,16 @@ ZONE_POLICY_{policyName} = {{
 # from https://github.com/eggert/tz/releases/tag/{tz_version}
 #
 # DO NOT EDIT
+
+from typing import List
+from ..zone_info_types import (
+    ZoneRule,
+    ZonePolicy,
+    ZonePolicyMap,
+    ZoneEra,
+    ZoneInfo,
+    ZoneInfoMap,
+)
 
 from .zone_policies import *
 
@@ -150,11 +170,11 @@ from .zone_policies import *
 # Era count: {numEras}
 #---------------------------------------------------------------------------
 
-ZONE_ERAS_{zoneNormalizedName} = [
+ZONE_ERAS_{zoneNormalizedName}: List[ZoneEra] = [
 {eraItems}
 ]
 
-ZONE_INFO_{zoneNormalizedName} = {{
+ZONE_INFO_{zoneNormalizedName}: ZoneInfo = {{
     'name': '{zoneFullName}',
     'eras': ZONE_ERAS_{zoneNormalizedName}
 }}
@@ -189,15 +209,24 @@ ZONE_INFO_{zoneNormalizedName} = {{
 #
 # DO NOT EDIT
 
+from typing import List
+from ..zone_info_types import (
+    ZoneRule,
+    ZonePolicy,
+    ZonePolicyMap,
+    ZoneEra,
+    ZoneInfo,
+    ZoneInfoMap,
+)
 from .zone_infos import *
 
 # Supported Zones: {numZones}
-ZONE_REGISTRY = {{
+ZONE_REGISTRY: ZoneInfoMap = {{
 {zoneItems}
 }}
 
 # Supported Zones and Links: {numZonesAndLinks}
-ZONE_AND_LINK_REGISTRY = {{
+ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
 {zoneAndLinkItems}
 }}
 """
@@ -366,7 +395,7 @@ ZONE_AND_LINK_REGISTRY = {{
             zone_normalized_name = normalize_name(zone_name)
             link_items += f"""\
 # Link name: {link_name} -> {zone_name}
-ZONE_INFO_{link_normalized_name} = {{
+ZONE_INFO_{link_normalized_name}: ZoneInfo = {{
     'name': '{link_name}',
     'eras': ZONE_ERAS_{zone_normalized_name}
 }}
