@@ -119,6 +119,14 @@ from ..zonedb_types import (
 from .zone_policies import *
 
 # ---------------------------------------------------------------------------
+# Zone Context
+# ---------------------------------------------------------------------------
+
+TZDB_VERSION = '{tz_version}'
+START_YEAR = {start_year}
+UNTIL_YEAR = {until_year}
+
+# ---------------------------------------------------------------------------
 # Supported zones: {numInfos}
 # numEras: {numEras}
 # ---------------------------------------------------------------------------
@@ -229,6 +237,8 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
         self.tz_version = zidb['tz_version']
+        self.start_year = zidb['start_year']
+        self.until_year = zidb['until_year']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -349,6 +359,8 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
             invocation=self.invocation,
             tz_version=self.tz_version,
             tz_files=self.tz_files,
+            start_year=self.start_year,
+            until_year=self.until_year,
             numInfos=len(self.zones_map),
             numEras=num_eras,
             infoItems=info_items,

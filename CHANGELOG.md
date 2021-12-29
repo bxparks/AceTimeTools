@@ -4,6 +4,13 @@
     * Move `compare_xxx` scripts to `AceTimeValidation` repo.
     * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
     * Deprecate and archive `acetimetools/validator` to `archive/`.
+    * Update `pygenerator.py`
+        * Fix formatting to make flake8 happier
+        * Add typing information to the `zone_{infos,policies,registry}.py`
+          modules to make mypy happier.
+        * Change `acetime.zonedbpy` package to `acetime.zonedb`.
+        * Add zone context info to `zone_infos.py` (`TZDB_VERSION`,
+          `START_YEAR`, `UNTIL_YEAR`).
 * v0.2 (2021-12-02)
     * Validate that the zoneId and linkId cannot be 0x00, because 0x00
       is used as an error return code in certain parts of the AceTime C++ code.
