@@ -2,32 +2,42 @@
 
 [![Python Tools](https://github.com/bxparks/AceTimeTools/actions/workflows/python_tools.yml/badge.svg)](https://github.com/bxparks/AceTimeTools/actions/workflows/python_tools.yml)
 
-These are various tools (Python, Java, C++, C# programs) which parse the [IANA
+These are various scripts and tools which parse the [IANA
 TZ database](https://www.iana.org/time-zones) and generate zoneinfo datasets for
-the [AceTime](https://github.com/bxparks/AceTime) Arduino library. These tools
+the [AceTime](https://github.com/bxparks/AceTime) Arduino library and the
+[AceTimePython](https://github.com/bxparks/AceTimePython) library. These tools
 used to be in the AceTime project itself, but was extracted into a separate repo
 to support other languages and environments.
 
-**Version**: v0.2 (2021-12-02)
+**Version**: v1.0.0 (2022-01-10)
 
 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
 ## Summary of Tools
 
-A number of scripts are exposed at the top level:
+Here is a quick summary of the various tools:
 
-* `tzcompiler.sh` is the main driver for generating the zoneinfo files in
-  the various `zonedb*/` directories. It is a thin shell wrapper around the
-  `tzcompiler.py` script, which invokes an ETL data processing pipeline to
-  perform 2 major tasks:
-    * parse and read the raw IANA TZ databas files with `Zone`, `Link` and
-      `Rule` entries),
-    * generate the `zone_infos.{h,cpp}`, `zone_policies.{h,cpp}`,
-     `zone_registry.{h,cpp}` files in the specified `zonedb*/` directory.
+* `tzcompiler.sh`
+    * main driver for generating the zoneinfo files in the various `zonedb*/`
+      irectories.
+    * thin shell wrapper around the `tzcompiler.py` script, which invokes an ETL
+      data processing pipeline to perform 2 major tasks:
+        * parse and read the raw IANA TZ databas files with `Zone`, `Link` and
+        `Rule` entries),
+        * generate the `zone_infos.{h,cpp}`, `zone_policies.{h,cpp}`,
+        `zone_registry.{h,cpp}` files in the specified `zonedb*/` directory.
 * `zinfo.py`
-    * an interactive command line interface to the `zone_processor.py` Python
+    * a command line interface to the `zone_processor.py` Python
       module using a pre-compiled zoneinfo files in
       `AceTimePython/src/acetime/zonedb/` directory.
+    * (Maybe move to AceTimePython project? Though it's sometimes useful for
+      debugging output of the `tzcompiler.py`)
+* `copytz.sh`
+    * script to copy the raw TZDB files from a local copy of the IANA TZDB repo
+      (https://github.com/eggert/tz/) at a specific tag version (e.g. "2021e")
+      into the current directory
+    * copying the raw TZDB files allows parallel pipelines which use different
+      TZDB versions
 
 ## TZ Compiler (tzcompiler.py)
 
@@ -95,12 +105,17 @@ zone_strings.{h,cpp}         |                           (AceTimeValidation)
 ## Dependencies
 
 * Python3.7 or higher
-* the [TZ Database](https://github.com/eggert/tz) as a sibling directory
+* [IANA TZ Database](https://github.com/eggert/tz) as a sibling directory
     * `$ cd ..`
     * `$ git clone https://github.com/eggert/tz`
-* [Hinnant Date](https://github.com/HowardHinnant/date) as a sibling directory
-    * See [compare_cpp](compare_cpp)
 * [AceTimePython](https://github.com/bxparks/AceTimePython)
+    * This causes a partial circular dependency.
+    * AceTimeTool generates the `zonedb` files used by the AceTimePython
+      classes.
+    * But AceTimeTool feeds the in-memory transient versions of the `zonedb`
+      files into the `zone_processor.py` module in AceTimePython to estimate the
+      Transition buffer sizes, which is then included in the actual
+      `src/acetime/zonedb` files written into the AceTimePython library.
 
 ## Usage
 

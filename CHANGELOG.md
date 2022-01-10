@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.0.0 (2022-01-10)
     * Move `compare_xxx` scripts to `AceTimeValidation` repo.
     * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
     * Deprecate and archive `acetimetools/validator` to `archive/`.
