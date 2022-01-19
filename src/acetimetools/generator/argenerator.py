@@ -286,23 +286,8 @@ extern const {scope}::ZonePolicy kPolicy{policyName};
                 policyName=normalize_name(name),
                 scope=self.scope)
 
-        ZONE_POLICIES_H_REMOVED_POLICY_ITEM = """\
-// kPolicy{policyName} ({policyReason})
-"""
-        removed_policy_items = ''
-        for name, reasons in sorted(self.removed_policies.items()):
-            removed_policy_items += ZONE_POLICIES_H_REMOVED_POLICY_ITEM.format(
-                policyName=name,
-                policyReason=', '.join(reasons))
-
-        ZONE_POLICIES_H_NOTABLE_POLICY_ITEM = """\
-// kPolicy{policyName} ({policyReason})
-"""
-        notable_policy_items = ''
-        for name, reasons in sorted(self.notable_policies.items()):
-            notable_policy_items += ZONE_POLICIES_H_NOTABLE_POLICY_ITEM.format(
-                policyName=name,
-                policyReason=', '.join(reasons))
+        removed_policy_items = _render_comments_map(self.removed_policies)
+        notable_policy_items = _render_comments_map(self.notable_policies)
 
         return self.ZONE_POLICIES_H_FILE.format(
             invocation=self.invocation,
@@ -788,37 +773,10 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
                 linkId=self.link_ids[link_name],
             )
 
-        ZONE_INFOS_H_REMOVED_INFO_ITEM = """\
-// {zoneFullName} ({reason})
-"""
-        removed_info_items = ''
-        for zone_name, reasons in sorted(self.removed_zones.items()):
-            removed_info_items += ZONE_INFOS_H_REMOVED_INFO_ITEM.format(
-                zoneFullName=zone_name, reason=', '.join(reasons))
-
-        ZONE_INFOS_H_NOTABLE_INFO_ITEM = """\
-// {zoneFullName} ({reason})
-"""
-        notable_info_items = ''
-        for zone_name, reasons in sorted(self.notable_zones.items()):
-            notable_info_items += ZONE_INFOS_H_NOTABLE_INFO_ITEM.format(
-                zoneFullName=zone_name, reason=', '.join(reasons))
-
-        ZONE_INFOS_H_REMOVED_LINK_ITEM = """\
-// {linkFullName} ({reason})
-"""
-        removed_link_items = ''
-        for link_name, reasons in sorted(self.removed_links.items()):
-            removed_link_items += ZONE_INFOS_H_REMOVED_LINK_ITEM.format(
-                linkFullName=link_name, reason=', '.join(reasons))
-
-        ZONE_INFOS_H_NOTABLE_LINK_ITEM = """\
-// {linkFullName} ({reason})
-"""
-        notable_link_items = ''
-        for link_name, reasons in sorted(self.notable_links.items()):
-            notable_link_items += ZONE_INFOS_H_NOTABLE_LINK_ITEM.format(
-                linkFullName=link_name, reason=', '.join(reasons))
+        removed_info_items = _render_comments_map(self.removed_zones)
+        notable_info_items = _render_comments_map(self.notable_zones)
+        removed_link_items = _render_comments_map(self.removed_links)
+        notable_link_items = _render_comments_map(self.notable_links)
 
         return self.ZONE_INFOS_H_FILE.format(
             invocation=self.invocation,
@@ -1362,3 +1320,26 @@ def _compressed_name_to_c_string(compressed_name: str) -> str:
     if in_normal_string:
         rendered_string += '"'
     return rendered_string.strip()
+
+
+def _render_comments_map(comments: CommentsMap) -> str:
+    """Convert the CommentsMap into a C++ comment. Print the name and list of
+    reasons one a single line, or multiple lines, like this:
+
+    // Name1 (reason)
+    //
+    // Name2 (
+    //   reason1,
+    //   reason2,
+    // )
+    """
+    comment = ''
+    for name, reasons in sorted(comments.items()):
+        if len(reasons) <= 1:
+            comment += f"// {name} ({next(iter(reasons))})\n"
+        else:
+            comment += f"// {name} (\n"
+            for reason in reasons:
+                comment += f'//   {reason},\n'
+            comment += "// )\n"
+    return comment

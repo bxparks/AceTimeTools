@@ -271,10 +271,8 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
 
     def _generate_policies(self) -> str:
         num_rules, policy_items = self._generate_policy_items(self.policies_map)
-        removed_policy_items = self._generate_removed_policy_items(
-            self.removed_policies)
-        notable_policy_items = self._generate_notable_policy_items(
-            self.notable_policies)
+        removed_policy_items = _render_comments_map(self.removed_policies)
+        notable_policy_items = _render_comments_map(self.notable_policies)
 
         return self.ZONE_POLICIES_FILE.format(
             invocation=self.invocation,
@@ -319,26 +317,6 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
             numRules=len(rules),
             ruleItems=rule_items)
 
-    def _generate_removed_policy_items(
-        self, removed_policies: CommentsMap,
-    ) -> str:
-        removed_policy_items = ''
-        for name, reason in sorted(removed_policies.items()):
-            removed_policy_items += f"""\
-# {normalize_name(name)} ({reason})
-"""
-        return removed_policy_items
-
-    def _generate_notable_policy_items(
-        self, notable_policies: CommentsMap,
-    ) -> str:
-        notable_policy_items = ''
-        for name, reason in sorted(notable_policies.items()):
-            notable_policy_items += f"""\
-# {normalize_name(name)} ({reason})
-"""
-        return notable_policy_items
-
     # ------------------------------------------------------------------------
     # Zone Infos
     # ------------------------------------------------------------------------
@@ -346,14 +324,10 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
     def _generate_infos(self) -> str:
         (num_eras, info_items) = self._generate_info_items(self.zones_map)
         link_items = self._generate_link_items(self.links_map)
-        removed_info_items = self._generate_removed_info_items(
-            self.removed_zones)
-        notable_info_items = self._generate_notable_info_items(
-            self.notable_zones)
-        removed_link_items = self._generate_removed_link_items(
-            self.removed_links)
-        notable_link_items = self._generate_notable_link_items(
-            self.notable_links)
+        removed_info_items = _render_comments_map(self.removed_zones)
+        notable_info_items = _render_comments_map(self.notable_zones)
+        removed_link_items = _render_comments_map(self.removed_links)
+        notable_link_items = _render_comments_map(self.notable_links)
 
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
@@ -398,38 +372,6 @@ ZONE_INFO_{link_normalized_name}: ZoneInfo = {{
 
 """
         return link_items
-
-    def _generate_removed_info_items(self, removed_zones: CommentsMap) -> str:
-        removed_info_items = ''
-        for zone_name, reason in sorted(removed_zones.items()):
-            removed_info_items += f"""\
-# {zone_name} ({reason})
-"""
-        return removed_info_items
-
-    def _generate_notable_info_items(self, notable_zones: CommentsMap) -> str:
-        notable_info_items = ''
-        for zone_name, reason in sorted(notable_zones.items()):
-            notable_info_items += f"""\
-# {zone_name} ({reason})
-"""
-        return notable_info_items
-
-    def _generate_removed_link_items(self, removed_links: CommentsMap) -> str:
-        removed_link_items = ''
-        for link_name, reason in sorted(removed_links.items()):
-            removed_link_items += f"""\
-# {link_name} ({reason})
-"""
-        return removed_link_items
-
-    def _generate_notable_link_items(self, notable_links: CommentsMap) -> str:
-        notable_link_items = ''
-        for link_name, reason in sorted(notable_links.items()):
-            notable_link_items += f"""\
-# {link_name} ({reason})
-"""
-        return notable_link_items
 
     def _generate_info_item(
         self, zone_name: str, eras: List[ZoneEraRaw],
@@ -509,3 +451,26 @@ ZONE_INFO_{link_normalized_name}: ZoneInfo = {{
     '{zone_and_link_name}': ZONE_INFO_{normalize_name(zone_and_link_name)},
 """
         return zone_and_link_items
+
+
+def _render_comments_map(comments: CommentsMap) -> str:
+    """Convert the CommentsMap into a Python comment. Print the name and list
+    of reasons one a single line, or multiple lines, like this:
+
+    # Name1 (reason)
+    #
+    # Name2 (
+    #   reason1,
+    #   reason2,
+    # )
+    """
+    comment = ''
+    for name, reasons in sorted(comments.items()):
+        if len(reasons) <= 1:
+            comment += f"# {name} ({next(iter(reasons))})\n"
+        else:
+            comment += f"# {name} (\n"
+            for reason in reasons:
+                comment += f'#   {reason},\n'
+            comment += "# )\n"
+    return comment

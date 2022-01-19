@@ -2,7 +2,7 @@
 #
 # MIT License
 
-from typing import List, Dict, Iterable
+from typing import List, Dict, Collection
 from typing import Optional
 from typing import NamedTuple
 from typing import Set
@@ -168,11 +168,12 @@ IndexMap = Dict[str, int]
 LettersPerPolicy = Dict[str, IndexMap]
 
 # Map of {name -> Set[reason]} used by Transformer to collect de-duped error
-# messages or warnings. A set() collection does not serialize well to JSON, so #
+# messages or warnings. A set() collection does not serialize well to JSON, so
 # jsongenerator.py will convert these into {name -> List[Comment]} internally.
-# We use an Iterable[str] instead of a Union[Dict[], Dict[]] or even a Dict[str,
-# Union[Set[], List[]] to avoid a LOT of headaches with mypy type checking.
-CommentsMap = Dict[str, Iterable[str]]
+# We use an Collection[str] instead of a Union[Dict[], Dict[]] or even a
+# Dict[str, Union[Set[], List[]] to avoid a LOT of headaches with mypy type
+# checking.
+CommentsMap = Dict[str, Collection[str]]
 
 
 class TransformerResult(NamedTuple):

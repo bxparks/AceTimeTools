@@ -1,6 +1,8 @@
 # Changelog
 
 * Unreleased
+    * Identify zones and policies whose DST shifts are not 0:00 or 1:00.
+    * Simplify rendering of CommentsMap to support multiple comment lines.
 * v1.0.0 (2022-01-10)
     * Move `compare_xxx` scripts to `AceTimeValidation` repo.
     * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
