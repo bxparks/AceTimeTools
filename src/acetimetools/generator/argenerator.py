@@ -1016,8 +1016,8 @@ const {scope}::ZoneInfo kZone{linkNormalizedName} {progmem} = {{
   kZoneName{linkNormalizedName} /*name*/,
   0x{linkId:08x} /*zoneId*/,
   &kZoneContext /*zoneContext*/,
-  {numEras} /*numEras*/,
-  kZoneEra{zoneNormalizedName} /*eras*/,
+  0 /*numEras*/,
+  &kZone{zoneNormalizedName} /*eras(info)*/,
 }};
 
 """
