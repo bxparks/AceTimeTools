@@ -9,7 +9,7 @@ the [AceTime](https://github.com/bxparks/AceTime) Arduino library and the
 used to be in the AceTime project itself, but was extracted into a separate repo
 to support other languages and environments.
 
-**Version**: v1.0.0 (2022-01-10)
+**Version**: v1.1.0 (2022-02-14)
 
 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 

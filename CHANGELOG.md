@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.1.0 (2022-02-14)
     * Identify zones and policies whose DST shifts are not 0:00 or 1:00.
     * Simplify rendering of `CommentsMap` to support multiple comment lines.
     * Set the `eras` field of Link entries to the target `ZoneInfo` instead
