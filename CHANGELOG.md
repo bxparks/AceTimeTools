@@ -5,6 +5,8 @@
     * Simplify rendering of `CommentsMap` to support multiple comment lines.
     * Set the `eras` field of Link entries to the target `ZoneInfo` instead
       the `ZoneEras`, converting hard links to symbolic links.
+        * Update `argenerator.py` for AceTime.
+        * Update `pygenerator.py` for AceTimePython.
 * v1.0.0 (2022-01-10)
     * Move `compare_xxx` scripts to `AceTimeValidation` repo.
     * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
