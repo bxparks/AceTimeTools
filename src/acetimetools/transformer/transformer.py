@@ -1,12 +1,6 @@
 # Copyright 2018 Brian T. Park
 #
 # MIT License.
-"""
-Cleanses and transforms the Zone, Rule and Link entries for processing by
-various AceTime algorithms. The data will be consumed by code generation classes
-(ArduinoGenerator, PythonGenerator) or by the ZoneInfoInliner to generate zone
-info records internally.
-"""
 
 import logging
 import sys
@@ -40,6 +34,21 @@ PoliciesToZones = Dict[str, List[str]]
 
 
 class Transformer:
+    """
+    Cleanses and transforms the Zone, Rule and Link entries for processing by
+    various AceTime algorithms. The TransformerResult will be further
+    transformed by the transformer.ArduinoTransformer class to massage it into
+    an at_types.ZoneInfoDatabase data structure. The ZoneInfoDatabase is then
+    used to generate the AceTime C++ files, the AceTimePython files, and the
+    zonedb*.json JSON files.
+
+    The Transformer was intended to be agnostic to a specific implementation of
+    the AceTime algorithms. The ArduinoTransformer was intended to transform the
+    abstract data structures into a specific data structure that is suitable to
+    be consumed by the AceTime library. It turned out to be easier for the
+    AceTimePython library to reuse the same data structure as AceTime, so the
+    ArduinoTransformer is used for the AceTimePython library as well.
+    """
     def __init__(
         self,
         tresult: TransformerResult,

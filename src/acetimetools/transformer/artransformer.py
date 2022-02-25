@@ -30,8 +30,8 @@ from acetimetools.data_types.at_types import add_comment
 
 class ArduinoTransformer:
     """Process the ZonesMap and PoliciesMap for the zone_info.{h,cpp} and
-    zone_policies.{h,cpp} files required on Arduino. Produces a new
-    TransformerResult from get_data().
+    zone_policies.{h,cpp} files required by the AceTime and AceTimePython
+    libraries. Produces a new TransformerResult from get_data().
     """
 
     def __init__(
