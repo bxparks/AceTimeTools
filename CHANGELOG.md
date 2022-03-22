@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+* v1.1.1 (2022-03-22)
+    * Update docstring. No code changes.
+    * This is a maintenance release to match the AceTime v1.11.3 release.
 * v1.1.0 (2022-02-14)
     * Identify zones and policies whose DST shifts are not 0:00 or 1:00.
     * Simplify rendering of `CommentsMap` to support multiple comment lines.
