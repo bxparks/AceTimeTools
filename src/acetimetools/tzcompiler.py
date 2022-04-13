@@ -19,8 +19,8 @@ be created. If empty, it means the same as $PWD.
 For `--action zonedb` is selected, The `--language` flag is a comma-separated
 list of output file:
 
-  * arduino: Generate `zone_*.{h,cpp}` files for Arduino
-  * python: Generate `zone_*.py` files for Python `zone_processor`
+  * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
+  * python: Generate `zone_*.py` files for AceTimePython Python library
   * json: Generate `zonedb.json` file.
   * zonelist: Generate a raw list of zone names in 'zones.txt' file.
 
@@ -35,6 +35,7 @@ The Transformer class accepts a number of options:
   * --offset_granularity {seconds}
   * --delta_granularity {seconds}
   * --strict, --nostrict
+  * --compress, --nocompress
 
 which determine which Rules or Zones are retained during the 'transformation'
 process.
@@ -83,6 +84,7 @@ class Generator(Protocol):
 def generate_zonedb(
     invocation: str,
     db_namespace: str,
+    compress: bool,
     language: str,
     output_dir: str,
     json_file: str,
@@ -107,6 +109,7 @@ def generate_zonedb(
         generator = ArduinoGenerator(
             invocation=invocation,
             db_namespace=db_namespace,
+            compress=compress,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -231,6 +234,20 @@ def main() -> None:
     parser.add_argument(
         '--db_namespace',
         help='C++ namespace for the zonedb files (default: zonedb or zonedbx)',
+    )
+
+    # Whether to compress the zone and link names
+    parser.add_argument(
+        '--compress',
+        help='Compress the zone and link names using fragments (default: True)',
+        action='store_true',
+        default=True,
+    )
+    parser.add_argument(
+        '--nocompress',
+        help='Disable compression of zone and link names using fragments',
+        action='store_false',
+        dest='compress',
     )
 
     # For language=json, specify the output file.
@@ -428,6 +445,7 @@ def main() -> None:
             generate_zonedb(
                 invocation=invocation,
                 db_namespace=args.db_namespace,
+                compress=args.compress,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,

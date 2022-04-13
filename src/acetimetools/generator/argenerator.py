@@ -40,6 +40,7 @@ class ArduinoGenerator:
         self,
         invocation: str,
         db_namespace: str,
+        compress: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -79,6 +80,7 @@ class ArduinoGenerator:
             invocation=wrapped_invocation,
             tz_files=wrapped_tzfiles,
             db_namespace=db_namespace,
+            compress=compress,
             tz_version=zidb['tz_version'],
             scope=zidb['scope'],
             start_year=zidb['start_year'],
@@ -671,6 +673,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         self,
         invocation: str,
         db_namespace: str,
+        compress: bool,
         tz_version: str,
         tz_files: str,
         scope: str,
@@ -695,6 +698,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
     ):
         self.invocation = invocation
         self.db_namespace = db_namespace
+        self.compress = compress
         self.tz_version = tz_version
         self.tz_files = tz_files
         self.scope = scope
@@ -831,17 +835,29 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
         zone_string_original_size = sum([
             len(name) + 1 for name in self.zones_map.keys()
         ])
-        zone_string_size = sum([
-            len(self.compressed_names[name]) + 1
-            for name in self.zones_map.keys()
-        ])
+        if self.compress:
+            zone_string_size = sum([
+                len(self.compressed_names[name]) + 1
+                for name in self.zones_map.keys()
+            ])
+        else:
+            zone_string_size = sum([
+                len(name) + 1
+                for name in self.zones_map.keys()
+            ])
         link_string_original_size = sum([
             len(name) + 1 for name in self.links_map.keys()
         ])
-        link_string_size = sum([
-            len(self.compressed_names[name]) + 1
-            for name in self.links_map.keys()
-        ])
+        if self.compress:
+            link_string_size = sum([
+                len(self.compressed_names[name]) + 1
+                for name in self.links_map.keys()
+            ])
+        else:
+            link_string_size = sum([
+                len(name) + 1
+                for name in self.links_map.keys()
+            ])
         format_size = sum([len(s) + 1 for s in self.formats_map.keys()])
         fragment_size = sum([len(s) + 1 for s in self.fragments_map.keys()])
 
@@ -917,7 +933,10 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             era_item = self._generate_era_item(zone_name, era)
             era_items += era_item
 
-        compressed_name = self.compressed_names[zone_name]
+        if self.compress:
+            compressed_name = self.compressed_names[zone_name]
+        else:
+            compressed_name = zone_name
         rendered_name = _compressed_name_to_c_string(compressed_name)
 
         # Calculate memory sizes
@@ -1021,7 +1040,10 @@ const {scope}::ZoneInfo kZone{linkNormalizedName} {progmem} = {{
 }};
 
 """
-        compressed_name = self.compressed_names[link_name]
+        if self.compress:
+            compressed_name = self.compressed_names[link_name]
+        else:
+            compressed_name = link_name
         rendered_name = _compressed_name_to_c_string(compressed_name)
 
         link_name_size = len(compressed_name) + 1
