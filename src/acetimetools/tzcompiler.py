@@ -20,6 +20,7 @@ For `--action zonedb` is selected, The `--language` flag is a comma-separated
 list of output file:
 
   * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
+  * c: Generate `zone_*.{h,cpp}` files for AceTimeC C lang library
   * python: Generate `zone_*.py` files for AceTimePython Python library
   * json: Generate `zonedb.json` file.
   * zonelist: Generate a raw list of zone names in 'zones.txt' file.
@@ -64,6 +65,7 @@ from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
 from acetimetools.generator.argenerator import ArduinoGenerator
+from acetimetools.generator.cgenerator import CGenerator
 from acetimetools.generator.pygenerator import PythonGenerator
 from acetimetools.generator.zonelistgenerator import ZoneListGenerator
 from acetimetools.generator.jsongenerator import JsonGenerator
@@ -107,6 +109,16 @@ def generate_zonedb(
     elif language == 'arduino':
         logging.info('==== Creating Arduino zone_*.{h,cpp} files')
         generator = ArduinoGenerator(
+            invocation=invocation,
+            db_namespace=db_namespace,
+            compress=compress,
+            zidb=zidb,
+        )
+        generator.generate_files(output_dir)
+
+    elif language == 'c':
+        logging.info('==== Creating AceTimeC zone_*.{h,c} files')
+        generator = CGenerator(
             invocation=invocation,
             db_namespace=db_namespace,
             compress=compress,
@@ -225,7 +237,7 @@ def main() -> None:
     parser.add_argument(
         '--language',
         help='Comma-separated list of target languages '
-             '(arduino|python|json|zonelist)',
+             '(arduino|c|python|json|zonelist)',
         default='',
     )
 
@@ -288,7 +300,7 @@ def main() -> None:
 
     # Manually parse the comma-separated --action.
     languages = set(args.language.split(','))
-    allowed_languages = set(['arduino', 'python', 'json', 'zonelist'])
+    allowed_languages = set(['arduino', 'c', 'python', 'json', 'zonelist'])
     if not languages.issubset(allowed_languages):
         print(f'Invalid --language: {languages - allowed_languages}')
         sys.exit(1)
