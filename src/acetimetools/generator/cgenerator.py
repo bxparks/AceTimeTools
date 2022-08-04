@@ -705,12 +705,12 @@ const struct AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
 extern const struct AtcZoneInfo kAtcZone{zoneNormalizedName}; // {zoneFullName}
 """
         ZONE_INFOS_H_INFO_ZONE_ID = """\
-const uint32_t kAtcZoneId{zoneNormalizedName} = 0x{zoneId:08x}; \
-// {zoneFullName}
+#define kAtcZoneId{zoneNormalizedName} 0x{zoneId:08x} \
+/* {zoneFullName} */
 """
         ZONE_INFOS_H_BUF_SIZE = """\
-const uint8_t kAtcZoneBufSize{zoneNormalizedName} = {bufSize};  \
-// {zoneFullName} in {bufYear}
+#define kAtcZoneBufSize{zoneNormalizedName} {bufSize}  \
+/* {zoneFullName} in {bufYear} */
 """
         info_items = ''
         info_zone_ids = ''
@@ -739,8 +739,8 @@ extern const struct AtcZoneInfo kAtcZone{linkNormalizedName}; \
 // {linkFullName} -> {zoneFullName}
 """
         ZONE_INFOS_H_LINK_ID = """\
-const uint32_t kAtcZoneId{linkNormalizedName} = 0x{linkId:08x}; \
-// {linkFullName}
+#define kAtcZoneId{linkNormalizedName} 0x{linkId:08x} \
+/* {linkFullName} */
 """
         link_items = ''
         link_ids = ''
@@ -1108,16 +1108,16 @@ const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
 #include "../zone_info.h"
 
 // Zones
-const uint16_t kAtcZoneRegistrySize = {numZones};
+#define kAtcZoneRegistrySize {numZones}
 extern const struct AtcZoneInfo * const kAtcZoneRegistry[{numZones}];
 
 // Zones and Links
-const uint16_t kAtcZoneAndLinkRegistrySize = {numZonesAndLinks};
+#define kAtcZoneAndLinkRegistrySize {numZonesAndLinks}
 extern const struct AtcZoneInfo * \
 const kAtcZoneAndLinkRegistry[{numZonesAndLinks}];
 
 // Link Entries
-const uint16_t kAtcLinkRegistrySize = {numLinks};
+#define kAtcLinkRegistrySize {numLinks}
 extern const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}];
 
 #endif
