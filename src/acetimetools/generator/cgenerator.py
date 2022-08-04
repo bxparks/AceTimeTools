@@ -223,8 +223,8 @@ static const struct AtcZoneRule kAtcZoneRules{policyName}[] {progmem} = {{
 const struct AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
   kAtcZoneRules{policyName} /*rules*/,
   {letterArrayRef} /*letters*/,
-  {numRules} /*numRules*/,
-  {numLetters} /*numLetters*/,
+  {numRules} /*num_rules*/,
+  {numLetters} /*num_letters*/,
 }};
 
 """
