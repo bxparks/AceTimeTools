@@ -420,7 +420,7 @@ static const char * const kLetters{policyName}[] {progmem} = {{
             letter_array = ZONE_POLICIES_LETTER_ARRAY.format(
                 policyName=policy_name,
                 letterItems=letterItems,
-                progmem='ACE_TIME_C_PROGMEM')
+                progmem='')
         else:
             letter_array_ref = 'NULL'
             letter_array = ''
@@ -446,7 +446,7 @@ static const char * const kLetters{policyName}[] {progmem} = {{
             numLetters=num_letters,
             letterArrayRef=letter_array_ref,
             letterArray=letter_array,
-            progmem='ACE_TIME_C_PROGMEM')
+            progmem='')
 
         return (policy_item, memory8, memory32)
 
@@ -947,7 +947,7 @@ extern const struct AtcZoneInfo kAtcZone{linkNormalizedName}; \
             memory8=data_size8 + string_size,
             memory32=data_size32 + string_size,
             eraItems=era_items,
-            progmem='ACE_TIME_C_PROGMEM')
+            progmem='')
         return info_item
 
     def _generate_era_item(
@@ -1042,7 +1042,7 @@ const struct AtcZoneInfo kAtcZone{linkNormalizedName} {progmem} = {{
             memory8=memory8,
             memory32=memory32,
             numEras=len(self.zones_map[zone_name]),
-            progmem='ACE_TIME_C_PROGMEM',
+            progmem='',
         )
 
         return link_item
@@ -1215,7 +1215,7 @@ extern const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}];
             zoneRegistryItems=zone_registry_items,
             zoneAndLinkRegistryItems=zone_and_link_registry_items,
             linkRegistryItems=link_registry_items,
-            progmem='ACE_TIME_C_PROGMEM',
+            progmem='',
         )
 
     def generate_registry_h(self) -> str:
