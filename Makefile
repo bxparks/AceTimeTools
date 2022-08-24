@@ -34,23 +34,17 @@ flake8:
 
 # The TZ DB version used for internal testing targets defined below. This does
 # not affect the zonedb files generated in AceTime or AceTimePython.
-TZ_VERSION := 2021a
+TZ_VERSION := 2022b
 
 # Copy the TZ DB files into this directory for testing purposes.
-$(TZ_VERSION):
-	./copytz.sh $(TZ_VERSION)
-
-# Run the Validator using validate.py.
-validate: $(TZ_VERSION)
-	./src/acetimetools/validate.py \
-		--input_dir $(TZ_VERSION) \
-		--scope extended
+tzfiles:
+	./copytz.sh --tag $(TZ_VERSION) ~/src/tz tzfiles
 
 # Generate zonedb.json for testing purposes.
-zonedb.json: $(TZ_VERSION)
+zonedb.json: tzfiles
 	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
-		--input_dir $(TZ_VERSION) \
+		--input_dir tzfiles \
 		--scope basic \
 		--language json \
 		--json_file $@ \
@@ -58,10 +52,10 @@ zonedb.json: $(TZ_VERSION)
 		--until_year 2050
 
 # Generate zonedbx.json for testing purposes.
-zonedbx.json: $(TZ_VERSION)
+zonedbx.json: tzfiles
 	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
-		--input_dir $(TZ_VERSION) \
+		--input_dir tzfiles \
 		--scope extended \
 		--language json \
 		--json_file $@ \
@@ -69,10 +63,10 @@ zonedbx.json: $(TZ_VERSION)
 		--until_year 2050
 
 # Generate the zones.txt file for testing purposes.
-zones.txt: $(TZ_VERSION)
+zones.txt: tzfiles
 	./src/acetimetools/tzcompiler.py \
 		--tz_version $(TZ_VERSION) \
-		--input_dir $(TZ_VERSION) \
+		--input_dir tzfiles \
 		--scope basic \
 		--language zonelist
 
@@ -81,4 +75,4 @@ zones.txt: $(TZ_VERSION)
 clean:
 	rm -f zones.txt zonedb.json zonedbx.json validation_data.json \
 		validation_data.h validation_data.cpp validation_tests.cpp
-	rm -rf $(TZ_VERSION)
+	rm -rf tzfiles

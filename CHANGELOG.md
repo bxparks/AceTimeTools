@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+    * Simplify `copytz.sh` by using `git clone` against the local repo to
+      extract the files at a specific tag, instead of using `git checkout`.
+        * Eliminates the need for `flock(1)` which is not supported on MacOS.
 * v1.1.1 (2022-03-22)
     * Update docstring. No code changes.
     * This is a maintenance release to match the AceTime v1.11.3 release.
