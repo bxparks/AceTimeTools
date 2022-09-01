@@ -214,13 +214,13 @@ class ZonePoliciesGenerator:
 // Memory (32-bit): {memory32}
 //---------------------------------------------------------------------------
 
-static const struct AtcZoneRule kAtcZoneRules{policyName}[] {progmem} = {{
+static const AtcZoneRule kAtcZoneRules{policyName}[] {progmem} = {{
 {ruleItems}
 }};
 
 {letterArray}
 
-const struct AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
+const AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
   kAtcZoneRules{policyName} /*rules*/,
   {letterArrayRef} /*letters*/,
   {numRules} /*num_rules*/,
@@ -268,7 +268,7 @@ const struct AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
 
     def generate_policies_h(self) -> str:
         ZONE_POLICIES_H_POLICY_ITEM = """\
-extern const struct AtcZonePolicy kAtcPolicy{policyName};
+extern const AtcZonePolicy kAtcPolicy{policyName};
 """
         policy_items = ''
         for name, rules in sorted(self.policies_map.items()):
@@ -478,7 +478,7 @@ class ZoneInfosGenerator:
 extern const char kAtcTzDatabaseVersion[];
 
 // Metadata about the zonedb files.
-extern const struct AtcZoneContext kAtcZoneContext;
+extern const AtcZoneContext kAtcZoneContext;
 
 //---------------------------------------------------------------------------
 // Supported zones: {numInfos}
@@ -578,7 +578,7 @@ const char * const kAtcFragments[] = {{
 {fragments}
 }};
 
-const struct AtcZoneContext kAtcZoneContext = {{
+const AtcZoneContext kAtcZoneContext = {{
   {start_year} /*startYear*/,
   {until_year} /*untilYear*/,
   kAtcTzDatabaseVersion /*tzVersion*/,
@@ -608,14 +608,14 @@ const struct AtcZoneContext kAtcZoneContext = {{
 // Memory (32-bit): {memory32}
 //---------------------------------------------------------------------------
 
-static const struct AtcZoneEra kAtcZoneEra{zoneNormalizedName}[] {progmem} = {{
+static const AtcZoneEra kAtcZoneEra{zoneNormalizedName}[] {progmem} = {{
 {eraItems}
 }};
 
 static const char kAtcZoneName{zoneNormalizedName}[] {progmem} = \
 {compressedName};
 
-const struct AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
+const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
   kAtcZoneName{zoneNormalizedName} /*name*/,
   0x{zoneId:08x} /*zone_id*/,
   &kAtcZoneContext /*zone_context*/,
@@ -702,7 +702,7 @@ const struct AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
 
     def generate_infos_h(self) -> str:
         ZONE_INFOS_H_INFO_ITEM = """\
-extern const struct AtcZoneInfo kAtcZone{zoneNormalizedName}; // {zoneFullName}
+extern const AtcZoneInfo kAtcZone{zoneNormalizedName}; // {zoneFullName}
 """
         ZONE_INFOS_H_INFO_ZONE_ID = """\
 #define kAtcZoneId{zoneNormalizedName} 0x{zoneId:08x} \
@@ -735,7 +735,7 @@ extern const struct AtcZoneInfo kAtcZone{zoneNormalizedName}; // {zoneFullName}
             )
 
         ZONE_INFOS_H_LINK_ITEM = """\
-extern const struct AtcZoneInfo kAtcZone{linkNormalizedName}; \
+extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
 // {linkFullName} -> {zoneFullName}
 """
         ZONE_INFOS_H_LINK_ID = """\
@@ -1010,7 +1010,7 @@ extern const struct AtcZoneInfo kAtcZone{linkNormalizedName}; \
 static const char kAtcZoneName{linkNormalizedName}[] {progmem} = \
 {compressedName};
 
-const struct AtcZoneInfo kAtcZone{linkNormalizedName} {progmem} = {{
+const AtcZoneInfo kAtcZone{linkNormalizedName} {progmem} = {{
   kAtcZoneName{linkNormalizedName} /*name*/,
   0x{linkId:08x} /*zoneId*/,
   &kAtcZoneContext /*zoneContext*/,
@@ -1069,14 +1069,14 @@ class ZoneRegistryGenerator:
 //---------------------------------------------------------------------------
 // Zone Info registry. Sorted by zoneId.
 //---------------------------------------------------------------------------
-const struct AtcZoneInfo * const kAtcZoneRegistry[{numZones}] {progmem} = {{
+const AtcZoneInfo * const kAtcZoneRegistry[{numZones}] {progmem} = {{
 {zoneRegistryItems}
 }};
 
 //---------------------------------------------------------------------------
 // Zone and Link (fat) Info registry. Sorted by zoneId. Links act like Zones.
 //---------------------------------------------------------------------------
-const struct AtcZoneInfo * const kAtcZoneAndLinkRegistry[{numZonesAndLinks}] \
+const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{numZonesAndLinks}] \
 {progmem} = {{
 {zoneAndLinkRegistryItems}
 }};
@@ -1084,7 +1084,7 @@ const struct AtcZoneInfo * const kAtcZoneAndLinkRegistry[{numZonesAndLinks}] \
 //---------------------------------------------------------------------------
 // Link (thin) Entry registry. Sorted by linkId. Links are references to Zones.
 //---------------------------------------------------------------------------
-const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
+const AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
 {linkRegistryItems}
 }};
 """
@@ -1109,16 +1109,16 @@ const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
 
 // Zones
 #define kAtcZoneRegistrySize {numZones}
-extern const struct AtcZoneInfo * const kAtcZoneRegistry[{numZones}];
+extern const AtcZoneInfo * const kAtcZoneRegistry[{numZones}];
 
 // Zones and Links
 #define kAtcZoneAndLinkRegistrySize {numZonesAndLinks}
-extern const struct AtcZoneInfo * \
+extern const AtcZoneInfo * \
 const kAtcZoneAndLinkRegistry[{numZonesAndLinks}];
 
 // Link Entries
 #define kAtcLinkRegistrySize {numLinks}
-extern const struct AtcLinkEntry kAtcLinkRegistry[{numLinks}];
+extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
 
 #endif
 """
