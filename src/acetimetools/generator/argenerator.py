@@ -346,8 +346,8 @@ extern const {scope}::ZonePolicy kPolicy{policyName};
         ZONE_POLICIES_CPP_RULE_ITEM = """\
   // {raw_line}
   {{
-    {from_year_tiny} /*fromYearTiny*/,
-    {to_year_tiny} /*toYearTiny*/,
+    {from_year} /*fromYear*/,
+    {to_year} /*toYear*/,
     {in_month} /*inMonth*/,
     {on_day_of_week} /*onDayOfWeek*/,
     {on_day_of_month} /*onDayOfMonth*/,
@@ -377,8 +377,8 @@ static const char* const kLetters{policyName}[] {progmem} = {{
                 delta_seconds=rule['delta_seconds_truncated'],
                 scope=self.scope,
             )
-            from_year_tiny = rule['from_year_tiny']
-            to_year_tiny = rule['to_year_tiny']
+            from_year = rule['from_year']
+            to_year = rule['to_year']
 
             # Single-character 'letter' values are represented as themselves
             # using the C++ 'char' type ('A'-'Z'). But some 'letter' fields hold
@@ -403,8 +403,8 @@ static const char* const kLetters{policyName}[] {progmem} = {{
 
             rule_items += ZONE_POLICIES_CPP_RULE_ITEM.format(
                 raw_line=normalize_raw(rule['raw_line']),
-                from_year_tiny=from_year_tiny,
-                to_year_tiny=to_year_tiny,
+                from_year=from_year,
+                to_year=to_year,
                 in_month=rule['in_month'],
                 on_day_of_week=rule['on_day_of_week'],
                 on_day_of_month=rule['on_day_of_month'],
@@ -656,7 +656,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
     "{format}" /*format*/,
     {offset_code} /*offsetCode*/,
     {delta_code} /*deltaCode ({delta_code_comment})*/,
-    {until_year_tiny} /*untilYearTiny*/,
+    {until_year} /*untilYear*/,
     {until_month} /*untilMonth*/,
     {until_day} /*untilDay*/,
     {until_time_code} /*untilTimeCode*/,
@@ -987,7 +987,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             delta_seconds=era['rules_delta_seconds_truncated'],
             scope=self.scope,
         )
-        until_year_tiny = era['until_year_tiny']
+        until_year = era['until_year']
         until_month = era['until_month']
         until_day = era['until_day']
         until_time_code = era['until_time_code']
@@ -1005,7 +1005,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             delta_code_comment=delta_code_comment,
             zone_policy=zone_policy,
             format=format_short,
-            until_year_tiny=until_year_tiny,
+            until_year=until_year,
             until_month=until_month,
             until_day=until_day,
             until_time_code=until_time_code,
