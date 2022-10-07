@@ -22,15 +22,15 @@ class TestDateUtil(unittest.TestCase):
         self.assertEqual(946811045, int(ddt.timestamp()))
 
         ddt_utcoffset = ddt.utcoffset()
-        assert(ddt_utcoffset is not None)
+        assert ddt_utcoffset is not None
         self.assertEqual(-8 * 3600, ddt_utcoffset.total_seconds())
 
-        assert(ddt.tzinfo is not None)
+        assert ddt.tzinfo is not None
         self.assertEqual("PST", ddt.tzinfo.tzname(ddt))
 
     def test_before_fall_back(self) -> None:
         tz = gettz('America/Los_Angeles')
-        assert(tz is not None)
+        assert tz is not None
 
         # One second before DST shift, 01:59:59 UTC-7
         epoch_seconds = 26125199
@@ -69,7 +69,7 @@ class TestDateUtil(unittest.TestCase):
 
     def test_after_fall_back(self) -> None:
         tz = gettz('America/Los_Angeles')
-        assert(tz is not None)
+        assert tz is not None
 
         # Just after DST fall back 01:00:00 UTC-8
         epoch_seconds = 26125200
