@@ -61,6 +61,7 @@ class BufSizeEstimator:
             len(zone_infos), len(zone_policies))
 
         # Calculate expected buffer sizes for each zone using a ZoneProcessor.
+        logging.info('Calculating buf sizes per zone')
         buf_size_map = _calculate_buf_sizes_per_zone(
             zone_infos,
             self.start_year,
@@ -135,6 +136,10 @@ def _find_max_buffer_sizes(
     the given ZoneProcessor, over the years from start_year to until_year. This
     is useful for determining that buffer size of the C++ version of this code
     which uses static sizes for the Transition buffers.
+
+    If until_year is large (e.g. 10000), this function will be slow. Currently,
+    we should limit until_year to less than ~2500, which should be more than
+    enough for now.
     """
     max_active_size = CountAndYear(0, 0)
     max_buffer_size = CountAndYear(0, 0)

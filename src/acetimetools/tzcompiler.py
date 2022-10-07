@@ -420,7 +420,9 @@ def main() -> None:
         start_year=args.start_year,
         until_year=args.until_year,
     )
+    logging.info('Calculating buf_size_map');
     buf_size_map = estimator.calculate_buf_size_map()
+    logging.info('Calculating max_buf_size');
     max_buf_size = calculate_max_buf_size(buf_size_map)
 
     # Check if the estimated buffer size is too big
