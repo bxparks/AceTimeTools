@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.1.2 (2022-10-07)
     * Simplify `copytz.sh` by using `git clone` against the local repo to
       extract the files at a specific tag, instead of using `git checkout`.
         * Eliminates the need for `flock(1)` which is not supported on MacOS.
