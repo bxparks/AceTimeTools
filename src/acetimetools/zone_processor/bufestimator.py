@@ -147,15 +147,6 @@ def _find_max_buffer_sizes(
     max_active_size = CountAndYear(0, 0)
     max_buffer_size = CountAndYear(0, 0)
     for year in range(start_year, until_year):
-        # Terminate the loop if the (year-1) is a terminal year. We use (year-1)
-        # because we use a 3-year window around the current `year` when
-        # calculating the Transitions. All future years will produce the same
-        # number of Transitions within the window. This allow this function to
-        # bail early and finish in a reasonable amount of time when very large
-        # `until_year` (e.g. 10000, infinity) is given.
-        if zone_processor.is_terminal_year(year - 1):
-            break
-
         # Get the buffer sizes for given year (within the 3-year window).
         zone_processor.init_for_year(year)
         buffer_size_info = zone_processor.get_buffer_sizes()
@@ -169,6 +160,21 @@ def _find_max_buffer_sizes(
         if buffer_size_info.buffer_size > max_buffer_size.number:
             max_buffer_size = CountAndYear(
                 buffer_size_info.buffer_size, year)
+
+        # Terminate the loop if the (year-2) is a terminal year. This check is
+        # performed at the end of the loop body so that the buffer size
+        # calculation is done at least once.
+        #
+        # We use (year-2) because we use a 3-year window [year-1, year+1] around
+        # the current `year` when calculating the Transitions, and we want any
+        # most recent prior year (<= year-2) to also be a terminal year.
+        #
+        # All future years after `year` will produce the same number of
+        # Transitions within the window. This allow this function to bail early
+        # and finish in a reasonable amount of time when very large `until_year`
+        # (e.g. 10000, infinity) is given.
+        if zone_processor.is_terminal_year(year - 2):
+            break
 
     return MaxBufferSizeInfo(
         max_active_size=max_active_size,
