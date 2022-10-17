@@ -20,6 +20,8 @@ class MaxBufferSizeInfo(NamedTuple):
     """
     max_active_size: CountAndYear
     max_buffer_size: CountAndYear
+    # The first (smallest) year when zone_processor.is_terminal_year() is True
+    terminal_year: int
 
 
 class BufSizeEstimator:
@@ -106,6 +108,7 @@ def _calculate_buf_sizes_per_zone(
     zone listed in zone_infos.
     """
     buf_sizes: BufSizeMap = {}
+    max_terminal_year = 0
     for zone_name, zone_info in zone_infos.items():
         zone_processor = ZoneProcessor(zone_info)
 
@@ -123,7 +126,11 @@ def _calculate_buf_sizes_per_zone(
         # Currently, we just care about the max buffer size, not the max
         # active size.
         buf_sizes[zone_name] = max_buffer_size_info.max_buffer_size
+        terminal_year = max_buffer_size_info.terminal_year
+        if terminal_year > max_terminal_year:
+            max_terminal_year = terminal_year
 
+    logging.info(f'max_terminal_year: {max_terminal_year}')
     return buf_sizes
 
 
@@ -136,14 +143,20 @@ def _find_max_buffer_sizes(
     the given ZoneProcessor, over the years from start_year to until_year. This
     is useful for determining that buffer size of the C++ version of this code
     which uses static sizes for the Transition buffers.
-
-    If until_year is large (e.g. 10000), this function will be slow. Currently,
-    we should limit until_year to less than ~2500, which should be more than
-    enough for now.
     """
     max_active_size = CountAndYear(0, 0)
     max_buffer_size = CountAndYear(0, 0)
     for year in range(start_year, until_year):
+        # Terminate the loop if the (year-1) is a terminal year. We use (year-1)
+        # because we use a 3-year window around the current `year` when
+        # calculating the Transitions. All future years will produce the same
+        # number of Transitions within the window. This allow this function to
+        # bail early and finish in a reasonable amount of time when very large
+        # `until_year` (e.g. 10000, infinity) is given.
+        if zone_processor.is_terminal_year(year - 1):
+            break
+
+        # Get the buffer sizes for given year (within the 3-year window).
         zone_processor.init_for_year(year)
         buffer_size_info = zone_processor.get_buffer_sizes()
 
@@ -160,4 +173,5 @@ def _find_max_buffer_sizes(
     return MaxBufferSizeInfo(
         max_active_size=max_active_size,
         max_buffer_size=max_buffer_size,
+        terminal_year=year,
     )
