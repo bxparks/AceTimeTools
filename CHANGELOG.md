@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+* v1.1.3 (2022-10-22)
+    * Use `ZoneProcessor.is_terminal_year()` to allow `bufestimator.py` to
+      finish early when `until_year` is very large, e.g. 10000.
 * v1.1.2 (2022-10-07)
     * Simplify `copytz.sh` by using `git clone` against the local repo to
       extract the files at a specific tag, instead of using `git checkout`.
