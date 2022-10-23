@@ -42,6 +42,7 @@ class CGenerator:
         invocation: str,
         db_namespace: str,
         compress: bool,
+        generate_int16_years: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -66,6 +67,7 @@ class CGenerator:
             invocation=wrapped_invocation,
             tz_files=wrapped_tzfiles,
             db_namespace=db_namespace,
+            generate_int16_years=generate_int16_years,
             tz_version=zidb['tz_version'],
             scope=zidb['scope'],
             zones_map=zidb['zones_map'],
@@ -82,6 +84,7 @@ class CGenerator:
             tz_files=wrapped_tzfiles,
             db_namespace=db_namespace,
             compress=compress,
+            generate_int16_years=generate_int16_years,
             tz_version=zidb['tz_version'],
             scope=zidb['scope'],
             start_year=zidb['start_year'],
@@ -237,10 +240,11 @@ const AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
     def __init__(
         self,
         invocation: str,
-        tz_version: str,
         tz_files: str,
-        scope: str,
         db_namespace: str,
+        generate_int16_years: bool,
+        tz_version: str,
+        scope: str,
         zones_map: ZonesMap,
         policies_map: PoliciesMap,
         removed_zones: CommentsMap,
@@ -251,10 +255,11 @@ const AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
         letters_map: IndexMap,
     ):
         self.invocation = invocation
-        self.tz_version = tz_version
         self.tz_files = tz_files
-        self.scope = scope
         self.db_namespace = db_namespace
+        self.generate_int16_years = generate_int16_years
+        self.tz_version = tz_version
+        self.scope = scope
         self.zones_map = zones_map
         self.policies_map = policies_map
         self.removed_zones = removed_zones
@@ -334,8 +339,8 @@ extern const AtcZonePolicy kAtcPolicy{policyName};
         ZONE_POLICIES_C_RULE_ITEM = """\
   // {raw_line}
   {{
-    {from_year} /*from_year*/,
-    {to_year} /*to_year*/,
+    {from_year} /*{from_year_label}*/,
+    {to_year} /*{to_year_label}*/,
     {in_month} /*in_month*/,
     {on_day_of_week} /*on_day_of_week*/,
     {on_day_of_month} /*on_day_of_month*/,
@@ -365,8 +370,16 @@ static const char * const kLetters{policyName}[] {progmem} = {{
                 delta_seconds=rule['delta_seconds_truncated'],
                 scope=self.scope,
             )
-            from_year = rule['from_year']
-            to_year = rule['to_year']
+            if self.generate_int16_years:
+                from_year = rule['from_year']
+                from_year_label = 'from_year'
+                to_year = rule['to_year']
+                to_year_label = 'to_year'
+            else:
+                from_year = rule['from_year_tiny']
+                from_year_label = 'from_year_tiny'
+                to_year = rule['to_year_tiny']
+                to_year_label = 'to_year_tiny'
 
             # Single-character 'letter' values are represented as themselves
             # using the C++ 'char' type ('A'-'Z'). But some 'letter' fields hold
@@ -392,7 +405,9 @@ static const char * const kLetters{policyName}[] {progmem} = {{
             rule_items += ZONE_POLICIES_C_RULE_ITEM.format(
                 raw_line=normalize_raw(rule['raw_line']),
                 from_year=from_year,
+                from_year_label=from_year_label,
                 to_year=to_year,
+                to_year_label=to_year_label,
                 in_month=rule['in_month'],
                 on_day_of_week=rule['on_day_of_week'],
                 on_day_of_month=rule['on_day_of_month'],
@@ -632,7 +647,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
     "{format}" /*format*/,
     {offset_code} /*offset_code*/,
     {delta_code} /*delta_code ({delta_code_comment})*/,
-    {until_year} /*until_year*/,
+    {until_year} /*{until_year_label}*/,
     {until_month} /*until_month*/,
     {until_day} /*until_day*/,
     {until_time_code} /*until_time_code*/,
@@ -649,10 +664,11 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
     def __init__(
         self,
         invocation: str,
+        tz_files: str,
         db_namespace: str,
         compress: bool,
+        generate_int16_years: bool,
         tz_version: str,
-        tz_files: str,
         scope: str,
         start_year: int,
         until_year: int,
@@ -674,10 +690,11 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         compressed_names: Dict[str, str],
     ):
         self.invocation = invocation
+        self.tz_files = tz_files
         self.db_namespace = db_namespace
         self.compress = compress
+        self.generate_int16_years = generate_int16_years
         self.tz_version = tz_version
-        self.tz_files = tz_files
         self.scope = scope
         self.start_year = start_year
         self.until_year = until_year
@@ -966,7 +983,12 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
             delta_seconds=era['rules_delta_seconds_truncated'],
             scope=self.scope,
         )
-        until_year = era['until_year']
+        if self.generate_int16_years:
+            until_year = era['until_year']
+            until_year_label = 'until_year'
+        else:
+            until_year = era['until_year_tiny']
+            until_year_label = 'until_year_tiny'
         until_month = era['until_month']
         until_day = era['until_day']
         until_time_code = era['until_time_code']
@@ -985,6 +1007,7 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
             zone_policy=zone_policy,
             format=format_short,
             until_year=until_year,
+            until_year_label=until_year_label,
             until_month=until_month,
             until_day=until_day,
             until_time_code=until_time_code,
