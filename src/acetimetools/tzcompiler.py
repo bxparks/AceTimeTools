@@ -87,6 +87,7 @@ def generate_zonedb(
     invocation: str,
     db_namespace: str,
     compress: bool,
+    generate_int16_years: bool,
     language: str,
     output_dir: str,
     json_file: str,
@@ -112,6 +113,7 @@ def generate_zonedb(
             invocation=invocation,
             db_namespace=db_namespace,
             compress=compress,
+            generate_int16_years=generate_int16_years,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -122,6 +124,7 @@ def generate_zonedb(
             invocation=invocation,
             db_namespace=db_namespace,
             compress=compress,
+            generate_int16_years=generate_int16_years,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -295,6 +298,14 @@ def main() -> None:
         action='store_true',
     )
 
+    # Generate full int16_t years instead int8_t years which are offsets from
+    # the year 2000.
+    parser.add_argument(
+        '--generate_int16_years',
+        help='Generate int16_t years instead of int8_t years',
+        action='store_true',
+    )
+
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -460,6 +471,7 @@ def main() -> None:
                 invocation=invocation,
                 db_namespace=args.db_namespace,
                 compress=args.compress,
+                generate_int16_years=args.generate_int16_years,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,
