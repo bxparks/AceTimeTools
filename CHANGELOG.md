@@ -1,6 +1,10 @@
 # Changelog
 
 * Unreleased
+* v1.1.4 (2022-11-02)
+    * Add `--generate_int16_year` flag to generate year fields with `int16_t`
+      type instead of `int8_t`.
+    * Print the 3 notable zones whose UTC offset is not on the :00 or :30 mark.
 * v1.1.3 (2022-10-22)
     * Use `ZoneProcessor.is_terminal_year()` to allow `bufestimator.py` to
       finish early when `until_year` is very large, e.g. 10000.
