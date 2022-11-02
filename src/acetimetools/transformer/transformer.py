@@ -172,7 +172,10 @@ class Transformer:
         zones_map, links_map = self._remove_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 7: Replace the original maps with the transformed ones.
+        # Part 7: Note zones whose UTC offset does not occur at :00 or :30.
+        self._note_zones_with_odd_utc_offset(zones_map, policies_map)
+
+        # Part 8: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
         self.zones_map = zones_map
         self.links_map = links_map
@@ -226,33 +229,33 @@ class Transformer:
     def _print_comments_map(
         self,
         *,
-        removed_label: str,
-        removed_map: CommentsMap,
-        notable_label: Optional[str] = None,
-        notable_map: Optional[CommentsMap] = None,
+        label: str,
+        comments: CommentsMap,
+        max_comments: int = 5,
     ) -> None:
-        """Helper routine that prints the 'Removed' Zone rules or Zone eras
-        along with the reason why it was removed. Print up to a maximum of
-        MAX_COMMENTS zones or eras. Also prints the 'Notable' rules or eras if
-        available.
+        """Helper routine that prints the 'Removed' or 'Noted' Zone rules or
+        Zone eras along with the reason why it was removed or noted. Print up to
+        a maximum of max_comments zones or eras.
         """
+        if len(comments) == 0:
+            return
+
         # Print summary line, e.g.:
         # "Removed 0 rule policies with from_year or to_year out of bounds"
-        logging.info(f'Removed {len(removed_map)} {removed_label}')
+        logging.info(label, len(comments))
 
-        # Print all lines if len() <= MAX_COMMENTS. Otherwise, print top half of
-        # MAX_COMMENTS and bottom half of MAX_COMMENTS.
-        MAX_COMMENTS = 5
-        sorted_map = sorted(removed_map.items())
-        num_items = len(sorted_map)
-        if num_items <= MAX_COMMENTS:
-            for name, reasons in sorted_map:
+        # Print all lines if len() <= max_comments. Otherwise, print top half of
+        # max_comments and bottom half of max_comments.
+        sorted_comments = sorted(comments.items())
+        num_items = len(sorted_comments)
+        if num_items <= max_comments:
+            for name, reasons in sorted_comments:
                 logging.info(f'- {name} ({reasons})')
         else:
             index = 0
             ellipses_printed = False
-            limit = (MAX_COMMENTS - 1) // 2
-            for name, reasons in sorted_map:
+            limit = (max_comments - 1) // 2
+            for name, reasons in sorted_comments:
                 if ((index >= 0 and index < limit)
                         or (index >= num_items - limit and index < num_items)):
                     logging.info(f'- {name} ({reasons})')
@@ -261,12 +264,6 @@ class Transformer:
                         logging.info('- [...]')
                         ellipses_printed = True
                 index += 1
-
-        # Print notable zones, eras or links if given.
-        if notable_map:
-            logging.info(f'Noted {len(notable_map)} {notable_label}')
-            for name, reasons in sorted(notable_map.items()):
-                logging.info(f'- {name} ({reasons})')
 
     # --------------------------------------------------------------------
     # Methods related to Zones.
@@ -406,8 +403,8 @@ class Transformer:
                 add_comment(removed_zones, name, "no ZoneEra found")
 
         self._print_comments_map(
-            removed_label='zone infos without ZoneEras',
-            removed_map=removed_zones,
+            label='Removed %s zone infos without ZoneEras',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -432,8 +429,8 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with UNTIL month/day/time',
-            removed_map=removed_zones,
+            label='Removed %s zone infos with UNTIL containing month/day/time',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -493,10 +490,12 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with invalid until_day',
-            removed_map=removed_zones,
-            notable_label='zone infos notable until_day',
-            notable_map=notable_zones,
+            label='Removed %s zone infos with invalid UNTIL day',
+            comments=removed_zones,
+        )
+        self._print_comments_map(
+            label='Noted %s zone infos with notable UNTIL day',
+            comments=notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -551,10 +550,12 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with invalid UNTIL time',
-            removed_map=removed_zones,
-            notable_label='zone infos with notable UNTIL time',
-            notable_map=notable_zones,
+            label='Removed %s zone infos with invalid UNTIL time',
+            comments=removed_zones,
+        )
+        self._print_comments_map(
+            label='Noted %s zone infos with notable UNTIL time',
+            comments=notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -592,8 +593,8 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with unsupported UNTIL time suffix',
-            removed_map=removed_zones,
+            label='Removed %s zone infos with unsupported UNTIL time suffix',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_policies, removed_zones)
         return results
@@ -652,10 +653,12 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zones with invalid offset_string',
-            removed_map=removed_zones,
-            notable_label='zones with notable offset_string',
-            notable_map=notable_zones,
+            label='Removed %s zone infos with invalid STDOFF field',
+            comments=removed_zones,
+        )
+        self._print_comments_map(
+            label='Noted %s zone infos with notable STDOFF field',
+            comments=notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -708,10 +711,12 @@ class Transformer:
                 results[zone_name] = eras
 
         self._print_comments_map(
-            removed_label='zones with invalid RULES and FORMAT combo',
-            removed_map=removed_zones,
-            notable_label='zones with notable RULES and FORMAT combo',
-            notable_map=notable_zones,
+            label='Removed %s zones with invalid RULES and FORMAT combo',
+            comments=removed_zones,
+        )
+        self._print_comments_map(
+            label='Noted %s zones with notable RULES and FORMAT combo',
+            comments=notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -813,10 +818,12 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with invalid RULES',
-            removed_map=removed_zones,
-            notable_label='zone infos with notable RULES',
-            notable_map=notable_zones,
+            label='Removed %s zone infos with invalid RULES',
+            comments=removed_zones,
+        )
+        self._print_comments_map(
+            label='Noted %s zone infos with notable RULES',
+            comments=notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -845,8 +852,8 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos without rules',
-            removed_map=removed_zones,
+            label='Removed %s zone infos without rules',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -904,8 +911,8 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            removed_label='zone infos with invalid UNTIL fields',
-            removed_map=removed_zones,
+            label='Removed %s zone infos with invalid UNTIL fields',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -965,8 +972,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with multiple transitions in 1 month',
-            removed_map=removed_policies,
+            label='Removed %s policies with multiple transitions in 1 month',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -993,8 +1000,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with long DST letter',
-            removed_map=removed_policies,
+            label='Removed %s policies with long DST letter',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1027,8 +1034,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with unsupported AT suffix',
-            removed_map=removed_policies,
+            label='Removed %s policies with unsupported AT suffix',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1150,10 +1157,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label=(
-                'rule policies with from_year or to_year out of bounds'
-            ),
-            removed_map=removed_policies,
+            label='Removed %s policies with FROM or TO out of bounds',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1204,8 +1209,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with invalid on_day',
-            removed_map=removed_policies,
+            label='Removed %s policies with invalid ON field',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1323,8 +1328,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with border Transitions',
-            removed_map=removed_policies,
+            label='Removed %s policies with border Transitions',
+            comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1389,10 +1394,12 @@ class Transformer:
                 results[policy_name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with invalid at_time',
-            removed_map=removed_policies,
-            notable_label='rule policies with notable at_time',
-            notable_map=notable_policies,
+            label='Removed %s policies with invalid AT field',
+            comments=removed_policies,
+        )
+        self._print_comments_map(
+            label='Noted %s policies with notable AT field',
+            comments=notable_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         merge_comments(self.all_notable_policies, notable_policies)
@@ -1463,10 +1470,12 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            removed_label='rule policies with invalid SAVE (delta_offset)',
-            removed_map=removed_policies,
-            notable_label='rule policies with notable SAVE (delta_offset)',
-            notable_map=notable_policies,
+            label='Removed %s policies with invalid SAVE field',
+            comments=removed_policies,
+        )
+        self._print_comments_map(
+            label='Noted %s policies with notable SAVE field',
+            comments=notable_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         merge_comments(self.all_notable_policies, notable_policies)
@@ -1492,8 +1501,8 @@ class Transformer:
                     f'Target Zone "{zone_name}" missing')
 
         self._print_comments_map(
-            removed_label='links with missing zones',
-            removed_map=removed_links,
+            label='Removed %s links with missing zones',
+            comments=removed_links,
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
@@ -1542,6 +1551,56 @@ class Transformer:
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_removed_links, removed_links)
         return result_zones, result_links
+
+    def _note_zones_with_odd_utc_offset(
+        self,
+        zones_map: ZonesMap,
+        policies_map: PoliciesMap,
+    ) -> None:
+        """Note zones whose UTC offset is not at :00 or :30 mark.
+        """
+        notable_zones: CommentsMap = {}
+        for zone_name, eras in zones_map.items():
+            for era in eras:
+                # Check the STDOFF column for non :00 or :30
+                if era['offset_seconds'] % 1800 != 0:
+                    offset_string = era['offset_string']
+                    add_comment(
+                        notable_zones, zone_name,
+                        f'STDOFF ({offset_string}) not at :00 or :30 mark')
+                    break
+
+                # Check the RULES column, which has 3 options: a policy name,
+                # '-', or ':'.
+                rule_name = era['rules']
+                found_odd_offset = False
+                if rule_name == ':':
+                    if era['rules_delta_seconds'] % 1800 != 0:
+                        add_comment(
+                            notable_zones, zone_name,
+                            f'RULES ({rule_name}) not at :00 or :30 mark')
+                elif rule_name != '-':
+                    # RULES contains a reference to a policy
+                    rules = policies_map.get(rule_name)
+                    assert rules is not None
+                    for rule in rules:
+                        # Check SAVE column for non :00 or :30
+                        save_string = rule['delta_offset']
+                        if rule['delta_seconds'] % 1800 != 0:
+                            add_comment(
+                                notable_zones, zone_name,
+                                f'SAVE ({save_string}) in Rule {rule_name}'
+                                f' not at :00 or :30 mark')
+                            found_odd_offset = True
+                            break
+                if found_odd_offset:
+                    break
+
+        self._print_comments_map(
+            label='Noted %s zones with non :00 or :30 UTC offsets',
+            comments=notable_zones,
+        )
+        merge_comments(self.all_notable_zones, notable_zones)
 
 
 # ISO-8601 specifies Monday=1, Sunday=7
