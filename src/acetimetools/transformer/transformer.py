@@ -59,6 +59,7 @@ class Transformer:
         offset_granularity: int,
         delta_granularity: int,
         strict: bool,
+        generate_int16_years: bool,
     ):
         """
         Args:
@@ -69,9 +70,11 @@ class Transformer:
             until_at_granularity: truncate UNTIL, AT to this many seconds
             offset_granularity: truncate STDOFF (offset) to this many seconds
             delta_granularity: truncate SAVE (offset), RULES (rulesOffset) to
-                    this many seconds
-            strict: throw out Zones or Rules which are not exactly
-                    on the time boundary defined by granularity
+                this many seconds
+            strict: throw out Zones or Rules which are not exactly on the time
+                boundary defined by granularity
+            generate_int16_years: generate 'year' fields for an int16_t type,
+                instead of the older int8_t type
         """
         self.tresult = tresult
         self.zones_map = tresult.zones_map
@@ -84,6 +87,7 @@ class Transformer:
         self.offset_granularity = offset_granularity
         self.delta_granularity = delta_granularity
         self.strict = strict
+        self.generate_int16_years = generate_int16_years
 
         self.all_removed_zones: CommentsMap = {}
         self.all_removed_policies: CommentsMap = {}
@@ -139,7 +143,8 @@ class Transformer:
 
         # Part 3: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
-        policies_map = self._remove_rules_out_of_bounds(policies_map)
+        if not self.generate_int16_years:
+            policies_map = self._remove_rules_out_of_bounds(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_multiple_transitions_in_month(
                 policies_map)
@@ -1093,10 +1098,7 @@ class Transformer:
 
     def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
         """Remove RULE entries which have not been marked as used by the
-        _mark_rules_used_by_zones() method. It is expected that all remaining
-        RULE entries have FROM and TO fields which is greater than 1872 (the
-        earliest year which can be represented by an int8_t to_year_tiny field,
-        (2000-128)==1872). See also _remove_rules_out_of_bounds().
+        _mark_rules_used_by_zones() method.
         """
         results: PoliciesMap = {}
         removed_rule_count = 0
@@ -1142,7 +1144,7 @@ class Transformer:
                     add_comment(
                         removed_policies, name,
                         f"from_year ({from_year}) or to_year ({to_year}) "
-                        f" out of bounds")
+                        f" outside int8_t")
                     break
             if valid:
                 results[name] = rules

@@ -405,6 +405,7 @@ def main() -> None:
         offset_granularity=offset_granularity,
         delta_granularity=delta_granularity,
         strict=args.strict,
+        generate_int16_years=args.generate_int16_years,
     )
     transformer.transform()
     transformer.print_summary()
