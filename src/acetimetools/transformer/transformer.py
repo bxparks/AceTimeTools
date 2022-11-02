@@ -166,10 +166,10 @@ class Transformer:
             zones_map=zones_map, policies_map=policies_map)
 
         # Part 5: Remove links which point to removed zones.
-        links_map = self.remove_links_to_missing_zones(links_map, zones_map)
+        links_map = self._remove_links_to_missing_zones(links_map, zones_map)
 
         # Part 6: Remove zones and links whose normalized names conflict.
-        zones_map, links_map = self.remove_zones_and_links_with_similar_names(
+        zones_map, links_map = self._remove_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
         # Part 7: Replace the original maps with the transformed ones.
@@ -1476,7 +1476,7 @@ class Transformer:
     # Methods related to Links.
     # --------------------------------------------------------------------
 
-    def remove_links_to_missing_zones(
+    def _remove_links_to_missing_zones(
         self,
         links_map: LinksMap,
         zones_map: ZonesMap
@@ -1498,7 +1498,7 @@ class Transformer:
         merge_comments(self.all_removed_links, removed_links)
         return results
 
-    def remove_zones_and_links_with_similar_names(
+    def _remove_zones_and_links_with_similar_names(
         self,
         zones_map: ZonesMap,
         links_map: LinksMap,
