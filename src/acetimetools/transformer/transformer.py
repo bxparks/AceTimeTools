@@ -122,7 +122,7 @@ class Transformer:
         zones_map = self._remove_zone_eras_too_new(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
         if self.scope == 'basic':
-            zones_map = self._remove_zone_until_year_only_false(zones_map)
+            zones_map = self._remove_zone_with_non_simple_until_year(zones_map)
         zones_map = self._create_zones_with_until_day(zones_map)
         zones_map = self._create_zones_with_expanded_until_time(zones_map)
         zones_map = self._remove_zones_invalid_until_time_suffix(zones_map)
@@ -407,7 +407,7 @@ class Transformer:
         merge_comments(self.all_removed_zones, removed_zones)
         return results
 
-    def _remove_zone_until_year_only_false(
+    def _remove_zone_with_non_simple_until_year(
         self, zones_map: ZonesMap,
     ) -> ZonesMap:
         """Remove zones which have month, day or time in the UNTIL field.
