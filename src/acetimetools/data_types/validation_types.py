@@ -8,6 +8,7 @@ type can be serialized to JSON directly. The JSON looks like:
 {
   'start_year': int,
   'until_year': int,
+  'epoch_year': int,
   'source': str,
   'version': str,
   'tz_version': str,
@@ -68,6 +69,7 @@ TestData = Dict[str, List[TestItem]]
 ValidationData = TypedDict('ValidationData', {
     'start_year': int,
     'until_year': int,
+    'epoch_year': int,
     'source': str,
     'version': str,
     'tz_version': str,
