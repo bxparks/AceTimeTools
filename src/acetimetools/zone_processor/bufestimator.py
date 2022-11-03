@@ -66,7 +66,8 @@ class BufSizeEstimator:
         # Include (start_year - 1) and (until_year + 1) to support conversions
         # from epochSeconds where the local year may shift to the previous or
         # next year depending on the UTC offset of the given timezone.
-        logging.info('Calculating buf sizes per zone [%s, %s)',
+        logging.info(
+            'Calculating buf sizes per zone [%s, %s)',
             self.start_year - 1,
             self.until_year + 1,
         )
