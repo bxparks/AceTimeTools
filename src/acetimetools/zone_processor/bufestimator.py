@@ -63,11 +63,17 @@ class BufSizeEstimator:
             len(zone_infos), len(zone_policies))
 
         # Calculate expected buffer sizes for each zone using a ZoneProcessor.
-        logging.info('Calculating buf sizes per zone')
+        # Include (start_year - 1) and (until_year + 1) to support conversions
+        # from epochSeconds where the local year may shift to the previous or
+        # next year depending on the UTC offset of the given timezone.
+        logging.info('Calculating buf sizes per zone [%s, %s)',
+            self.start_year - 1,
+            self.until_year + 1,
+        )
         buf_size_map = _calculate_buf_sizes_per_zone(
             zone_infos,
-            self.start_year,
-            self.until_year,
+            self.start_year - 1,
+            self.until_year + 1,
         )
 
         return OrderedDict(sorted(buf_size_map.items()))
