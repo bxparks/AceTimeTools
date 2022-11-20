@@ -1514,7 +1514,8 @@ class Transformer:
     ) -> Tuple[ZonesMap, LinksMap]:
         """Currently, there are no conflicts, but if there were 2 zones names
         like "Etc/GMT-0" and "Etc/GMT_0", both would normalize to "Etc/GMT_0",
-        producing a symbol "kZoneEtc_GMT_0, so one of them is thrown out.
+        producing a symbol "kZoneEtc_GMT_0. Make this a fatal error so that we
+        can fix it instead of one of the zones or links being removed.
         """
         normalized_names: Dict[str, str] = {}  # normalized_name, name
         result_zones: ZonesMap = {}
@@ -1526,30 +1527,22 @@ class Transformer:
         for zone_name, zone in zones_map.items():
             nname = normalize_name(zone_name)
             if normalized_names.get(nname):
-                add_comment(
-                    removed_zones, zone_name,
-                    'Duplicate normalized name')
-            else:
-                normalized_names[nname] = zone_name
-                result_zones[zone_name] = zone
+                raise Exception(
+                    f"Duplicate normalized zone name: {zone_name} -> {nname}"
+                )
+            normalized_names[nname] = zone_name
+            result_zones[zone_name] = zone
 
-        # Then strike out any duplicate links.
+        # Check for duplicate links.
         for link_name, link in links_map.items():
             nname = normalize_name(link_name)
             if normalized_names.get(nname):
-                add_comment(
-                    removed_links, link_name,
-                    'Duplicate normalized name')
-            else:
-                normalized_names[nname] = link_name
-                result_links[link_name] = link
+                raise Exception(
+                    f"Duplicate normalized link name: {link_name} -> {nname}"
+                )
+            normalized_names[nname] = link_name
+            result_links[link_name] = link
 
-        logging.info(
-            'Removed %d Zones and %s Links with duplicate names',
-            len(removed_zones),
-            len(removed_links))
-        merge_comments(self.all_removed_zones, removed_zones)
-        merge_comments(self.all_removed_links, removed_links)
         return result_zones, result_links
 
     def _note_zones_with_odd_utc_offset(
