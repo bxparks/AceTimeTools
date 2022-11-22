@@ -1229,18 +1229,16 @@ class Transformer:
         corresponding to 4 zones:
             Pacific/Apia, Asia/Dhaka, Asia/Karachi, Asia/Yerevan
         """
-        anchored_policies: List[str] = []
+        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
             if not self._has_prior_rule(rules):
                 anchor_rule = self._get_anchor_rule(rules)
                 rules.insert(0, anchor_rule)
-                anchored_policies.append(name)
+                add_comment(
+                    notable_policies, name,
+                    f"Added anchor rule at year 0")
 
-        logging.info(
-            'Added anchor rule to %s rule policies: %s',
-            len(anchored_policies),
-            anchored_policies
-        )
+        merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
 
     def _has_prior_rule(self, rules: List[ZoneRuleRaw]) -> bool:
