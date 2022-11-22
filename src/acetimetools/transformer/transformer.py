@@ -1236,7 +1236,7 @@ class Transformer:
                 rules.insert(0, anchor_rule)
                 add_comment(
                     notable_policies, name,
-                    f"Added anchor rule at year 0")
+                    "Added anchor rule at year 0")
 
         merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
@@ -1518,8 +1518,6 @@ class Transformer:
         normalized_names: Dict[str, str] = {}  # normalized_name, name
         result_zones: ZonesMap = {}
         result_links: LinksMap = {}
-        removed_zones: CommentsMap = {}
-        removed_links: CommentsMap = {}
 
         # Check for duplicate zone names.
         for zone_name, zone in zones_map.items():
