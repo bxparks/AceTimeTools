@@ -161,21 +161,20 @@ class Transformer:
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
 
-        # Part 4: Go back to zones_map and remove unused.
+        # Part 4: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(
             zones_map=zones_map, policies_map=policies_map)
+        links_map = self._remove_links_to_missing_zones(
+            links_map=links_map, zones_map=zones_map)
 
-        # Part 5: Remove links which point to removed zones.
-        links_map = self._remove_links_to_missing_zones(links_map, zones_map)
-
-        # Part 6: Remove zones and links whose normalized names conflict.
-        zones_map, links_map = self._remove_zones_and_links_with_similar_names(
+        # Part 5: Detect zones and links whose normalized names conflict.
+        zones_map, links_map = self._detect_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 7: Note zones whose UTC offset does not occur at :00 or :30.
+        # Part 6: Note zones whose UTC offset does not occur at :00 or :30.
         self._note_zones_with_odd_utc_offset(zones_map, policies_map)
 
-        # Part 8: Replace the original maps with the transformed ones.
+        # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
         self.zones_map = zones_map
         self.links_map = links_map
@@ -1505,15 +1504,15 @@ class Transformer:
         merge_comments(self.all_removed_links, removed_links)
         return results
 
-    def _remove_zones_and_links_with_similar_names(
+    def _detect_zones_and_links_with_similar_names(
         self,
         zones_map: ZonesMap,
         links_map: LinksMap,
     ) -> Tuple[ZonesMap, LinksMap]:
-        """Currently, there are no conflicts, but if there were 2 zones names
-        like "Etc/GMT-0" and "Etc/GMT_0", both would normalize to "Etc/GMT_0",
-        producing a symbol "kZoneEtc_GMT_0. Make this a fatal error so that we
-        can fix it instead of one of the zones or links being removed.
+        """If there were 2 zones names like "Etc/GMT-0" and "Etc/GMT_0", both
+        would normalize to "Etc/GMT_0", producing a symbol "kZoneEtc_GMT_0. Make
+        this a fatal error so that we can fix it instead of removing one of the
+        zones or links and continuing.
         """
         normalized_names: Dict[str, str] = {}  # normalized_name, name
         result_zones: ZonesMap = {}
