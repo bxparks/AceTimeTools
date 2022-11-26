@@ -10,7 +10,10 @@ from collections import OrderedDict
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
+from typing import Union
+from typing import cast
 from typing_extensions import TypedDict
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
@@ -19,9 +22,11 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import (
-    TransformerResult, add_comment, merge_comments
-)
+from acetimetools.data_types.at_types import MergedCommentsMap
+from acetimetools.data_types.at_types import ZonesToPolicies
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import add_comment
+from acetimetools.data_types.at_types import merge_comments
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MAX_YEAR
@@ -95,6 +100,8 @@ class Transformer:
         self.all_notable_zones: CommentsMap = {}
         self.all_notable_policies: CommentsMap = {}
         self.all_notable_links: CommentsMap = {}
+        self.zones_to_policies: ZonesToPolicies = {}
+        self.merged_notable_zones: MergedCommentsMap = {}
 
         self.original_zone_count = len(self.zones_map)
         self.original_rule_count = len(self.policies_map)
@@ -171,8 +178,17 @@ class Transformer:
         zones_map, links_map = self._detect_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 6: Note zones whose UTC offset does not occur at :00 or :30.
+        # Part 6: Update note about zones and policies:
+        #   * Zones whose UTC offset does not occur at :00 or :30.
+        #   * Merge policy notes into zone notes.
         self._note_zones_with_odd_utc_offset(zones_map, policies_map)
+        self.zones_to_policies = self._gather_zones_to_policies(
+            zones_map, policies_map)
+        self.merged_notable_zones = _create_merged_comments_map(
+            self.all_notable_zones,
+            self.all_notable_policies,
+            self.zones_to_policies,
+        )
 
         # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
@@ -191,10 +207,12 @@ class Transformer:
             zones_map=self.zones_map,
             policies_map=self.policies_map,
             links_map=self.links_map,
+            zones_to_policies=self.zones_to_policies,
             removed_zones=self.tresult.removed_zones,
             removed_policies=self.tresult.removed_policies,
             removed_links=self.tresult.removed_links,
             notable_zones=self.tresult.notable_zones,
+            merged_notable_zones=self.merged_notable_zones,
             notable_policies=self.tresult.notable_policies,
             notable_links=self.tresult.notable_links,
             zone_ids=self.tresult.zone_ids,
@@ -1590,6 +1608,30 @@ class Transformer:
         )
         merge_comments(self.all_notable_zones, notable_zones)
 
+    def _gather_zones_to_policies(
+        self,
+        zones_map: ZonesMap,
+        policies_map: PoliciesMap,
+    ) -> ZonesToPolicies:
+        """
+        Create a map of zone names to its list of policy names which are used
+        by that zone.
+        """
+        zones_to_policies: ZonesToPolicies = {}
+        for zone_name, eras in zones_map.items():
+            for era in eras:
+                rule_name = era['rules']
+                if rule_name not in [':', '-']:
+                    policies = cast(
+                        Optional[Set[str]],
+                        zones_to_policies.get(zone_name)
+                    )
+                    if policies is None:
+                        policies = set()
+                        zones_to_policies[zone_name] = policies
+                    policies.add(rule_name)
+        return zones_to_policies
+
 
 # ISO-8601 specifies Monday=1, Sunday=7
 WEEK_TO_WEEK_INDEX = {
@@ -1945,3 +1987,38 @@ def hash_name(name: str) -> int:
     for c in name:
         hash = (33 * hash + ord(c)) % U32_MOD
     return hash
+
+
+def _create_merged_comments_map(
+    zone_comments: CommentsMap,
+    policy_comments: CommentsMap,
+    zones_to_policies: ZonesToPolicies,
+) -> MergedCommentsMap:
+
+    merged_comments: MergedCommentsMap = {}
+
+    # Pass 1: Copy the zone comments.
+    for name, reasons in sorted(zone_comments.items()):
+        # Copy the zone comments.
+        merged_reasons: List[Union[str, CommentsMap]] = list(reasons)
+        merged_comments[name] = merged_reasons
+
+    # Pass 2: Add the policy notes.
+    for zone_name, policies in sorted(zones_to_policies.items()):
+
+        # Extract the policy comments for the given zone.
+        sub_policies_map: CommentsMap = {}
+        for policy in policies:
+            entry = policy_comments.get(policy)
+            if entry is not None:
+                sub_policies_map[policy] = entry
+
+        # Add to the merged_reasons.
+        if sub_policies_map:
+            policy_reasons = merged_comments.get(zone_name)
+            if policy_reasons is None:
+                policy_reasons = list()
+                merged_comments[zone_name] = policy_reasons
+            policy_reasons.append(sub_policies_map)
+
+    return merged_comments
