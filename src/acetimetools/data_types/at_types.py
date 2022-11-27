@@ -2,12 +2,15 @@
 #
 # MIT License
 
-from typing import List, Dict, Collection
-from typing import Optional
-from typing import NamedTuple
-from typing import Set
-from typing import cast
 from collections import OrderedDict
+from typing import Collection
+from typing import Dict
+from typing import List
+from typing import NamedTuple
+from typing import Optional
+from typing import Set
+from typing import Union
+from typing import cast
 from typing_extensions import TypedDict
 
 """
@@ -143,13 +146,16 @@ class ZoneEraRaw(TypedDict, total=False):
     format_short: str  # Arduino version of format with %s -> %
 
 
-# Map of policyName -> ZoneRuleRaw[]. Created by extractor.py.
+# Map of policyName -> ZoneRuleRaw[]. Created by extractor.py. Updated by
+# transformer.py.
 PoliciesMap = Dict[str, List[ZoneRuleRaw]]
 
-# Map of zoneName -> ZoneEraRaw[]. Created by extractor.py.
+# Map of zoneName -> ZoneEraRaw[]. Created by extractor.py. Updated by
+# transformer.py.
 ZonesMap = Dict[str, List[ZoneEraRaw]]
 
-# Map of linkName -> zoneName. Created by extractor.py.
+# Map of linkName -> zoneName. Created by extractor.py. Updated by
+# transformer.py.
 LinksMap = Dict[str, str]
 
 # -----------------------------------------------------------------------------
@@ -175,9 +181,17 @@ LettersPerPolicy = Dict[str, IndexMap]
 # checking.
 CommentsMap = Dict[str, Collection[str]]
 
+# Map of {name -> List[Any]}, a merged list of zone comments and policy
+# comments. The list can contain `str` or another CommentsMap.
+MergedCommentsMap = Dict[str, List[Union[str, CommentsMap]]]
+
+# Map of zoneName -> List[policiNames]. Created by transformer.py.
+ZonesToPolicies = Dict[str, Collection[str]]
+
 
 class TransformerResult(NamedTuple):
     """Result type of Transformer.get_data().
+
     * zones_map: (zoneName -> ZoneEraRaw[]).
     * policies_map: (policyName -> ZoneRuleRaw[]).
     * links_map: (linkName -> zoneName)
@@ -187,6 +201,8 @@ class TransformerResult(NamedTuple):
     * notable_zones: {zoneName -> reasons[]}
     * notable_policies: {policyName -> reasons[]}
     * notable_links: {linkName -> reasons[]}
+    * zones_to_policies: {zoneName -> policyName[]}
+    * merged_notable_zones: {zoneName -> Set[str | CommentsMap]}
     * zone_ids: {zoneName -> zoneHash}
     * link_ids: {linkName -> zoneHash}
     * letters_per_policy: {policyName -> {letter -> index}}
@@ -204,6 +220,8 @@ class TransformerResult(NamedTuple):
     notable_zones: CommentsMap
     notable_policies: CommentsMap
     notable_links: CommentsMap
+    zones_to_policies: ZonesToPolicies
+    merged_notable_zones: MergedCommentsMap
     zone_ids: Dict[str, int]
     link_ids: Dict[str, int]
     letters_per_policy: LettersPerPolicy
@@ -279,10 +297,12 @@ class ZoneInfoDatabase(TypedDict):
     links_map: LinksMap
 
     # Data from Transformer
+    zones_to_policies: ZonesToPolicies
     removed_zones: CommentsMap
     removed_links: CommentsMap
     removed_policies: CommentsMap
     notable_zones: CommentsMap
+    merged_notable_zones: MergedCommentsMap
     notable_links: CommentsMap
     notable_policies: CommentsMap
 
@@ -338,10 +358,12 @@ def create_zone_info_database(
         'links_map': tresult.links_map,
 
         # Data from Transformer.
+        'zones_to_policies': tresult.zones_to_policies,
         'removed_zones': _sort_comments(tresult.removed_zones),
         'removed_links': _sort_comments(tresult.removed_links),
         'removed_policies': _sort_comments(tresult.removed_policies),
         'notable_zones': _sort_comments(tresult.notable_zones),
+        'merged_notable_zones': tresult.merged_notable_zones,
         'notable_links': _sort_comments(tresult.notable_links),
         'notable_policies': _sort_comments(tresult.notable_policies),
 

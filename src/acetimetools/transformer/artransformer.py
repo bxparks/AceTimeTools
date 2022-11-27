@@ -74,6 +74,8 @@ class ArduinoTransformer:
             notable_zones=self.tresult.notable_zones,
             notable_policies=self.tresult.notable_policies,
             notable_links=self.tresult.notable_links,
+            zones_to_policies=self.tresult.zones_to_policies,
+            merged_notable_zones=self.tresult.merged_notable_zones,
             zone_ids=self.zone_ids,
             link_ids=self.link_ids,
             letters_per_policy=self.letters_per_policy,
@@ -111,10 +113,6 @@ class ArduinoTransformer:
 
                 # Check if AT is not on 15-minute boundary
                 if encoded_at_time.time_minute != 0:
-                    logging.info(
-                        f"Notable policy: {policy_name}: "
-                        f"AT '{rule['at_time']}' not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_policies, policy_name,
                         f"AT '{rule['at_time']}' not on 15-minute boundary"
@@ -174,11 +172,6 @@ class ArduinoTransformer:
 
                 # Check if STDOFF is not on 15-minute boundary
                 if encoded_offset.offset_minute != 0:
-                    logging.info(
-                        f"Notable zone: {zone_name}: "
-                        f"STDOFF '{era['offset_string']}' "
-                        "not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"STDOFF '{era['offset_string']}' "
@@ -197,10 +190,6 @@ class ArduinoTransformer:
 
                 # Check if UNTIL is not on 15-minute boundary
                 if encoded_until_time.time_minute != 0:
-                    logging.info(
-                        f"Notable zone: {zone_name}: "
-                        f"UNTIL '{era['until_time']}' not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"

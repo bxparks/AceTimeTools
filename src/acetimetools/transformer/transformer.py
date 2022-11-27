@@ -19,9 +19,9 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import (
-    TransformerResult, add_comment, merge_comments
-)
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import add_comment
+from acetimetools.data_types.at_types import merge_comments
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MAX_YEAR
@@ -161,43 +161,36 @@ class Transformer:
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
 
-        # Part 4: Go back to zones_map and remove unused.
+        # Part 4: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(
             zones_map=zones_map, policies_map=policies_map)
+        links_map = self._remove_links_to_missing_zones(
+            links_map=links_map, zones_map=zones_map)
 
-        # Part 5: Remove links which point to removed zones.
-        links_map = self._remove_links_to_missing_zones(links_map, zones_map)
-
-        # Part 6: Remove zones and links whose normalized names conflict.
-        zones_map, links_map = self._remove_zones_and_links_with_similar_names(
+        # Part 5: Detect zones and links whose normalized names conflict.
+        zones_map, links_map = self._detect_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 7: Note zones whose UTC offset does not occur at :00 or :30.
-        self._note_zones_with_odd_utc_offset(zones_map, policies_map)
-
-        # Part 8: Replace the original maps with the transformed ones.
+        # Part 6: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
         self.zones_map = zones_map
         self.links_map = links_map
 
     def get_data(self) -> TransformerResult:
         """Merge the result of transform() into the original tresult."""
-        merge_comments(self.tresult.removed_zones, self.all_removed_zones)
-        merge_comments(self.tresult.removed_policies, self.all_removed_policies)
-        merge_comments(self.tresult.removed_links, self.all_removed_links)
-        merge_comments(self.tresult.notable_zones, self.all_notable_zones)
-        merge_comments(self.tresult.notable_policies, self.all_notable_policies)
-        merge_comments(self.tresult.notable_links, self.all_notable_links)
+
         return TransformerResult(
             zones_map=self.zones_map,
             policies_map=self.policies_map,
             links_map=self.links_map,
-            removed_zones=self.tresult.removed_zones,
-            removed_policies=self.tresult.removed_policies,
-            removed_links=self.tresult.removed_links,
-            notable_zones=self.tresult.notable_zones,
-            notable_policies=self.tresult.notable_policies,
-            notable_links=self.tresult.notable_links,
+            removed_zones=self.all_removed_zones,
+            removed_policies=self.all_removed_policies,
+            removed_links=self.all_removed_links,
+            notable_zones=self.all_notable_zones,
+            notable_policies=self.all_notable_policies,
+            notable_links=self.all_notable_links,
+            zones_to_policies=self.tresult.zones_to_policies,
+            merged_notable_zones=self.tresult.merged_notable_zones,
             zone_ids=self.tresult.zone_ids,
             link_ids=self.tresult.link_ids,
             letters_per_policy=self.tresult.letters_per_policy,
@@ -1505,15 +1498,15 @@ class Transformer:
         merge_comments(self.all_removed_links, removed_links)
         return results
 
-    def _remove_zones_and_links_with_similar_names(
+    def _detect_zones_and_links_with_similar_names(
         self,
         zones_map: ZonesMap,
         links_map: LinksMap,
     ) -> Tuple[ZonesMap, LinksMap]:
-        """Currently, there are no conflicts, but if there were 2 zones names
-        like "Etc/GMT-0" and "Etc/GMT_0", both would normalize to "Etc/GMT_0",
-        producing a symbol "kZoneEtc_GMT_0. Make this a fatal error so that we
-        can fix it instead of one of the zones or links being removed.
+        """If there were 2 zones names like "Etc/GMT-0" and "Etc/GMT_0", both
+        would normalize to "Etc/GMT_0", producing a symbol "kZoneEtc_GMT_0. Make
+        this a fatal error so that we can fix it instead of removing one of the
+        zones or links and continuing.
         """
         normalized_names: Dict[str, str] = {}  # normalized_name, name
         result_zones: ZonesMap = {}
@@ -1540,56 +1533,6 @@ class Transformer:
             result_links[link_name] = link
 
         return result_zones, result_links
-
-    def _note_zones_with_odd_utc_offset(
-        self,
-        zones_map: ZonesMap,
-        policies_map: PoliciesMap,
-    ) -> None:
-        """Note zones whose UTC offset is not at :00 or :30 mark.
-        """
-        notable_zones: CommentsMap = {}
-        for zone_name, eras in zones_map.items():
-            for era in eras:
-                # Check the STDOFF column for non :00 or :30
-                if era['offset_seconds'] % 1800 != 0:
-                    offset_string = era['offset_string']
-                    add_comment(
-                        notable_zones, zone_name,
-                        f'STDOFF ({offset_string}) not at :00 or :30 mark')
-                    break
-
-                # Check the RULES column, which has 3 options: a policy name,
-                # '-', or ':'.
-                rule_name = era['rules']
-                found_odd_offset = False
-                if rule_name == ':':
-                    if era['rules_delta_seconds'] % 1800 != 0:
-                        add_comment(
-                            notable_zones, zone_name,
-                            f'RULES ({rule_name}) not at :00 or :30 mark')
-                elif rule_name != '-':
-                    # RULES contains a reference to a policy
-                    rules = policies_map.get(rule_name)
-                    assert rules is not None
-                    for rule in rules:
-                        # Check SAVE column for non :00 or :30
-                        save_string = rule['delta_offset']
-                        if rule['delta_seconds'] % 1800 != 0:
-                            add_comment(
-                                notable_zones, zone_name,
-                                f'SAVE ({save_string}) in Rule {rule_name}'
-                                f' not at :00 or :30 mark')
-                            found_odd_offset = True
-                            break
-                if found_odd_offset:
-                    break
-
-        self._print_comments_map(
-            label='Noted %s zones with non :00 or :30 UTC offsets',
-            comments=notable_zones,
-        )
-        merge_comments(self.all_notable_zones, notable_zones)
 
 
 # ISO-8601 specifies Monday=1, Sunday=7
