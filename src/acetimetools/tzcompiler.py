@@ -64,6 +64,7 @@ from acetimetools.zone_processor.bufestimator import calculate_max_buf_size
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
+from acetimetools.transformer.commenter import Commenter
 from acetimetools.generator.argenerator import ArduinoGenerator
 from acetimetools.generator.cgenerator import CGenerator
 from acetimetools.generator.pygenerator import PythonGenerator
@@ -450,6 +451,13 @@ def main() -> None:
             logging.warning(msg)
         else:
             raise Exception(msg)
+
+    # Generate the fields for the Arduino zoneinfo data.
+    logging.info('======== Updating comments')
+    commenter = Commenter(tresult=tresult)
+    commenter.transform()
+    commenter.print_summary()
+    tresult = commenter.get_data()
 
     # Collect TZ DB data into a single JSON-serializable object.
     zidb = create_zone_info_database(

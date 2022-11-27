@@ -12,7 +12,6 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
-from typing import Union
 from typing import cast
 from typing_extensions import TypedDict
 
@@ -22,7 +21,6 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import ZonesToPolicies
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import add_comment
@@ -101,7 +99,6 @@ class Transformer:
         self.all_notable_policies: CommentsMap = {}
         self.all_notable_links: CommentsMap = {}
         self.zones_to_policies: ZonesToPolicies = {}
-        self.merged_notable_zones: MergedCommentsMap = {}
 
         self.original_zone_count = len(self.zones_map)
         self.original_rule_count = len(self.policies_map)
@@ -184,11 +181,6 @@ class Transformer:
         self._note_zones_with_odd_utc_offset(zones_map, policies_map)
         self.zones_to_policies = self._gather_zones_to_policies(
             zones_map, policies_map)
-        self.merged_notable_zones = _create_merged_comments_map(
-            self.all_notable_zones,
-            self.all_notable_policies,
-            self.zones_to_policies,
-        )
 
         # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
@@ -197,24 +189,19 @@ class Transformer:
 
     def get_data(self) -> TransformerResult:
         """Merge the result of transform() into the original tresult."""
-        merge_comments(self.tresult.removed_zones, self.all_removed_zones)
-        merge_comments(self.tresult.removed_policies, self.all_removed_policies)
-        merge_comments(self.tresult.removed_links, self.all_removed_links)
-        merge_comments(self.tresult.notable_zones, self.all_notable_zones)
-        merge_comments(self.tresult.notable_policies, self.all_notable_policies)
-        merge_comments(self.tresult.notable_links, self.all_notable_links)
+
         return TransformerResult(
             zones_map=self.zones_map,
             policies_map=self.policies_map,
             links_map=self.links_map,
             zones_to_policies=self.zones_to_policies,
-            removed_zones=self.tresult.removed_zones,
-            removed_policies=self.tresult.removed_policies,
-            removed_links=self.tresult.removed_links,
-            notable_zones=self.tresult.notable_zones,
-            merged_notable_zones=self.merged_notable_zones,
-            notable_policies=self.tresult.notable_policies,
-            notable_links=self.tresult.notable_links,
+            removed_zones=self.all_removed_zones,
+            removed_policies=self.all_removed_policies,
+            removed_links=self.all_removed_links,
+            notable_zones=self.all_notable_zones,
+            notable_policies=self.all_notable_policies,
+            notable_links=self.all_notable_links,
+            merged_notable_zones=self.tresult.merged_notable_zones,
             zone_ids=self.tresult.zone_ids,
             link_ids=self.tresult.link_ids,
             letters_per_policy=self.tresult.letters_per_policy,
@@ -1987,38 +1974,3 @@ def hash_name(name: str) -> int:
     for c in name:
         hash = (33 * hash + ord(c)) % U32_MOD
     return hash
-
-
-def _create_merged_comments_map(
-    zone_comments: CommentsMap,
-    policy_comments: CommentsMap,
-    zones_to_policies: ZonesToPolicies,
-) -> MergedCommentsMap:
-
-    merged_comments: MergedCommentsMap = {}
-
-    # Pass 1: Copy the zone comments.
-    for name, reasons in sorted(zone_comments.items()):
-        # Copy the zone comments.
-        merged_reasons: List[Union[str, CommentsMap]] = list(reasons)
-        merged_comments[name] = merged_reasons
-
-    # Pass 2: Add the policy notes.
-    for zone_name, policies in sorted(zones_to_policies.items()):
-
-        # Extract the policy comments for the given zone.
-        sub_policies_map: CommentsMap = {}
-        for policy in policies:
-            entry = policy_comments.get(policy)
-            if entry is not None:
-                sub_policies_map[policy] = entry
-
-        # Add to the merged_reasons.
-        if sub_policies_map:
-            policy_reasons = merged_comments.get(zone_name)
-            if policy_reasons is None:
-                policy_reasons = list()
-                merged_comments[zone_name] = policy_reasons
-            policy_reasons.append(sub_policies_map)
-
-    return merged_comments
