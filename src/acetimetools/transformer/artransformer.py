@@ -68,14 +68,14 @@ class ArduinoTransformer:
             zones_map=self.zones_map,
             policies_map=self.policies_map,
             links_map=self.tresult.links_map,
-            zones_to_policies=self.tresult.zones_to_policies,
             removed_zones=self.tresult.removed_zones,
             removed_policies=self.tresult.removed_policies,
             removed_links=self.tresult.removed_links,
             notable_zones=self.tresult.notable_zones,
-            merged_notable_zones=self.tresult.merged_notable_zones,
             notable_policies=self.tresult.notable_policies,
             notable_links=self.tresult.notable_links,
+            zones_to_policies=self.tresult.zones_to_policies,
+            merged_notable_zones=self.tresult.merged_notable_zones,
             zone_ids=self.zone_ids,
             link_ids=self.link_ids,
             letters_per_policy=self.letters_per_policy,
@@ -113,10 +113,6 @@ class ArduinoTransformer:
 
                 # Check if AT is not on 15-minute boundary
                 if encoded_at_time.time_minute != 0:
-                    logging.info(
-                        f"Notable policy: {policy_name}: "
-                        f"AT '{rule['at_time']}' not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_policies, policy_name,
                         f"AT '{rule['at_time']}' not on 15-minute boundary"
@@ -176,11 +172,6 @@ class ArduinoTransformer:
 
                 # Check if STDOFF is not on 15-minute boundary
                 if encoded_offset.offset_minute != 0:
-                    logging.info(
-                        f"Notable zone: {zone_name}: "
-                        f"STDOFF '{era['offset_string']}' "
-                        "not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"STDOFF '{era['offset_string']}' "
@@ -199,10 +190,6 @@ class ArduinoTransformer:
 
                 # Check if UNTIL is not on 15-minute boundary
                 if encoded_until_time.time_minute != 0:
-                    logging.info(
-                        f"Notable zone: {zone_name}: "
-                        f"UNTIL '{era['until_time']}' not on 15-minute boundary"
-                    )
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
