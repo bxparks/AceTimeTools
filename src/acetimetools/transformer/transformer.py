@@ -118,10 +118,13 @@ class Transformer:
             len(self.links_map),
         )
 
-        # Part 1: Transform the zones_map
-        # zones_map = self._remove_zones_without_slash(zones_map)
+        # Part 1: Some sanity checks.
+        _detect_links_to_links(links_map)
         zones_map, links_map = self._detect_hash_collisions(
             zones_map=zones_map, links_map=links_map)
+
+        # Part 2: Transform the zones_map
+        # zones_map = self._remove_zones_without_slash(zones_map)
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
@@ -136,12 +139,12 @@ class Transformer:
         zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
 
-        # Part 2: Transformations requring both zones_map and policies_map.
+        # Part 3: Transformations requring both zones_map and policies_map.
         zones_map, policies_map = self._mark_rules_used_by_zones(
             zones_map=zones_map, policies_map=policies_map)
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
 
-        # Part 3: Transform the policies_map
+        # Part 4: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
         if not self.generate_int16_years:
             policies_map = self._remove_rules_out_of_bounds(policies_map)
@@ -161,17 +164,17 @@ class Transformer:
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
 
-        # Part 4: Remove unused zones and links.
+        # Part 5: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(
             zones_map=zones_map, policies_map=policies_map)
         links_map = self._remove_links_to_missing_zones(
             links_map=links_map, zones_map=zones_map)
 
-        # Part 5: Detect zones and links whose normalized names conflict.
+        # Part 6: Detect zones and links whose normalized names conflict.
         zones_map, links_map = self._detect_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 6: Replace the original maps with the transformed ones.
+        # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
         self.zones_map = zones_map
         self.links_map = links_map
@@ -1889,3 +1892,21 @@ def hash_name(name: str) -> int:
     for c in name:
         hash = (33 * hash + ord(c)) % U32_MOD
     return hash
+
+
+def _detect_links_to_links(links_map: LinksMap) -> None:
+    """Check for links to links. TZDB 2022f seems to be adding some ground work
+    to use that feature in the future. AceTime does not support links-to-links
+    currently so let's just throw an exception to notify the human operator.
+
+    I think it would be relatively straightforward to support it by recursively
+    resolving the link-to-link until a zone was found. The algorithm needs to
+    detect any cycles in the TZDB files. In theory, they should not exist, but
+    it would be prudent to check for cycles to avoid an infinite loop.
+    """
+    for link_name, link in links_map.items():
+        target_name = links_map.get(link_name)
+        if target_name in links_map:
+            raise Exception(
+                f"Unsupported Link to Link: {link_name} -> {target_name}"
+            )
