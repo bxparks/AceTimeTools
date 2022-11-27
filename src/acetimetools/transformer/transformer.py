@@ -171,12 +171,7 @@ class Transformer:
         zones_map, links_map = self._detect_zones_and_links_with_similar_names(
             zones_map=zones_map, links_map=links_map)
 
-        # Part 6: Update note about zones and policies:
-        #   * Zones whose UTC offset does not occur at :00 or :30.
-        #   * Merge policy notes into zone notes.
-        self._note_zones_with_odd_utc_offset(zones_map, policies_map)
-
-        # Part 7: Replace the original maps with the transformed ones.
+        # Part 6: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
         self.zones_map = zones_map
         self.links_map = links_map
@@ -1538,56 +1533,6 @@ class Transformer:
             result_links[link_name] = link
 
         return result_zones, result_links
-
-    def _note_zones_with_odd_utc_offset(
-        self,
-        zones_map: ZonesMap,
-        policies_map: PoliciesMap,
-    ) -> None:
-        """Note zones whose UTC offset is not at :00 or :30 mark.
-        """
-        notable_zones: CommentsMap = {}
-        for zone_name, eras in zones_map.items():
-            for era in eras:
-                # Check the STDOFF column for non :00 or :30
-                if era['offset_seconds'] % 1800 != 0:
-                    offset_string = era['offset_string']
-                    add_comment(
-                        notable_zones, zone_name,
-                        f'STDOFF ({offset_string}) not at :00 or :30 mark')
-                    break
-
-                # Check the RULES column, which has 3 options: a policy name,
-                # '-', or ':'.
-                rule_name = era['rules']
-                found_odd_offset = False
-                if rule_name == ':':
-                    if era['rules_delta_seconds'] % 1800 != 0:
-                        add_comment(
-                            notable_zones, zone_name,
-                            f'RULES ({rule_name}) not at :00 or :30 mark')
-                elif rule_name != '-':
-                    # RULES contains a reference to a policy
-                    rules = policies_map.get(rule_name)
-                    assert rules is not None
-                    for rule in rules:
-                        # Check SAVE column for non :00 or :30
-                        save_string = rule['delta_offset']
-                        if rule['delta_seconds'] % 1800 != 0:
-                            add_comment(
-                                notable_zones, zone_name,
-                                f'SAVE ({save_string}) in Rule {rule_name}'
-                                f' not at :00 or :30 mark')
-                            found_odd_offset = True
-                            break
-                if found_odd_offset:
-                    break
-
-        self._print_comments_map(
-            label='Noted %s zones with non :00 or :30 UTC offsets',
-            comments=notable_zones,
-        )
-        merge_comments(self.all_notable_zones, notable_zones)
 
 
 # ISO-8601 specifies Monday=1, Sunday=7

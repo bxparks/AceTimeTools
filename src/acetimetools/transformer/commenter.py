@@ -7,6 +7,7 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Union
+from typing import cast
 
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
@@ -14,14 +15,14 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import ZonesToPolicies
-from typing import cast
+from acetimetools.data_types.at_types import add_comment
+from acetimetools.data_types.at_types import merge_comments
 
 
 class Commenter:
+    """Update notable zone and policy comments.
     """
-    Merge zone policy comments into the zone info comments after all
-    transformations.
-    """
+
     def __init__(
         self,
         tresult: TransformerResult,
@@ -29,8 +30,12 @@ class Commenter:
         self.tresult = tresult
 
     def transform(self) -> None:
-        """Merge zone policy comments into zone info comments.
-        """
+        _note_zones_with_odd_utc_offset(
+            self.tresult.zones_map,
+            self.tresult.policies_map,
+            self.tresult.notable_zones,
+        )
+
         self.zones_to_policies = _gather_zones_to_policies(
             self.tresult.zones_map,
             self.tresult.policies_map,
@@ -48,8 +53,6 @@ class Commenter:
         logging.info(f"Zones: {zone_count}; Comments: {comment_count}")
 
     def get_data(self) -> TransformerResult:
-        """Merge the result of transform() into the original tresult."""
-
         return TransformerResult(
             zones_map=self.tresult.zones_map,
             policies_map=self.tresult.policies_map,
@@ -147,3 +150,51 @@ def _count_merged_counts_map(comments: MergedCommentsMap) -> int:
                     for policy_reason in policy_reasons:
                         count += 1
     return count
+
+
+def _note_zones_with_odd_utc_offset(
+    zones_map: ZonesMap,
+    policies_map: PoliciesMap,
+    all_notable_zones: CommentsMap,
+) -> None:
+    """Note zones whose UTC offset is not at :00 or :30 mark into the
+    'all_notable_zones' map.
+    """
+    notable_zones: CommentsMap = {}
+    for zone_name, eras in zones_map.items():
+        for era in eras:
+            # Check the STDOFF column for non :00 or :30
+            if era['offset_seconds'] % 1800 != 0:
+                offset_string = era['offset_string']
+                add_comment(
+                    notable_zones, zone_name,
+                    f'STDOFF ({offset_string}) not at :00 or :30 mark')
+                break
+
+            # Check the RULES column, which has 3 options: a policy name,
+            # '-', or ':'.
+            rule_name = era['rules']
+            found_odd_offset = False
+            if rule_name == ':':
+                if era['rules_delta_seconds'] % 1800 != 0:
+                    add_comment(
+                        notable_zones, zone_name,
+                        f'RULES ({rule_name}) not at :00 or :30 mark')
+            elif rule_name != '-':
+                # RULES contains a reference to a policy
+                rules = policies_map.get(rule_name)
+                assert rules is not None
+                for rule in rules:
+                    # Check SAVE column for non :00 or :30
+                    save_string = rule['delta_offset']
+                    if rule['delta_seconds'] % 1800 != 0:
+                        add_comment(
+                            notable_zones, zone_name,
+                            f'SAVE ({save_string}) in Rule {rule_name}'
+                            f' not at :00 or :30 mark')
+                        found_odd_offset = True
+                        break
+            if found_odd_offset:
+                break
+
+    merge_comments(all_notable_zones, notable_zones)
