@@ -398,7 +398,6 @@ def main() -> None:
 
     # Transform the TZ zones and rules
     logging.info('======== Transforming Zones and Rules')
-    logging.info('Extracting years [%d, %d)', args.start_year, args.until_year)
     transformer = Transformer(
         tresult=tresult,
         scope=args.scope,
