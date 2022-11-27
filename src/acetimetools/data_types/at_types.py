@@ -191,6 +191,7 @@ ZonesToPolicies = Dict[str, Collection[str]]
 
 class TransformerResult(NamedTuple):
     """Result type of Transformer.get_data().
+
     * zones_map: (zoneName -> ZoneEraRaw[]).
     * policies_map: (policyName -> ZoneRuleRaw[]).
     * links_map: (linkName -> zoneName)
@@ -200,6 +201,8 @@ class TransformerResult(NamedTuple):
     * notable_zones: {zoneName -> reasons[]}
     * notable_policies: {policyName -> reasons[]}
     * notable_links: {linkName -> reasons[]}
+    * zones_to_policies: {zoneName -> policyName[]}
+    * merged_notable_zones: {zoneName -> Set[str | CommentsMap]}
     * zone_ids: {zoneName -> zoneHash}
     * link_ids: {linkName -> zoneHash}
     * letters_per_policy: {policyName -> {letter -> index}}
@@ -211,14 +214,14 @@ class TransformerResult(NamedTuple):
     zones_map: ZonesMap
     policies_map: PoliciesMap
     links_map: LinksMap
-    zones_to_policies: ZonesToPolicies
     removed_zones: CommentsMap
     removed_policies: CommentsMap
     removed_links: CommentsMap
     notable_zones: CommentsMap
-    merged_notable_zones: MergedCommentsMap
     notable_policies: CommentsMap
     notable_links: CommentsMap
+    zones_to_policies: ZonesToPolicies
+    merged_notable_zones: MergedCommentsMap
     zone_ids: Dict[str, int]
     link_ids: Dict[str, int]
     letters_per_policy: LettersPerPolicy

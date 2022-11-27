@@ -4,12 +4,17 @@
 
 import logging
 from typing import List
+from typing import Optional
+from typing import Set
 from typing import Union
 
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
-from acetimetools.data_types.at_types import ZonesToPolicies
+from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import ZonesMap
+from acetimetools.data_types.at_types import ZonesToPolicies
+from typing import cast
 
 
 class Commenter:
@@ -26,10 +31,15 @@ class Commenter:
     def transform(self) -> None:
         """Merge zone policy comments into zone info comments.
         """
+        self.zones_to_policies = _gather_zones_to_policies(
+            self.tresult.zones_map,
+            self.tresult.policies_map,
+        )
+
         self.merged_notable_zones = _create_merged_comments_map(
             self.tresult.notable_zones,
             self.tresult.notable_policies,
-            self.tresult.zones_to_policies,
+            self.zones_to_policies,
         )
 
     def print_summary(self) -> None:
@@ -44,11 +54,11 @@ class Commenter:
             zones_map=self.tresult.zones_map,
             policies_map=self.tresult.policies_map,
             links_map=self.tresult.links_map,
-            zones_to_policies=self.tresult.zones_to_policies,
             removed_zones=self.tresult.removed_zones,
             removed_policies=self.tresult.removed_policies,
             removed_links=self.tresult.removed_links,
             notable_zones=self.tresult.notable_zones,
+            zones_to_policies=self.zones_to_policies,
             merged_notable_zones=self.merged_notable_zones,
             notable_policies=self.tresult.notable_policies,
             notable_links=self.tresult.notable_links,
@@ -60,6 +70,30 @@ class Commenter:
             fragments_map=self.tresult.fragments_map,
             compressed_names=self.tresult.compressed_names,
         )
+
+
+def _gather_zones_to_policies(
+    zones_map: ZonesMap,
+    policies_map: PoliciesMap,
+) -> ZonesToPolicies:
+    """
+    Create a map of zone names to its list of policy names which are used
+    by that zone.
+    """
+    zones_to_policies: ZonesToPolicies = {}
+    for zone_name, eras in zones_map.items():
+        for era in eras:
+            rule_name = era['rules']
+            if rule_name not in [':', '-']:
+                policies = cast(
+                    Optional[Set[str]],
+                    zones_to_policies.get(zone_name)
+                )
+                if policies is None:
+                    policies = set()
+                    zones_to_policies[zone_name] = policies
+                policies.add(rule_name)
+    return zones_to_policies
 
 
 def _create_merged_comments_map(
@@ -76,17 +110,20 @@ def _create_merged_comments_map(
     for name, reasons in sorted(zone_comments.items()):
         # Copy the zone comments.
         merged_reasons: List[Union[str, CommentsMap]] = list(reasons)
+        merged_reasons.sort()
         merged_comments[name] = merged_reasons
 
     # Pass 2: Add the policy notes.
-    for zone_name, policies in sorted(zones_to_policies.items()):
+    for zone_name, policies in zones_to_policies.items():
 
         # Extract the policy comments for the given zone.
         sub_policies_map: CommentsMap = {}
         for policy in policies:
             entry = policy_comments.get(policy)
             if entry is not None:
-                sub_policies_map[policy] = entry
+                comments = list(entry)
+                comments.sort()
+                sub_policies_map[policy] = comments
 
         # Add to the merged_reasons.
         if sub_policies_map:

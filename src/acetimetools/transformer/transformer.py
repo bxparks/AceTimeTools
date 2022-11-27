@@ -10,9 +10,7 @@ from collections import OrderedDict
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Set
 from typing import Tuple
-from typing import cast
 from typing_extensions import TypedDict
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
@@ -21,7 +19,6 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import ZonesToPolicies
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import add_comment
 from acetimetools.data_types.at_types import merge_comments
@@ -98,7 +95,6 @@ class Transformer:
         self.all_notable_zones: CommentsMap = {}
         self.all_notable_policies: CommentsMap = {}
         self.all_notable_links: CommentsMap = {}
-        self.zones_to_policies: ZonesToPolicies = {}
 
         self.original_zone_count = len(self.zones_map)
         self.original_rule_count = len(self.policies_map)
@@ -179,8 +175,6 @@ class Transformer:
         #   * Zones whose UTC offset does not occur at :00 or :30.
         #   * Merge policy notes into zone notes.
         self._note_zones_with_odd_utc_offset(zones_map, policies_map)
-        self.zones_to_policies = self._gather_zones_to_policies(
-            zones_map, policies_map)
 
         # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
@@ -194,13 +188,13 @@ class Transformer:
             zones_map=self.zones_map,
             policies_map=self.policies_map,
             links_map=self.links_map,
-            zones_to_policies=self.zones_to_policies,
             removed_zones=self.all_removed_zones,
             removed_policies=self.all_removed_policies,
             removed_links=self.all_removed_links,
             notable_zones=self.all_notable_zones,
             notable_policies=self.all_notable_policies,
             notable_links=self.all_notable_links,
+            zones_to_policies=self.tresult.zones_to_policies,
             merged_notable_zones=self.tresult.merged_notable_zones,
             zone_ids=self.tresult.zone_ids,
             link_ids=self.tresult.link_ids,
@@ -1594,30 +1588,6 @@ class Transformer:
             comments=notable_zones,
         )
         merge_comments(self.all_notable_zones, notable_zones)
-
-    def _gather_zones_to_policies(
-        self,
-        zones_map: ZonesMap,
-        policies_map: PoliciesMap,
-    ) -> ZonesToPolicies:
-        """
-        Create a map of zone names to its list of policy names which are used
-        by that zone.
-        """
-        zones_to_policies: ZonesToPolicies = {}
-        for zone_name, eras in zones_map.items():
-            for era in eras:
-                rule_name = era['rules']
-                if rule_name not in [':', '-']:
-                    policies = cast(
-                        Optional[Set[str]],
-                        zones_to_policies.get(zone_name)
-                    )
-                    if policies is None:
-                        policies = set()
-                        zones_to_policies[zone_name] = policies
-                    policies.add(rule_name)
-        return zones_to_policies
 
 
 # ISO-8601 specifies Monday=1, Sunday=7
