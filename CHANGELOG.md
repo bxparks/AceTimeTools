@@ -1,10 +1,13 @@
 # Changelog
 
 * Unreleased
+* v1.2.0 (2022-12-04)
     * If there are duplicate normalized zone names or link names, throw an
       exception to make it a fatal condition.
         * Allows detection and fixing of this problem, instead of silently
           dropping zones or links.
+    * Detect Link to Link and throw exception.
+    * Include notable policy comments into `zone_infos.h` and `zone_infos.py`.
 * v1.1.4 (2022-11-02)
     * Add `--generate_int16_year` flag to generate year fields with `int16_t`
       type instead of `int8_t`.
