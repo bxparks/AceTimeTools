@@ -19,6 +19,7 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
+from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import LettersPerPolicy
 from acetimetools.data_types.at_types import ZoneInfoDatabase
@@ -96,6 +97,7 @@ class CGenerator:
             removed_links=zidb['removed_links'],
             removed_policies=zidb['removed_policies'],
             notable_zones=zidb['notable_zones'],
+            merged_notable_zones=zidb['merged_notable_zones'],
             notable_links=zidb['notable_links'],
             notable_policies=zidb['notable_policies'],
             buf_sizes=zidb['buf_sizes'],
@@ -699,6 +701,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         removed_links: CommentsMap,
         removed_policies: CommentsMap,
         notable_zones: CommentsMap,
+        merged_notable_zones: MergedCommentsMap,
         notable_links: CommentsMap,
         notable_policies: CommentsMap,
         buf_sizes: BufSizeMap,
@@ -725,6 +728,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         self.removed_links = removed_links
         self.removed_policies = removed_policies
         self.notable_zones = notable_zones
+        self.merged_notable_zones = merged_notable_zones
         self.notable_links = notable_links
         self.notable_policies = notable_policies
         self.buf_sizes = buf_sizes
@@ -794,7 +798,9 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
             )
 
         removed_info_items = _render_comments_map(self.removed_zones)
-        notable_info_items = _render_comments_map(self.notable_zones)
+        # notable_info_items = _render_comments_map(self.notable_zones)
+        notable_info_items = _render_merged_comments_map(
+            self.merged_notable_zones)
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
@@ -1334,6 +1340,7 @@ def _get_rule_delta_code_comment(
         return f"(delta_minutes={delta_minutes})/15"
 
 
+# TODO: Identical to argenerator._compressed_name_to_c_string()
 def _compressed_name_to_c_string(compressed_name: str) -> str:
     """Convert a compressed name (with fragment references) to a string that
     the C++ compiler will accept. The primary reason for this function is
@@ -1362,24 +1369,70 @@ def _compressed_name_to_c_string(compressed_name: str) -> str:
     return rendered_string.strip()
 
 
-def _render_comments_map(comments: CommentsMap) -> str:
+# TODO: Identical to argenerator._render_comments_map()
+def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
     """Convert the CommentsMap into a C++ comment. Print the name and list of
     reasons one a single line, or multiple lines, like this:
 
-    // Name1 (reason)
+    // Name1 {reason}
     //
-    // Name2 (
+    // Name2 {
     //   reason1,
     //   reason2,
-    // )
+    // }
     """
     comment = ''
     for name, reasons in sorted(comments.items()):
         if len(reasons) <= 1:
-            comment += f"// {name} ({next(iter(reasons))})\n"
+            comment += f"// {indent}{name} {{{next(iter(reasons))}}}\n"
         else:
-            comment += f"// {name} (\n"
+            comment += f"// {indent}{name} {{\n"
             for reason in reasons:
+                comment += f'//   {indent}{reason},\n'
+            comment += f"// {indent}}}\n"
+    return comment
+
+
+# TODO: Identical to argenerator._render_merged_comments_map()
+def _render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
+    """Converts MergedCommentsMap for zones into a C++ comment. Includes the
+    comments for zones, as well as any comments in the referenced policies.
+
+    // Name1 {reason}
+    //
+    // Name2 {
+    //   reason1,
+    //   reason2,
+    // }
+    //
+    // Name3 {
+    //   reason1,
+    //   reason2,
+    //   Policy1 {reason11}
+    //   Policy2 {
+    //     reason21,
+    //     reason22,
+    //   }
+    // }
+    """
+    comment = ''
+    for name, reasons in sorted(merged_comments.items()):
+        if len(reasons) == 0:
+            continue
+
+        # If only a single comment, and the comment is a simple string,
+        # render it in a single line.
+        reason = next(iter(reasons))
+        if len(reasons) == 1 and isinstance(reason, str):
+            comment += f"// {name} {{{reason}}}\n"
+            continue
+
+        # Otherwise, render the comments using multiple lines deliminted by ( )
+        comment += f"// {name} {{\n"
+        for reason in reasons:
+            if isinstance(reason, str):
                 comment += f'//   {reason},\n'
-            comment += "// )\n"
+            else:
+                comment += _render_comments_map(reason, '  ')
+        comment += "// }\n"
     return comment
