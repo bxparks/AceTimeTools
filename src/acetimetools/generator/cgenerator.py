@@ -164,6 +164,10 @@ class ZonePoliciesGenerator:
 
 #include "../zone_info.h"
 
+#ifdef __cpluscplus
+extern "C" {{
+#endif
+
 //---------------------------------------------------------------------------
 // Supported zone policies: {numPolicies}
 //---------------------------------------------------------------------------
@@ -181,6 +185,12 @@ class ZonePoliciesGenerator:
 //---------------------------------------------------------------------------
 
 {notablePolicyItems}
+
+//---------------------------------------------------------------------------
+
+#ifdef __cpluscplus
+}}
+#endif
 
 #endif
 """
@@ -485,6 +495,10 @@ class ZoneInfosGenerator:
 
 #include "../zone_info.h"
 
+#ifdef __cpluscplus
+extern "C" {{
+#endif
+
 //---------------------------------------------------------------------------
 // ZoneContext (should not be in PROGMEM)
 //---------------------------------------------------------------------------
@@ -548,6 +562,12 @@ extern const AtcZoneContext kAtcZoneContext;
 //---------------------------------------------------------------------------
 
 {notableLinkItems}
+
+//---------------------------------------------------------------------------
+
+#ifdef __cpluscplus
+}}
+#endif
 
 #endif
 """
@@ -1130,6 +1150,10 @@ const AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
 
 #include "../zone_info.h"
 
+#ifdef __cpluscplus
+extern "C" {{
+#endif
+
 // Zones
 #define kAtcZoneRegistrySize {numZones}
 extern const AtcZoneInfo * const kAtcZoneRegistry[{numZones}];
@@ -1142,6 +1166,10 @@ const kAtcZoneAndLinkRegistry[{numZonesAndLinks}];
 // Link Entries
 #define kAtcLinkRegistrySize {numLinks}
 extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
+
+#ifdef __cpluscplus
+}}
+#endif
 
 #endif
 """
