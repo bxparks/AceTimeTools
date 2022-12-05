@@ -295,8 +295,8 @@ extern const {scope}::ZonePolicy kPolicy{policyName};
                 policyName=normalize_name(name),
                 scope=self.scope)
 
-        removed_policy_items = _render_comments_map(self.removed_policies)
-        notable_policy_items = _render_comments_map(self.notable_policies)
+        removed_policy_items = render_comments_map(self.removed_policies)
+        notable_policy_items = render_comments_map(self.notable_policies)
 
         return self.ZONE_POLICIES_H_FILE.format(
             invocation=self.invocation,
@@ -798,12 +798,12 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
                 linkId=self.link_ids[link_name],
             )
 
-        removed_info_items = _render_comments_map(self.removed_zones)
-        # notable_info_items = _render_comments_map(self.notable_zones)
-        notable_info_items = _render_merged_comments_map(
+        removed_info_items = render_comments_map(self.removed_zones)
+        # notable_info_items = render_comments_map(self.notable_zones)
+        notable_info_items = render_merged_comments_map(
             self.merged_notable_zones)
-        removed_link_items = _render_comments_map(self.removed_links)
-        notable_link_items = _render_comments_map(self.notable_links)
+        removed_link_items = render_comments_map(self.removed_links)
+        notable_link_items = render_comments_map(self.notable_links)
 
         return self.ZONE_INFOS_H_FILE.format(
             invocation=self.invocation,
@@ -960,7 +960,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             compressed_name = self.compressed_names[zone_name]
         else:
             compressed_name = zone_name
-        rendered_name = _compressed_name_to_c_string(compressed_name)
+        rendered_name = compressed_name_to_c_string(compressed_name)
 
         # Calculate memory sizes
         zone_name_size = len(compressed_name) + 1
@@ -1073,7 +1073,7 @@ const {scope}::ZoneInfo kZone{linkNormalizedName} {progmem} = {{
             compressed_name = self.compressed_names[link_name]
         else:
             compressed_name = link_name
-        rendered_name = _compressed_name_to_c_string(compressed_name)
+        rendered_name = compressed_name_to_c_string(compressed_name)
 
         link_name_size = len(compressed_name) + 1
         original_size = len(link_name) + 1
@@ -1345,7 +1345,7 @@ def _get_rule_delta_code_comment(
         return f"(deltaMinutes={delta_minutes})/15"
 
 
-def _compressed_name_to_c_string(compressed_name: str) -> str:
+def compressed_name_to_c_string(compressed_name: str) -> str:
     """Convert a compressed name (with fragment references) to a string that
     the C++ compiler will accept. The primary reason for this function is
     because the hex escape sequence (\\xHH) in C/C++ has no length limit, so
@@ -1373,7 +1373,7 @@ def _compressed_name_to_c_string(compressed_name: str) -> str:
     return rendered_string.strip()
 
 
-def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
+def render_comments_map(comments: CommentsMap, indent: str = '') -> str:
     """Convert the CommentsMap into a C++ comment. Print the name and list of
     reasons one a single line, or multiple lines, like this:
 
@@ -1396,7 +1396,7 @@ def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
     return comment
 
 
-def _render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
+def render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
     """Converts MergedCommentsMap for zones into a C++ comment. Includes the
     comments for zones, as well as any comments in the referenced policies.
 
@@ -1435,6 +1435,6 @@ def _render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
             if isinstance(reason, str):
                 comment += f'//   {reason},\n'
             else:
-                comment += _render_comments_map(reason, '  ')
+                comment += render_comments_map(reason, '  ')
         comment += "// }\n"
     return comment

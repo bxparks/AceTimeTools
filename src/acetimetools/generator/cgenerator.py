@@ -26,6 +26,9 @@ from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import BufSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
+from acetimetools.generator.argenerator import compressed_name_to_c_string
+from acetimetools.generator.argenerator import render_comments_map
+from acetimetools.generator.argenerator import render_merged_comments_map
 
 
 class CGenerator:
@@ -293,8 +296,8 @@ extern const AtcZonePolicy kAtcPolicy{policyName};
                 policyName=normalize_name(name),
                 scope=self.scope)
 
-        removed_policy_items = _render_comments_map(self.removed_policies)
-        notable_policy_items = _render_comments_map(self.notable_policies)
+        removed_policy_items = render_comments_map(self.removed_policies)
+        notable_policy_items = render_comments_map(self.notable_policies)
 
         return self.ZONE_POLICIES_H_FILE.format(
             invocation=self.invocation,
@@ -797,12 +800,12 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
                 linkId=self.link_ids[link_name],
             )
 
-        removed_info_items = _render_comments_map(self.removed_zones)
-        # notable_info_items = _render_comments_map(self.notable_zones)
-        notable_info_items = _render_merged_comments_map(
+        removed_info_items = render_comments_map(self.removed_zones)
+        # notable_info_items = render_comments_map(self.notable_zones)
+        notable_info_items = render_merged_comments_map(
             self.merged_notable_zones)
-        removed_link_items = _render_comments_map(self.removed_links)
-        notable_link_items = _render_comments_map(self.notable_links)
+        removed_link_items = render_comments_map(self.removed_links)
+        notable_link_items = render_comments_map(self.notable_links)
 
         return self.ZONE_INFOS_H_FILE.format(
             invocation=self.invocation,
@@ -959,7 +962,7 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
             compressed_name = self.compressed_names[zone_name]
         else:
             compressed_name = zone_name
-        rendered_name = _compressed_name_to_c_string(compressed_name)
+        rendered_name = compressed_name_to_c_string(compressed_name)
 
         # Calculate memory sizes
         zone_name_size = len(compressed_name) + 1
@@ -1072,7 +1075,7 @@ const AtcZoneInfo kAtcZone{linkNormalizedName} {progmem} = {{
             compressed_name = self.compressed_names[link_name]
         else:
             compressed_name = link_name
-        rendered_name = _compressed_name_to_c_string(compressed_name)
+        rendered_name = compressed_name_to_c_string(compressed_name)
 
         link_name_size = len(compressed_name) + 1
         original_size = len(link_name) + 1
@@ -1338,101 +1341,3 @@ def _get_rule_delta_code_comment(
         return f"(delta_minutes={delta_minutes})/15 + 4"
     else:
         return f"(delta_minutes={delta_minutes})/15"
-
-
-# TODO: Identical to argenerator._compressed_name_to_c_string()
-def _compressed_name_to_c_string(compressed_name: str) -> str:
-    """Convert a compressed name (with fragment references) to a string that
-    the C++ compiler will accept. The primary reason for this function is
-    because the hex escape sequence (\\xHH) in C/C++ has no length limit, so
-    will happily run into the characters after the HH. So we have to break
-    those references into separate strings. Example: converts ("\x01ab")
-    into ("\x01" "ab").
-    """
-    rendered_string = ''
-    in_normal_string = False
-    for c in compressed_name:
-        if ord(c) < 0x20:
-            if in_normal_string:
-                rendered_string += f'" "\\x{ord(c):02x}" '
-                in_normal_string = False
-            else:
-                rendered_string += f'"\\x{ord(c):02x}" '
-        else:
-            if in_normal_string:
-                rendered_string += c
-            else:
-                rendered_string += f'"{c}'
-            in_normal_string = True
-    if in_normal_string:
-        rendered_string += '"'
-    return rendered_string.strip()
-
-
-# TODO: Identical to argenerator._render_comments_map()
-def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
-    """Convert the CommentsMap into a C++ comment. Print the name and list of
-    reasons one a single line, or multiple lines, like this:
-
-    // Name1 {reason}
-    //
-    // Name2 {
-    //   reason1,
-    //   reason2,
-    // }
-    """
-    comment = ''
-    for name, reasons in sorted(comments.items()):
-        if len(reasons) <= 1:
-            comment += f"// {indent}{name} {{{next(iter(reasons))}}}\n"
-        else:
-            comment += f"// {indent}{name} {{\n"
-            for reason in reasons:
-                comment += f'//   {indent}{reason},\n'
-            comment += f"// {indent}}}\n"
-    return comment
-
-
-# TODO: Identical to argenerator._render_merged_comments_map()
-def _render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
-    """Converts MergedCommentsMap for zones into a C++ comment. Includes the
-    comments for zones, as well as any comments in the referenced policies.
-
-    // Name1 {reason}
-    //
-    // Name2 {
-    //   reason1,
-    //   reason2,
-    // }
-    //
-    // Name3 {
-    //   reason1,
-    //   reason2,
-    //   Policy1 {reason11}
-    //   Policy2 {
-    //     reason21,
-    //     reason22,
-    //   }
-    // }
-    """
-    comment = ''
-    for name, reasons in sorted(merged_comments.items()):
-        if len(reasons) == 0:
-            continue
-
-        # If only a single comment, and the comment is a simple string,
-        # render it in a single line.
-        reason = next(iter(reasons))
-        if len(reasons) == 1 and isinstance(reason, str):
-            comment += f"// {name} {{{reason}}}\n"
-            continue
-
-        # Otherwise, render the comments using multiple lines deliminted by ( )
-        comment += f"// {name} {{\n"
-        for reason in reasons:
-            if isinstance(reason, str):
-                comment += f'//   {reason},\n'
-            else:
-                comment += _render_comments_map(reason, '  ')
-        comment += "// }\n"
-    return comment
