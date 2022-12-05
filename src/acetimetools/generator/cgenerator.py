@@ -689,11 +689,11 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
     def __init__(
         self,
         invocation: str,
-        tz_files: str,
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
         tz_version: str,
+        tz_files: str,
         scope: str,
         start_year: int,
         until_year: int,
@@ -716,11 +716,11 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         compressed_names: Dict[str, str],
     ):
         self.invocation = invocation
-        self.tz_files = tz_files
         self.db_namespace = db_namespace
         self.compress = compress
         self.generate_int16_years = generate_int16_years
         self.tz_version = tz_version
+        self.tz_files = tz_files
         self.scope = scope
         self.start_year = start_year
         self.until_year = until_year
@@ -1186,20 +1186,20 @@ extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
     def __init__(
         self,
         invocation: str,
-        tz_version: str,
         tz_files: str,
-        scope: str,
         db_namespace: str,
+        tz_version: str,
+        scope: str,
         zones_map: ZonesMap,
         links_map: LinksMap,
         zone_ids: Dict[str, int],
         link_ids: Dict[str, int],
     ):
         self.invocation = invocation
-        self.tz_version = tz_version
         self.tz_files = tz_files
-        self.scope = scope
         self.db_namespace = db_namespace
+        self.tz_version = tz_version
+        self.scope = scope
         self.zones_map = zones_map
         self.links_map = links_map
         self.zone_ids = zone_ids
