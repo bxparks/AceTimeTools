@@ -202,7 +202,7 @@ class TransformerResult(NamedTuple):
     * notable_policies: {policyName -> reasons[]}
     * notable_links: {linkName -> reasons[]}
     * zones_to_policies: {zoneName -> policyName[]}
-    * merged_notable_zones: {zoneName -> Set[str | CommentsMap]}
+    * merged_notable_zones: {zoneName -> List[str | CommentsMap]}
     * zone_ids: {zoneName -> zoneHash}
     * link_ids: {linkName -> zoneHash}
     * letters_per_policy: {policyName -> {letter -> index}}
@@ -363,7 +363,8 @@ def create_zone_info_database(
         'removed_links': _sort_comments(tresult.removed_links),
         'removed_policies': _sort_comments(tresult.removed_policies),
         'notable_zones': _sort_comments(tresult.notable_zones),
-        'merged_notable_zones': tresult.merged_notable_zones,
+        'merged_notable_zones': _sort_merged_comments(
+            tresult.merged_notable_zones),
         'notable_links': _sort_comments(tresult.notable_links),
         'notable_policies': _sort_comments(tresult.notable_policies),
 
@@ -390,6 +391,26 @@ def _sort_comments(comments: CommentsMap) -> CommentsMap:
         (k, list(sorted(v)))
         for k, v in sorted(comments.items())
     )
+
+
+def _sort_merged_comments(
+    merged_comments: MergedCommentsMap
+) -> MergedCommentsMap:
+    """Convert the internal Set[] into List[] for serialization into JSON.
+    """
+    new_comments: MergedCommentsMap = {}
+    for k, v in sorted(merged_comments.items()):
+        merged_v: List[Union[str, CommentsMap]] = []
+        for e in v:
+            if isinstance(e, dict):
+                e = _sort_comments(e)
+                merged_v.append(e)
+            elif isinstance(e, str):
+                merged_v.append(e)
+            else:
+                raise Exception(f"Unknown type: k={k}, v={v}")
+        new_comments[k] = merged_v
+    return new_comments
 
 
 def _to_version_number(version: str) -> int:
