@@ -15,7 +15,7 @@ from acetimetools.data_types.at_types import ZoneInfoDatabase
 # https://researchdatapod.com/how-to-solve-python-typeerror-object-of-type-set-is-not-json-serializable/
 def serialize_sets(obj: Any) -> List[Any]:
     if isinstance(obj, set):
-        return list(obj)
+        return list(sorted(obj))
     raise TypeError("Type %s is not serializable" % type(obj))
 
 
