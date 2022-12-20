@@ -13,72 +13,39 @@
 #
 # Usage:
 #
-#   $ tzcompiler.sh --tag {tag}
-#       --language (python|arduino|json|zonelist)
-#       --scope (basic|extended)
-#       [other flags...]
-#
-# There are 4 targets depending on the --language flag:
-#
-#   * arduino
-#       * Generate the 'zone_infos.{h,cpp}', 'zone_policies.{h,cpp}' and
-#         'zone_registry.{h,cpp} files for Arduino.
-#   * python
-#       * Generate the 'zone_infos.py', 'zone_policies.py' files for
-#         `zone_processor.py` class in Python.
-#   * json
-#       * Generate the 'zonedb.json'.
-#   * zonelist
-#       * Generate the 'zones.txt' file which contains the list of Zone names.
-#
-# The '--action' flag has been reduced to a single option, and is now optional.
-#
-# Examples:
-#
-#   $ tzcompiler.sh --tag 2018i --language json --scope basic
-#       Generates zonedb.json file in the current directory.
-#
-#   $ tzcompiler.sh --tag 2018i --language arduino --scope basic
-#       Generates zone*.{h,cpp} files in the current directory.
-#
-#   $ tzcompiler.sh --tag 2018i --language python --scope basic
-#       Generates zone*.py files in the current directory.
-#
-#   $ tzcompiler.sh --tag 2018i --language zonelist --scope basic
-#       Generate the 'zones.txt' file in the current directory.
-#
-# See Also:
-#
-#   validate.sh
+#   $ tzcompiler.sh --tag {tag} [--skip_checkout] [tzcompiler_py_flags...]
 
 set -eu
 
 # Can't use $(realpath $(dirname $0)) because realpath doesn't exist on MacOS
 DIRNAME=$(dirname $0)
 
-# Point to the TZ git repository, assumed to be a sibling of AceTime repository.
-INPUT_DIR=$(realpath $DIRNAME/../tz)
+# The master TZ git repository, assumed to be a sibling of AceTime repository.
+TZDB_REPO=$(realpath $DIRNAME/../tz)
+
+# Location of the TZDB files
+TZDB_FILES=$PWD/tzfiles
 
 # Output generated code to the current directory
 OUTPUT_DIR=$PWD
 
 function usage() {
-    echo 'Usage: tzcompiler.sh '
-    echo '      --tag tag '
-    echo '      [--skip_checkout] '
-    echo '      --language (python|arduino|json) '
-    echo '      --scope (basic|extended) '
-    echo '      [...other python_flags...] '
+    echo 'Usage: tzcompiler.sh --tag tag [--tzfiles tzfiles] [--skip_checkout]'
+    echo '    [--skip_cleanup] [...other python_flags...]'
     exit 1
 }
 
 pass_thru_flags=''
 tag=''
 skip_checkout=0
+skip_cleanup=0
+tzfiles=$TZDB_FILES
 while [[ $# -gt 0 ]]; do
     case $1 in
         --tag) shift; tag=$1 ;;
+        --tzfiles) shift; tzfiles=$1 ;;
         --skip_checkout) skip_checkout=1 ;;
+        --skip_cleanup) skip_cleanup=1 ;;
         --help|-h) usage ;;
         -*) break ;;
         *) break ;;
@@ -90,36 +57,23 @@ if [[ "$tag" == '' ]]; then
 fi
 
 # Check out the TZDB repo at the specified tag
-if [[ $skip_checkout == '0' ]]; then
-    echo "\$ pushd $INPUT_DIR"
-    pushd $INPUT_DIR
+echo "+ git -c advice.detachedHead=false clone --quiet --branch $tag $TZDB_REPO $tzfiles"
+git -c advice.detachedHead=false clone --quiet --branch $tag $TZDB_REPO $tzfiles
 
-    echo "\$ git checkout $tag"
-    git checkout -q $tag
-
-    echo '$ popd'
-    popd
-fi
-
-echo \$ $DIRNAME/src/acetimetools/tzcompiler.py \
-    --input_dir $INPUT_DIR \
+# Run the tzcompiler.py.
+echo "+ $DIRNAME/src/acetimetools/tzcompiler.py" \
+    --input_dir $tzfiles \
     --output_dir $OUTPUT_DIR \
     --tz_version $tag \
     $@
 $DIRNAME/src/acetimetools/tzcompiler.py \
-    --input_dir $INPUT_DIR \
+    --input_dir $tzfiles \
     --output_dir $OUTPUT_DIR \
     --tz_version $tag \
     "$@"
 
-# Revert the TZ DB repo to the 'main' branch.
-if [[ $skip_checkout == '0' ]]; then
-    echo "\$ pushd $INPUT_DIR"
-    pushd $INPUT_DIR
-
-    echo "\$ git checkout main"
-    git checkout -q main
-
-    echo '$ popd'
-    popd
+# Clean up the tzfiles/ directory
+if [[ $skip_cleanup == 0 ]]; then
+    echo "+ rm -rf $tzfiles"
+    rm -rf $tzfiles
 fi
