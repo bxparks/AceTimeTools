@@ -238,7 +238,7 @@ static const AtcZoneRule kAtcZoneRules{policyName}[] {progmem} = {{
 
 {letterArray}
 
-const AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
+const AtcZonePolicy kAtcZonePolicy{policyName} {progmem} = {{
   kAtcZoneRules{policyName} /*rules*/,
   {letterArrayRef} /*letters*/,
   {numRules} /*num_rules*/,
@@ -288,7 +288,7 @@ const AtcZonePolicy kAtcPolicy{policyName} {progmem} = {{
 
     def generate_policies_h(self) -> str:
         ZONE_POLICIES_H_POLICY_ITEM = """\
-extern const AtcZonePolicy kAtcPolicy{policyName};
+extern const AtcZonePolicy kAtcZonePolicy{policyName};
 """
         policy_items = ''
         for name, rules in sorted(self.policies_map.items()):
@@ -1003,7 +1003,7 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
         if rules_policy_name == '-' or rules_policy_name == ':':
             zone_policy = 'NULL'
         else:
-            zone_policy = f'&kAtcPolicy{normalize_name(rules_policy_name)}'
+            zone_policy = f'&kAtcZonePolicy{normalize_name(rules_policy_name)}'
 
         offset_code = era['offset_code']
         delta_code = era['delta_code_encoded']
