@@ -237,7 +237,7 @@ static const {scope}::ZoneRule kZoneRules{policyName}[] {progmem} = {{
 
 {letterArray}
 
-const {scope}::ZonePolicy kPolicy{policyName} {progmem} = {{
+const {scope}::ZonePolicy kZonePolicy{policyName} {progmem} = {{
   kZoneRules{policyName} /*rules*/,
   {letterArrayRef} /*letters*/,
   {numRules} /*numRules*/,
@@ -287,7 +287,7 @@ const {scope}::ZonePolicy kPolicy{policyName} {progmem} = {{
 
     def generate_policies_h(self) -> str:
         ZONE_POLICIES_H_POLICY_ITEM = """\
-extern const {scope}::ZonePolicy kPolicy{policyName};
+extern const {scope}::ZonePolicy kZonePolicy{policyName};
 """
         policy_items = ''
         for name, rules in sorted(self.policies_map.items()):
@@ -1001,7 +1001,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
         if rules_policy_name == '-' or rules_policy_name == ':':
             zone_policy = 'nullptr'
         else:
-            zone_policy = f'&kPolicy{normalize_name(rules_policy_name)}'
+            zone_policy = f'&kZonePolicy{normalize_name(rules_policy_name)}'
 
         offset_code = era['offset_code']
         delta_code = era['delta_code_encoded']
