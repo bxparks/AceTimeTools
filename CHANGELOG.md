@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+    * `cgenerator.py`: Rename `kAtcPolicyXxx` to `kAtcZonePolicyXxx` for
+      consistency.
+    * `argenerator.py`: Rename `kPolicyXxx` to `kZonePolicyXxx` for consistency.
 * v1.2.0 (2022-12-04)
     * If there are duplicate normalized zone names or link names, throw an
       exception to make it a fatal condition.
