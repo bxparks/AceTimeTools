@@ -132,7 +132,6 @@ class Transformer:
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
 
         # Part 2: Transform the zones_map
-        # zones_map = self._remove_zones_without_slash(zones_map)
         zones_map = self._filter_include_zones(zones_map, self.include_list)
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
@@ -272,22 +271,6 @@ class Transformer:
     # --------------------------------------------------------------------
     # Methods related to Zones.
     # --------------------------------------------------------------------
-
-    def _remove_zones_without_slash(self, zones_map: ZonesMap) -> ZonesMap:
-        results: ZonesMap = {}
-        removed_zones: CommentsMap = {}
-        for name, eras in zones_map.items():
-            if name.rfind('/') >= 0:
-                results[name] = eras
-            else:
-                add_comment(removed_zones, name, "No '/' in zone name")
-
-        logging.info(
-            "Removed %s zone infos without '/' in name",
-            len(removed_zones)
-        )
-        merge_comments(self.all_removed_zones, removed_zones)
-        return results
 
     def _filter_include_zones(
         self,
