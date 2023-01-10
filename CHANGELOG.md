@@ -1,9 +1,17 @@
 # Changelog
 
 * Unreleased
-    * `cgenerator.py`: Rename `kAtcPolicyXxx` to `kAtcZonePolicyXxx` for
-      consistency.
-    * `argenerator.py`: Rename `kPolicyXxx` to `kZonePolicyXxx` for consistency.
+* v1.2.1 (2023-01-10)
+    * `cgenerator.py`
+        * Rename `kAtcPolicyXxx` to `kAtcZonePolicyXxx` for consistency.
+        * Include notable policy comments into `zone_infos.h` and
+          `zone_infos.py`.
+    * `argenerator.py`
+        * Rename `kPolicyXxx` to `kZonePolicyXxx` for consistency.
+    * `tzcompiler.sh`
+        * Use 'git clone --branch tag' instead of 'git checkout tag'.
+        * Eliminates modification of the target git repo.
+        * Allows concurrent execution of `tzcompiler.sh`.
 * v1.2.0 (2022-12-04)
     * If there are duplicate normalized zone names or link names, throw an
       exception to make it a fatal condition.
