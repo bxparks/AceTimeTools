@@ -10,6 +10,7 @@ from collections import OrderedDict
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
 from typing_extensions import TypedDict
 
@@ -60,6 +61,7 @@ class Transformer:
         delta_granularity: int,
         strict: bool,
         generate_int16_years: bool,
+        include_list: Set[str],
     ):
         """
         Args:
@@ -75,6 +77,7 @@ class Transformer:
                 boundary defined by granularity
             generate_int16_years: generate 'year' fields for an int16_t type,
                 instead of the older int8_t type
+            include_list: include list of zones and links, empty means 'all'
         """
         self.tresult = tresult
         self.zones_map = tresult.zones_map
@@ -88,6 +91,7 @@ class Transformer:
         self.delta_granularity = delta_granularity
         self.strict = strict
         self.generate_int16_years = generate_int16_years
+        self.include_list = include_list
 
         self.all_removed_zones: CommentsMap = {}
         self.all_removed_policies: CommentsMap = {}
@@ -129,6 +133,7 @@ class Transformer:
 
         # Part 2: Transform the zones_map
         # zones_map = self._remove_zones_without_slash(zones_map)
+        zones_map = self._filter_include_zones(zones_map, self.include_list)
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
@@ -169,14 +174,13 @@ class Transformer:
             policies_map = self._remove_rules_long_dst_letter(policies_map)
 
         # Part 5: Remove unused zones and links.
-        zones_map = self._remove_zones_without_rules(
-            zones_map=zones_map, policies_map=policies_map)
-        links_map = self._remove_links_to_missing_zones(
-            links_map=links_map, zones_map=zones_map)
+        zones_map = self._remove_zones_without_rules(zones_map, policies_map)
+        links_map = self._filter_include_links(links_map, self.include_list)
+        links_map = self._remove_links_to_missing_zones(links_map, zones_map)
 
         # Part 6: Detect zones and links whose normalized names conflict.
         zones_map, links_map = self._detect_zones_and_links_with_similar_names(
-            zones_map=zones_map, links_map=links_map)
+            zones_map, links_map)
 
         # Part 7: Replace the original maps with the transformed ones.
         self.policies_map = policies_map
@@ -281,6 +285,33 @@ class Transformer:
         logging.info(
             "Removed %s zone infos without '/' in name",
             len(removed_zones)
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        return results
+
+    def _filter_include_zones(
+        self,
+        zones_map: ZonesMap,
+        include_list: Set[str]
+    ) -> ZonesMap:
+        """Remove zones missing from include list."""
+        if not include_list:
+            return zones_map
+
+        results: ZonesMap = {}
+        removed_zones: CommentsMap = {}
+        for name, eras in zones_map.items():
+            if name in include_list:
+                results[name] = eras
+            else:
+                add_comment(
+                    removed_zones, name,
+                    "Zone missing from include list"
+                )
+
+        self._print_comments_map(
+            label='Removed %s zone infos missing from include list',
+            comments=removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -1483,16 +1514,43 @@ class Transformer:
             result_zones[zone_name] = zone
 
         # Check for duplicate links.
-        for link_name, link in links_map.items():
+        for link_name, zone_name in links_map.items():
             nname = normalize_name(link_name)
             if normalized_names.get(nname):
                 raise Exception(
                     f"Duplicate normalized link name: {link_name} -> {nname}"
                 )
             normalized_names[nname] = link_name
-            result_links[link_name] = link
+            result_links[link_name] = zone_name
 
         return result_zones, result_links
+
+    def _filter_include_links(
+        self,
+        links_map: LinksMap,
+        include_list: Set[str]
+    ) -> LinksMap:
+        """Remove links missing from include list."""
+        if not include_list:
+            return links_map
+
+        results: LinksMap = {}
+        removed_links: CommentsMap = {}
+        for link_name, zone_name in links_map.items():
+            if link_name in include_list:
+                results[link_name] = zone_name
+            else:
+                add_comment(
+                    removed_links, link_name,
+                    "Link missing from include list"
+                )
+
+        self._print_comments_map(
+            label='Removed %s links missing from include list',
+            comments=removed_links,
+        )
+        merge_comments(self.all_removed_links, removed_links)
+        return results
 
 
 # ISO-8601 specifies Monday=1, Sunday=7

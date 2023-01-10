@@ -54,6 +54,7 @@ Examples:
 import argparse
 import logging
 import sys
+from typing import Set
 from typing_extensions import Protocol
 
 from acetimetools.data_types.at_types import TransformerResult
@@ -307,6 +308,13 @@ def main() -> None:
         action='store_true',
     )
 
+    # File name containing list of zones and links to include.
+    parser.add_argument(
+        '--include_list',
+        help='File containing list of zones and links to include',
+        default='',
+    )
+
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -324,6 +332,9 @@ def main() -> None:
 
     # How the script was invoked
     invocation = ' '.join(sys.argv)
+
+    # Read the zone list filter file.
+    include_list = read_include_list(args.include_list)
 
     # Define scope-dependent granularity if not overridden by flag
     if args.granularity:
@@ -408,6 +419,7 @@ def main() -> None:
         delta_granularity=delta_granularity,
         strict=args.strict,
         generate_int16_years=args.generate_int16_years,
+        include_list=include_list,
     )
     transformer.transform()
     transformer.print_summary()
@@ -492,6 +504,25 @@ def main() -> None:
         sys.exit(1)
 
     logging.info('======== Finished processing TZ Data files.')
+
+
+def read_include_list(filename: str) -> Set[str]:
+    """Read file containing the list of zones and links to include. Empty
+    list means 'include everything'.
+    """
+    zones: Set[str] = set()
+    if not filename:
+        return zones
+
+    with open(filename) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            zones.add(line)
+    return zones
 
 
 if __name__ == '__main__':
