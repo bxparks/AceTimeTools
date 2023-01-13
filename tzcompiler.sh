@@ -57,8 +57,10 @@ if [[ "$tag" == '' ]]; then
 fi
 
 # Check out the TZDB repo at the specified tag
-echo "+ git -c advice.detachedHead=false clone --quiet --branch $tag $TZDB_REPO $tzfiles"
-git -c advice.detachedHead=false clone --quiet --branch $tag $TZDB_REPO $tzfiles
+if [[ $skip_checkout == 0 ]]; then
+    echo "+ $DIRNAME/copytz.sh --tag $tag $TZDB_REPO $tzfiles"
+    $DIRNAME/copytz.sh --tag $tag $TZDB_REPO $tzfiles
+fi
 
 # Run the tzcompiler.py.
 echo "+ $DIRNAME/src/acetimetools/tzcompiler.py" \

@@ -47,6 +47,25 @@ src=$1
 dst=$2
 
 # Check out TZDB repo at the $tag, unless --skip_checkout flag is given.
-echo "==== Cloning TZ files from '$src' to '$dst' at tag '$tag'"
-echo "+ git -c advice.detachedHead=false clone --quiet --branch $tag $src $dst"
+echo "+ git clone --quiet --branch $tag $src $dst"
 git -c advice.detachedHead=false clone --quiet --branch $tag $src $dst
+
+# Remove all files other than the zone info files with Rule and Zone entries.
+# In particular, remove *.c and *.h to prevent EpoxyDuino from trying to compile
+# them recursively in the zonedb/ and zonedbx/ directories. See
+# src/acetimetools/extractor/extractor.py for master list of zone info files.
+echo "+ rm -rf $dst/{clutter}"
+shopt -s extglob # in case it isn't enabled by default
+cd $dst
+rm -rf !(\
+africa|\
+antarctica|\
+asia|\
+australasia|\
+backward|\
+etcetera|\
+europe|\
+northamerica|\
+southamerica|\
+backzone|\
+systemv)
