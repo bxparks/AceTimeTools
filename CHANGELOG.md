@@ -1,6 +1,16 @@
 # Changelog
 
 * Unreleased
+    * `copytz.sh`
+        * Remove all files other than the raw TZDB files from the TZ DB git repo
+          after performing a 'git clone'.
+        * Prevents spurious C files from being picked up by EpoxyDuino, and
+          causing compiler errors.
+    * `tzcompiler.py`
+        * Add `--include_list {file}` flag which points to a list of zones and
+          links to include in the zonedb output.
+        * Used to generate `testing/zonedb/` and `testing/zonedbx` databases
+          which are used by unit tests.
 * v1.2.1 (2023-01-10)
     * `cgenerator.py`
         * Rename `kAtcPolicyXxx` to `kAtcZonePolicyXxx` for consistency.
