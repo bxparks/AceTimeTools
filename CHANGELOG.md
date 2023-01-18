@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.3.0 (2023-01-17)
     * `copytz.sh`
         * Remove all files other than the raw TZDB files from the TZ DB git repo
           after performing a 'git clone'.
