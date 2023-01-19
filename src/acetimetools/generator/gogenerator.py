@@ -43,7 +43,7 @@ class GoGenerator:
 package {dbNamespace}
 
 import (
-	"github.com/bxparks/AceTimeGo/zoneinfo"
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
 )
 
 // ---------------------------------------------------------------------------
@@ -257,9 +257,9 @@ var ZoneAndLinkRegistry = map[string]*zoneinfo.ZoneInfo{{
         self.merged_notable_zones = zidb['merged_notable_zones']
         self.notable_links = zidb['notable_links']
         self.notable_policies = zidb['notable_policies']
-        self.zone_ids=zidb['zone_ids']
-        self.link_ids=zidb['link_ids']
-        self.formats_map=zidb['formats_map']
+        self.zone_ids = zidb['zone_ids']
+        self.link_ids = zidb['link_ids']
+        self.formats_map = zidb['formats_map']
 
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
