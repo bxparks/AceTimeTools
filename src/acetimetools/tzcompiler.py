@@ -68,6 +68,7 @@ from acetimetools.transformer.artransformer import ArduinoTransformer
 from acetimetools.transformer.commenter import Commenter
 from acetimetools.generator.argenerator import ArduinoGenerator
 from acetimetools.generator.cgenerator import CGenerator
+from acetimetools.generator.gogenerator import GoGenerator
 from acetimetools.generator.pygenerator import PythonGenerator
 from acetimetools.generator.zonelistgenerator import ZoneListGenerator
 from acetimetools.generator.jsongenerator import JsonGenerator
@@ -127,6 +128,15 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_int16_years=generate_int16_years,
+            zidb=zidb,
+        )
+        generator.generate_files(output_dir)
+
+    elif language == 'go':
+        logging.info('==== Creating AceTimeGo zone_*.go files')
+        generator = GoGenerator(
+            invocation=invocation,
+            db_namespace=db_namespace,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -242,7 +252,7 @@ def main() -> None:
     parser.add_argument(
         '--language',
         help='Comma-separated list of target languages '
-             '(arduino|c|python|json|zonelist)',
+             '(arduino|c|python|go|json|zonelist)',
         default='',
     )
 
@@ -320,7 +330,9 @@ def main() -> None:
 
     # Manually parse the comma-separated --action.
     languages = set(args.language.split(','))
-    allowed_languages = set(['arduino', 'c', 'python', 'json', 'zonelist'])
+    allowed_languages = set([
+        'arduino', 'c', 'python', 'go', 'json', 'zonelist',
+    ])
     if not languages.issubset(allowed_languages):
         print(f'Invalid --language: {languages - allowed_languages}')
         sys.exit(1)
