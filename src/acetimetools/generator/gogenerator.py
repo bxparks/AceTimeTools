@@ -185,7 +185,7 @@ var Zone{zoneNormalizedName} = zoneinfo.ZoneInfo{{
 """
 
     ZONE_ERA_ITEM = """\
-    // {raw_line}
+\t// {raw_line}
 \t{{
 \t\tZonePolicy: {zone_policy},
 \t\tFormat: "{format}",
@@ -321,6 +321,9 @@ var ZoneAndLinkRegistry = map[string]*zoneinfo.ZoneInfo{{
                 delta_seconds=rule['delta_seconds_truncated'],
                 scope='extended',  # AceTimeGo supports only extended
             )
+            letter = rule['letter']
+            if letter == '-':
+                letter = ''
             rule_items += self.ZONE_RULE_ITEM.format(
                 policyName=normalize_name(name),
                 raw_line=normalize_raw(rule['raw_line']),
@@ -334,7 +337,8 @@ var ZoneAndLinkRegistry = map[string]*zoneinfo.ZoneInfo{{
                 at_time_modifier_comment=at_time_modifier_comment,
                 delta_code=rule['delta_code_encoded'],
                 delta_code_comment=delta_code_comment,
-                letter=rule['letter'])
+                letter=letter,
+            )
         return self.ZONE_POLICY_ITEM.format(
             policyName=normalize_name(name),
             numRules=len(rules),
