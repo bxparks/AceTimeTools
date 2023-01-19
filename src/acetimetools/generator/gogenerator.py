@@ -219,12 +219,12 @@ import (
 )
 
 // Supported Zones: {numZones}
-var ZoneRegistry = map[string]*zoneinfo.ZoneInfo{{
+var ZoneRegistry = map[uint32]*zoneinfo.ZoneInfo{{
 {zoneItems}
 }}
 
 // Supported Zones and Links: {numZonesAndLinks}
-var ZoneAndLinkRegistry = map[string]*zoneinfo.ZoneInfo{{
+var ZoneAndLinkRegistry = map[uint32]*zoneinfo.ZoneInfo{{
 {zoneAndLinkItems}
 }}
 """
@@ -260,6 +260,12 @@ var ZoneAndLinkRegistry = map[string]*zoneinfo.ZoneInfo{{
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
         self.formats_map = zidb['formats_map']
+
+        self.zones_and_links = list(
+            self.zones_map.keys()) + list(self.links_map.keys()
+        )
+        self.zone_and_link_ids = self.zone_ids.copy()
+        self.zone_and_link_ids.update(self.link_ids)
 
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
@@ -484,12 +490,17 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
     def _generate_zone_registry_items(self, zones_map: ZonesMap) -> str:
         """Generate a map of (zone_name -> zoneInfo), sorted by name.
         """
-        zone_items = ''
-        for zone_name, zones in sorted(zones_map.items()):
-            zone_items += f"""\
-\t"{zone_name}": &Zone{normalize_name(zone_name)},
+        zone_registry_items = ''
+        for zone_name in sorted(
+                self.zones_map.keys(),
+                key=lambda x: self.zone_ids[x],
+        ):
+            normalized_name = normalize_name(zone_name)
+            zone_id = self.zone_ids[zone_name]
+            zone_registry_items += f"""\
+\t0x{zone_id:08x}: &Zone{normalized_name}, // {zone_name}
 """
-        return zone_items
+        return zone_registry_items
 
     def _generate_zone_and_link_registry_items(
         self,
@@ -499,13 +510,24 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
         """Generate a map of (zone_name -> zoneInfo), for all zones and links,
         sorted by name.
         """
-        zones_and_links = list(zones_map.keys()) + list(links_map.keys())
-        zone_and_link_items = ''
-        for zone_and_link_name in sorted(zones_and_links):
-            zone_and_link_items += f"""\
-\t"{zone_and_link_name}": &Zone{normalize_name(zone_and_link_name)},
+        zone_and_link_registry_items = ''
+        num_zones_and_links = len(self.zones_and_links)
+        for zone_name in sorted(
+            self.zones_and_links,
+            key=lambda x: self.zone_and_link_ids[x],
+        ):
+            normalized_name = normalize_name(zone_name)
+            zone_id = self.zone_and_link_ids[zone_name]
+            target_name = self.links_map.get(zone_name)
+            if target_name:
+                desc_name = f'{zone_name} -> {target_name}'
+            else:
+                desc_name = zone_name
+
+            zone_and_link_registry_items += f"""\
+\t0x{zone_id:08x}: &Zone{normalized_name}, // {desc_name}
 """
-        return zone_and_link_items
+        return zone_and_link_registry_items
 
 
 def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
