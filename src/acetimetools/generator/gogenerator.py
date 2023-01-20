@@ -260,8 +260,9 @@ var ZoneAndLinkRegistry = map[uint32]*zoneinfo.ZoneInfo{{
         self.link_ids = zidb['link_ids']
         self.formats_map = zidb['formats_map']
 
-        self.zones_and_links = list(
-            self.zones_map.keys()) + list(self.links_map.keys()
+        self.zones_and_links = (
+            list(self.zones_map.keys())
+            + list(self.links_map.keys())
         )
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
@@ -510,7 +511,6 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
         sorted by name.
         """
         zone_and_link_registry_items = ''
-        num_zones_and_links = len(self.zones_and_links)
         for zone_name in sorted(
             self.zones_and_links,
             key=lambda x: self.zone_and_link_ids[x],
