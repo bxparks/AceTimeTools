@@ -78,7 +78,6 @@ var ZoneRules{policyName} = []zoneinfo.ZoneRule{{
 
 var ZonePolicy{policyName} = zoneinfo.ZonePolicy{{
 \tRules: ZoneRules{policyName},
-\tLetters: nil,
 }}
 
 """
