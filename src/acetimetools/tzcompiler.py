@@ -437,15 +437,9 @@ def main() -> None:
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Transforming to Arduino Zones and Rules')
-    arduino_transformer = ArduinoTransformer(
-        tresult=tresult,
-        scope=args.scope,
-        start_year=args.start_year,
-        until_year=args.until_year,
-    )
-    arduino_transformer.transform()
-    arduino_transformer.print_summary()
-    tresult = arduino_transformer.get_data()
+    arduino_transformer = ArduinoTransformer(scope=args.scope)
+    arduino_transformer.transform(tresult)
+    arduino_transformer.print_summary(tresult)
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')

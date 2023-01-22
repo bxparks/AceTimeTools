@@ -34,66 +34,49 @@ class ArduinoTransformer:
     libraries. Produces a new TransformerResult from get_data().
     """
 
-    def __init__(
-        self,
-        tresult: TransformerResult,
-        scope: str,
-        start_year: int,
-        until_year: int,
-    ) -> None:
-        self.tresult = tresult
+    def __init__(self, scope: str) -> None:
         self.scope = scope
-        self.start_year = start_year
-        self.until_year = until_year
 
-        self.zones_map = tresult.zones_map
-        self.policies_map = tresult.policies_map
-        self.links_map = tresult.links_map
+    def transform(self, tresult: TransformerResult) -> None:
+        self.tresult = tresult
 
-    def transform(self) -> None:
-        self.letters_per_policy, self.letters_map = \
-            _collect_letter_strings(self.policies_map)
-        self.formats_map = _collect_format_strings(self.zones_map)
-        self.policies_map = self._process_rules(self.policies_map)
-        self.zones_map = self._process_eras(self.zones_map)
-        self.zone_ids = _generate_zone_ids(self.zones_map)
-        self.link_ids = _generate_link_ids(self.links_map)
-        self.fragments_map = _generate_fragments(self.zones_map, self.links_map)
-        self.compressed_names = _generate_compressed_names(
-            self.zones_map, self.links_map, self.fragments_map
+        zones_map = tresult.zones_map
+        policies_map = tresult.policies_map
+        links_map = tresult.links_map
+
+        letters_per_policy, letters_map = _collect_letter_strings(policies_map)
+        formats_map = _collect_format_strings(zones_map)
+        self._process_rules(policies_map, letters_map, letters_per_policy)
+        self._process_eras(zones_map)
+        zone_ids = _generate_zone_ids(zones_map)
+        link_ids = _generate_link_ids(links_map)
+        fragments_map = _generate_fragments(zones_map, links_map)
+        compressed_names = _generate_compressed_names(
+            zones_map, links_map, fragments_map
         )
 
-    def get_data(self) -> TransformerResult:
-        return TransformerResult(
-            zones_map=self.zones_map,
-            policies_map=self.policies_map,
-            links_map=self.tresult.links_map,
-            removed_zones=self.tresult.removed_zones,
-            removed_policies=self.tresult.removed_policies,
-            removed_links=self.tresult.removed_links,
-            notable_zones=self.tresult.notable_zones,
-            notable_policies=self.tresult.notable_policies,
-            notable_links=self.tresult.notable_links,
-            zones_to_policies=self.tresult.zones_to_policies,
-            merged_notable_zones=self.tresult.merged_notable_zones,
-            zone_ids=self.zone_ids,
-            link_ids=self.link_ids,
-            letters_per_policy=self.letters_per_policy,
-            letters_map=self.letters_map,
-            formats_map=self.formats_map,
-            fragments_map=self.fragments_map,
-            compressed_names=self.compressed_names,
-        )
+        tresult.zone_ids = zone_ids
+        tresult.link_ids = link_ids
+        tresult.letters_per_policy = letters_per_policy
+        tresult.letters_map = letters_map
+        tresult.formats_map = formats_map
+        tresult.fragments_map = fragments_map
+        tresult.compressed_names = compressed_names
 
-    def print_summary(self) -> None:
+    def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
             "Summary"
-            f": {len(self.zones_map)} Zones"
-            f"; {len(self.policies_map)} Policies"
-            f"; {len(self.links_map)} Links"
+            f": {len(tresult.zones_map)} Zones"
+            f"; {len(tresult.policies_map)} Policies"
+            f"; {len(tresult.links_map)} Links"
         )
 
-    def _process_rules(self, policies_map: PoliciesMap) -> PoliciesMap:
+    def _process_rules(
+        self,
+        policies_map: PoliciesMap,
+        letters_map: IndexMap,
+        letters_per_policy: LettersPerPolicy,
+    ) -> None:
         """Convert various ZoneRule fields into values that are consumed by the
         ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
         """
@@ -131,11 +114,11 @@ class ArduinoTransformer:
                 letter = rule['letter']
                 rule['letter_index'] = _to_letter_index(
                     letter=letter,
-                    indexed_letters=self.letters_map,
+                    indexed_letters=letters_map,
                 )
                 rule['letter_index_per_policy'] = _to_letter_index(
                     letter=letter,
-                    indexed_letters=self.letters_per_policy.get(policy_name),
+                    indexed_letters=letters_per_policy.get(policy_name),
                 )
                 if len(letter) > 1:
                     add_comment(
@@ -143,9 +126,7 @@ class ArduinoTransformer:
                         f"LETTER '{letter}' not single character"
                     )
 
-        return self.policies_map
-
-    def _process_eras(self, zones_map: ZonesMap) -> ZonesMap:
+    def _process_eras(self, zones_map: ZonesMap) -> None:
         """Convert various ZoneRule fields into values that are consumed by the
         ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
         """
@@ -197,8 +178,6 @@ class ArduinoTransformer:
 
                 # FORMAT field for Arduino C++ replaces %s with just a %.
                 era['format_short'] = era['format'].replace('%s', '%')
-
-        return self.zones_map
 
 
 def _collect_letter_strings(
