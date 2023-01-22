@@ -3,6 +3,7 @@
 # MIT License
 
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import Collection
 from typing import Dict
 from typing import List
@@ -189,7 +190,8 @@ MergedCommentsMap = Dict[str, List[Union[str, CommentsMap]]]
 ZonesToPolicies = Dict[str, Collection[str]]
 
 
-class TransformerResult(NamedTuple):
+@dataclass
+class TransformerResult:
     """Result type of Transformer.get_data().
 
     * zones_map: (zoneName -> ZoneEraRaw[]).

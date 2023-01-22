@@ -422,7 +422,6 @@ def main() -> None:
     # Transform the TZ zones and rules
     logging.info('======== Transforming Zones and Rules')
     transformer = Transformer(
-        tresult=tresult,
         scope=args.scope,
         start_year=args.start_year,
         until_year=args.until_year,
@@ -433,21 +432,14 @@ def main() -> None:
         generate_int16_years=args.generate_int16_years,
         include_list=include_list,
     )
-    transformer.transform()
-    transformer.print_summary()
-    tresult = transformer.get_data()
+    transformer.transform(tresult)
+    transformer.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Transforming to Arduino Zones and Rules')
-    arduino_transformer = ArduinoTransformer(
-        tresult=tresult,
-        scope=args.scope,
-        start_year=args.start_year,
-        until_year=args.until_year,
-    )
-    arduino_transformer.transform()
-    arduino_transformer.print_summary()
-    tresult = arduino_transformer.get_data()
+    arduino_transformer = ArduinoTransformer(scope=args.scope)
+    arduino_transformer.transform(tresult)
+    arduino_transformer.print_summary(tresult)
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')
@@ -477,10 +469,9 @@ def main() -> None:
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Updating comments')
-    commenter = Commenter(tresult=tresult)
-    commenter.transform()
-    commenter.print_summary()
-    tresult = commenter.get_data()
+    commenter = Commenter()
+    commenter.transform(tresult)
+    commenter.print_summary(tresult)
 
     # Collect TZ DB data into a single JSON-serializable object.
     zidb = create_zone_info_database(
