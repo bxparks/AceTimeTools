@@ -469,10 +469,9 @@ def main() -> None:
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Updating comments')
-    commenter = Commenter(tresult=tresult)
-    commenter.transform()
-    commenter.print_summary()
-    tresult = commenter.get_data()
+    commenter = Commenter()
+    commenter.transform(tresult)
+    commenter.print_summary(tresult)
 
     # Collect TZ DB data into a single JSON-serializable object.
     zidb = create_zone_info_database(

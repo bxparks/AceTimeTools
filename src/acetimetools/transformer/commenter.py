@@ -23,56 +23,31 @@ class Commenter:
     """Update notable zone and policy comments.
     """
 
-    def __init__(
-        self,
-        tresult: TransformerResult,
-    ):
-        self.tresult = tresult
+    def __init__(self) -> None:
+        pass
 
-    def transform(self) -> None:
+    def transform(self, tresult: TransformerResult) -> None:
         _note_zones_with_odd_utc_offset(
-            self.tresult.zones_map,
-            self.tresult.policies_map,
-            self.tresult.notable_zones,
+            tresult.zones_map,
+            tresult.policies_map,
+            tresult.notable_zones,  # this is updated
         )
 
-        self.zones_to_policies = _gather_zones_to_policies(
-            self.tresult.zones_map,
-            self.tresult.policies_map,
+        tresult.zones_to_policies = _gather_zones_to_policies(
+            tresult.zones_map,
+            tresult.policies_map,
         )
 
-        self.merged_notable_zones = _create_merged_comments_map(
-            self.tresult.notable_zones,
-            self.tresult.notable_policies,
-            self.zones_to_policies,
+        tresult.merged_notable_zones = _create_merged_comments_map(
+            tresult.notable_zones,
+            tresult.notable_policies,
+            tresult.zones_to_policies,
         )
 
-    def print_summary(self) -> None:
-        zone_count = len(self.merged_notable_zones)
-        comment_count = _count_merged_counts_map(self.merged_notable_zones)
+    def print_summary(self, tresult: TransformerResult) -> None:
+        zone_count = len(tresult.merged_notable_zones)
+        comment_count = _count_merged_counts_map(tresult.merged_notable_zones)
         logging.info(f"Zones: {zone_count}; Comments: {comment_count}")
-
-    def get_data(self) -> TransformerResult:
-        return TransformerResult(
-            zones_map=self.tresult.zones_map,
-            policies_map=self.tresult.policies_map,
-            links_map=self.tresult.links_map,
-            removed_zones=self.tresult.removed_zones,
-            removed_policies=self.tresult.removed_policies,
-            removed_links=self.tresult.removed_links,
-            notable_zones=self.tresult.notable_zones,
-            zones_to_policies=self.zones_to_policies,
-            merged_notable_zones=self.merged_notable_zones,
-            notable_policies=self.tresult.notable_policies,
-            notable_links=self.tresult.notable_links,
-            zone_ids=self.tresult.zone_ids,
-            link_ids=self.tresult.link_ids,
-            letters_per_policy=self.tresult.letters_per_policy,
-            letters_map=self.tresult.letters_map,
-            formats_map=self.tresult.formats_map,
-            fragments_map=self.tresult.fragments_map,
-            compressed_names=self.tresult.compressed_names,
-        )
 
 
 def _gather_zones_to_policies(
