@@ -422,7 +422,6 @@ def main() -> None:
     # Transform the TZ zones and rules
     logging.info('======== Transforming Zones and Rules')
     transformer = Transformer(
-        tresult=tresult,
         scope=args.scope,
         start_year=args.start_year,
         until_year=args.until_year,
@@ -433,9 +432,8 @@ def main() -> None:
         generate_int16_years=args.generate_int16_years,
         include_list=include_list,
     )
-    transformer.transform()
-    transformer.print_summary()
-    tresult = transformer.get_data()
+    transformer.transform(tresult)
+    transformer.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Transforming to Arduino Zones and Rules')

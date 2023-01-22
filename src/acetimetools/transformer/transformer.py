@@ -52,7 +52,6 @@ class Transformer:
     """
     def __init__(
         self,
-        tresult: TransformerResult,
         scope: str,
         start_year: int,
         until_year: int,
@@ -65,7 +64,6 @@ class Transformer:
     ):
         """
         Args:
-            tresult: TransformerResult
             scope: scope of database (basic, or extended)
             start_year: include only years on or after start_year
             until_year: include only years valid before until_year
@@ -79,10 +77,6 @@ class Transformer:
                 instead of the older int8_t type
             include_list: include list of zones and links, empty means 'all'
         """
-        self.tresult = tresult
-        self.zones_map = tresult.zones_map
-        self.policies_map = tresult.policies_map
-        self.links_map = tresult.links_map
         self.scope = scope
         self.start_year = start_year
         self.until_year = until_year
@@ -100,20 +94,14 @@ class Transformer:
         self.all_notable_policies: CommentsMap = {}
         self.all_notable_links: CommentsMap = {}
 
-        self.original_zone_count = len(self.zones_map)
-        self.original_rule_count = len(self.policies_map)
-        self.original_link_count = len(self.links_map)
-
-    def transform(self) -> None:
+    def transform(self, tresult: TransformerResult) -> None:
         """
-        Transforms the zones_map and policies_map given in the constructor
-        through a series of filters, and produces the TransformerResult
-        can be retrieved using the get_data() function.
+        Transforms the given tresult in-situ through a series of filters.
         """
-
-        zones_map = self.zones_map
-        policies_map = self.policies_map
-        links_map = self.links_map
+        self.tresult = tresult
+        zones_map = tresult.zones_map
+        policies_map = tresult.policies_map
+        links_map = tresult.links_map
 
         logging.info(
             'Processing years [%d, %d)',
@@ -122,9 +110,9 @@ class Transformer:
         )
         logging.info(
             'Found %d zones, %d policies, %d links',
-            len(self.zones_map),
-            len(self.policies_map),
-            len(self.links_map),
+            len(zones_map),
+            len(policies_map),
+            len(links_map),
         )
 
         # Part 1: Some sanity checks.
@@ -182,52 +170,34 @@ class Transformer:
             zones_map, links_map)
 
         # Part 7: Replace the original maps with the transformed ones.
-        self.policies_map = policies_map
-        self.zones_map = zones_map
-        self.links_map = links_map
+        tresult.policies_map = policies_map
+        tresult.zones_map = zones_map
+        tresult.links_map = links_map
 
-    def get_data(self) -> TransformerResult:
-        """Merge the result of transform() into the original tresult."""
+        # Part 8: Add additional results
+        tresult.removed_zones = self.all_removed_zones
+        tresult.removed_policies = self.all_removed_policies
+        tresult.removed_links = self.all_removed_links
+        tresult.notable_zones = self.all_notable_zones
+        tresult.notable_policies = self.all_notable_policies
+        tresult.notable_links = self.all_notable_links
+        tresult.merged_notable_zones = self.tresult.merged_notable_zones
 
-        return TransformerResult(
-            zones_map=self.zones_map,
-            policies_map=self.policies_map,
-            links_map=self.links_map,
-            removed_zones=self.all_removed_zones,
-            removed_policies=self.all_removed_policies,
-            removed_links=self.all_removed_links,
-            notable_zones=self.all_notable_zones,
-            notable_policies=self.all_notable_policies,
-            notable_links=self.all_notable_links,
-            zones_to_policies=self.tresult.zones_to_policies,
-            merged_notable_zones=self.tresult.merged_notable_zones,
-            zone_ids=self.tresult.zone_ids,
-            link_ids=self.tresult.link_ids,
-            letters_per_policy=self.tresult.letters_per_policy,
-            letters_map=self.tresult.letters_map,
-            formats_map=self.tresult.formats_map,
-            fragments_map=self.tresult.fragments_map,
-            compressed_names=self.tresult.compressed_names,
-        )
-
-    def print_summary(self) -> None:
+    def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
-            f"Summary: Zones: original={self.original_zone_count}"
-            f"; generated={len(self.zones_map)}"
-            f"; removed={len(self.all_removed_zones)}"
-            f"; noted={len(self.all_notable_zones)}")
+            f"Summary: Zones: generated={len(tresult.zones_map)}"
+            f"; removed={len(tresult.removed_zones)}"
+            f"; noted={len(tresult.notable_zones)}")
 
         logging.info(
-            f"Summary: Policies: original={self.original_rule_count}"
-            f"; generated={len(self.policies_map)}"
-            f"; removed={len(self.all_removed_policies)}"
-            f"; noted={len(self.all_notable_policies)}")
+            f"Summary: Policies: generated={len(tresult.policies_map)}"
+            f"; removed={len(tresult.removed_policies)}"
+            f"; noted={len(tresult.notable_policies)}")
 
         logging.info(
-            f"Summary: Links: original={self.original_link_count}"
-            f"; generated={len(self.links_map)}"
-            f"; removed={len(self.all_removed_links)}"
-            f"; noted={len(self.all_notable_links)}")
+            f"Summary: Links: generated={len(tresult.links_map)}"
+            f"; removed={len(tresult.removed_links)}"
+            f"; noted={len(tresult.notable_links)}")
 
     def _print_comments_map(
         self,
