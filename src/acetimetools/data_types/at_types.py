@@ -210,6 +210,8 @@ class TransformerResult:
     * letters_per_policy: {policyName -> {letter -> index}}
     * letters_map: {letter -> index}
     * formats_map: {format -> index}
+    * go_letters_map: {letter -> byte_offset}
+    * go_formats_map: {format -> byte_offset}
     * fragments_map: {fragment -> index}
     * compressed_names: {zoneName -> compressedName}
     """
@@ -229,6 +231,8 @@ class TransformerResult:
     letters_per_policy: LettersPerPolicy
     letters_map: IndexMap
     formats_map: IndexMap
+    go_letters_map: IndexMap
+    go_formats_map: IndexMap
     fragments_map: IndexMap
     compressed_names: Dict[str, str]
 
@@ -321,6 +325,10 @@ class ZoneInfoDatabase(TypedDict):
     fragments_map: IndexMap  # zoneName fragment -> index
     compressed_names: Dict[str, str]  # zoneName -> compressedName
 
+    # Data from GoTransformer
+    go_letters_map: IndexMap  # all multi-character letters
+    go_formats_map: IndexMap  # shortened format strings.
+
 
 def create_zone_info_database(
     tz_version: str,
@@ -382,6 +390,10 @@ def create_zone_info_database(
         'formats_map': tresult.formats_map,
         'fragments_map': tresult.fragments_map,
         'compressed_names': tresult.compressed_names,
+
+        # Data from GoTransformer
+        'go_letters_map': tresult.go_letters_map,
+        'go_formats_map': tresult.go_formats_map,
     }
 
 
