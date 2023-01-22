@@ -218,12 +218,12 @@ import (
 )
 
 // Supported Zones: {numZones}
-var ZoneRegistry = map[uint32]*zoneinfo.ZoneInfo{{
+var ZoneRegistry = []*zoneinfo.ZoneInfo{{
 {zoneItems}
 }}
 
 // Supported Zones and Links: {numZonesAndLinks}
-var ZoneAndLinkRegistry = map[uint32]*zoneinfo.ZoneInfo{{
+var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
 {zoneAndLinkItems}
 }}
 """
@@ -498,7 +498,7 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
             normalized_name = normalize_name(zone_name)
             zone_id = self.zone_ids[zone_name]
             zone_registry_items += f"""\
-\t0x{zone_id:08x}: &Zone{normalized_name}, // {zone_name}
+\t&Zone{normalized_name}, // 0x{zone_id:08x}, {zone_name}
 """
         return zone_registry_items
 
@@ -524,7 +524,7 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
                 desc_name = zone_name
 
             zone_and_link_registry_items += f"""\
-\t0x{zone_id:08x}: &Zone{normalized_name}, // {desc_name}
+\t&Zone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
 """
         return zone_and_link_registry_items
 
