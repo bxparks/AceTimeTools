@@ -220,6 +220,7 @@ class TransformerResult:
     * compressed_names: {zoneName -> compressedName}
     * go_letters_map: {letter -> byte_offset}
     * go_formats_map: {format -> byte_offset}
+    * go_names_map: {name -> byte_offset}
     """
     zones_map: ZonesMap
     policies_map: PoliciesMap
@@ -241,6 +242,7 @@ class TransformerResult:
     compressed_names: Dict[str, str]
     go_letters_map: OffsetMap
     go_formats_map: OffsetMap
+    go_names_map: OffsetMap
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:
@@ -334,6 +336,7 @@ class ZoneInfoDatabase(TypedDict):
     # Data from GoTransformer
     go_letters_map: OffsetMap  # all letter strings
     go_formats_map: OffsetMap  # all format strings
+    go_names_map: OffsetMap  # all name strings
 
 
 def create_zone_info_database(
@@ -350,7 +353,7 @@ def create_zone_info_database(
     buf_size_map: BufSizeMap,
     max_buf_size: int,
 ) -> ZoneInfoDatabase:
-    """Return an instance of ZoneInfoDatabase from the various ingrediants."""
+    """Return an instance of ZoneInfoDatabase from the various ingredients."""
 
     return {
         # Context data.
@@ -400,6 +403,7 @@ def create_zone_info_database(
         # Data from GoTransformer
         'go_letters_map': tresult.go_letters_map,
         'go_formats_map': tresult.go_formats_map,
+        'go_names_map': tresult.go_names_map,
     }
 
 

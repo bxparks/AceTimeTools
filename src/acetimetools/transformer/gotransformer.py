@@ -6,6 +6,7 @@ Generate the 'format' OffsetMap, and the 'letters' OffsetMap for the AceTimeGo
 library.
 """
 
+from typing import Iterable
 from typing import Set
 import logging
 from collections import OrderedDict
@@ -26,15 +27,21 @@ class GoTransformer:
     def transform(self, tresult: TransformerResult) -> None:
         letters_map = _collect_letter_strings(tresult.policies_map)
         formats_map = _collect_format_strings(tresult.zones_map)
+        names_map = _collect_name_strings(
+            tresult.zones_map.keys(),
+            tresult.links_map.keys(),
+        )
 
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
+        tresult.go_names_map = names_map
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
             "Summary"
             f": {len(tresult.go_letters_map)} Letters"
             f"; {len(tresult.go_formats_map)} Formats"
+            f"; {len(tresult.go_names_map)} Names"
         )
 
 
@@ -65,7 +72,7 @@ def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
 
     # Check that the letters_buffer fits using a uint8 type.
     if offset >= 256:
-        raise Exception(f"Total size of LETTERS ({offset}) is too large")
+        raise Exception(f"Total size of LETTERS ({offset}) is >= 256")
 
     return letters_map
 
@@ -94,6 +101,33 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
 
     # Check that the formats_buffer fits using a uint16 type.
     if offset >= 65536:
-        raise Exception(f"Total size of FORMATS ({offset}) is too large")
+        raise Exception(f"Total size of FORMATS ({offset}) is >= 65536")
 
     return formats_map
+
+
+def _collect_name_strings(
+    zone_names: Iterable[str],
+    link_names: Iterable[str],
+) -> OffsetMap:
+
+    names: Set[str] = set()
+    names.add('')  # always include the empty string
+    names.update(zone_names)
+    names.update(link_names)
+
+    # Create a map of name to byte offset
+    index = 0
+    offset = 0
+    names_map: OffsetMap = OrderedDict()
+    for name in sorted(names):
+        names_map[name] = (index, offset)
+        index += 1
+        offset += len(name)
+    names_map["~"] = (index, offset)  # final sentinel marker
+
+    # Check that the names_buffer fits using a uint16 type.
+    if offset >= 65536:
+        raise Exception(f"Total size of Names ({offset}) is >= 65536")
+
+    return names_map

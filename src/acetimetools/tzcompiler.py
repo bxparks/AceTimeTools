@@ -416,10 +416,11 @@ def main() -> None:
         letters_per_policy={},
         letters_map={},
         formats_map={},
-        go_letters_map={},
-        go_formats_map={},
         fragments_map={},
         compressed_names={},
+        go_letters_map={},
+        go_formats_map={},
+        go_names_map={},
     )
 
     # Transform the TZ zones and rules

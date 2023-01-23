@@ -142,6 +142,9 @@ import (
 const (
 \t// All ZoneEra.Format entries concatenated together.
 \tFormatBuffer = "{formatBuffer}"
+
+\t// All ZoneInfo.Name entries concatenated togther.
+\tNameBuffer = "{nameBuffer}"
 )
 
 var (
@@ -150,6 +153,13 @@ var (
 \t// `FormatBuffer[FormatOffsets[i]:FormatOffsets[i+1]]`.
 \tFormatOffsets = []uint16{{
 {formatOffsets}
+\t}}
+
+\t// Byte offset into NameBuffer for each index. The actual Letter string
+\t// at index `i` given by the `ZoneRule.Name` field is
+\t// `NameBuffer[NameOffsets[i]:NameOffsets[i+1]]`.
+\tNameOffsets = []uint16{{
+{nameOffsets}
 \t}}
 )
 
@@ -201,11 +211,9 @@ var ZoneEra{zoneNormalizedName} = []zoneinfo.ZoneEra{{
 {eraItems}
 }}
 
-const ZoneName{zoneNormalizedName} = "{zoneFullName}"
-
 var Zone{zoneNormalizedName} = zoneinfo.ZoneInfo{{
-\tName: ZoneName{zoneNormalizedName},
 \tZoneID: 0x{zoneId:08x},
+\tNameIndex: {nameIndex}, // "{zoneFullName}"
 \tStartYear: {startYear},
 \tUntilYear: {untilYear},
 \tEras: ZoneEra{zoneNormalizedName},
@@ -259,6 +267,8 @@ var Context = zoneinfo.ZoneContext{{
 \tLetterOffsets: LetterOffsets,
 \tFormatBuffer: FormatBuffer,
 \tFormatOffsets: FormatOffsets,
+\tNameBuffer: NameBuffer,
+\tNameOffsets: NameOffsets,
 \tZoneRegistry: ZoneAndLinkRegistry,
 \tTzDatabaseVersion: TzDatabaseVersion,
 }}
@@ -310,6 +320,7 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         self.link_ids = zidb['link_ids']
         self.letters_map = zidb['go_letters_map']
         self.formats_map = zidb['go_formats_map']
+        self.names_map = zidb['go_names_map']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -434,6 +445,11 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             [x[1] for x in self.formats_map.values()]
         )
 
+        name_buffer = ''.join(self.names_map.keys())
+        name_offsets = _render_offsets(
+            [x[1] for x in self.names_map.values()]
+        )
+
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
@@ -456,6 +472,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             notableLinkItems=notable_link_items,
             formatBuffer=format_buffer,
             formatOffsets=format_offsets,
+            nameBuffer=name_buffer,
+            nameOffsets=name_offsets,
         )
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
@@ -466,6 +484,7 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             num_eras += len(eras)
         return (num_eras, info_items)
 
+    # TODO: Remove {link -> map} array
     def _generate_link_items(self, links_map: LinksMap) -> str:
         link_items = ''
         for link_name, zone_name in sorted(links_map.items()):
@@ -474,11 +493,12 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             start_year = self.start_year
             until_year = self.until_year
             link_id = self.link_ids[link_name]
+            name_index = self.names_map[link_name][0]
 
             link_items += f"""\
 // Link: {link_name} -> {zone_name}
 var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
-\tName: "{link_name}",
+\tNameIndex: {name_index}, // "{link_name}"
 \tZoneID: 0x{link_id:08x},
 \tStartYear: {start_year},
 \tUntilYear: {until_year},
@@ -496,9 +516,11 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
         for era in eras:
             era_items += self._generate_era_item(era)
 
+        name_index = self.names_map[zone_name][0]
         return self.ZONE_INFO_ITEM.format(
             zoneFullName=zone_name,
             zoneNormalizedName=normalize_name(zone_name),
+            nameIndex=name_index,
             zoneId=self.zone_ids[zone_name],
             startYear=self.start_year,
             untilYear=self.until_year,
@@ -554,6 +576,7 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
             self.links_map,
         )
 
+        # TODO: Replace zoneItems with zoneAndLinkItems only
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
