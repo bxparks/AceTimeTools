@@ -7,6 +7,7 @@ Generate the 'zone_infos.py' and 'zone_policies.py' files for Go lang.
 
 import logging
 import os
+from typing import Iterable
 from typing import List
 from typing import Tuple
 
@@ -44,6 +45,24 @@ package {dbNamespace}
 
 import (
 \t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// String constants.
+// ---------------------------------------------------------------------------
+
+const (
+\t// All ZoneRule.Letter entries concatenated together.
+\tLetterBuffer = "{letterBuffer}"
+)
+
+var (
+\t// Byte offset into LetterBuffer for each index. The actual Letter string
+\t// at index `i` given by the `ZoneRule.Letter` field is
+\t// `LetterBuffer[LetterOffsets[i]:LetterOffsets[i+1]]`.
+\tLetterOffsets = []uint8{{
+{letterOffsets}
+\t}}
 )
 
 // ---------------------------------------------------------------------------
@@ -93,7 +112,7 @@ var ZonePolicy{policyName} = zoneinfo.ZonePolicy{{
 \t\tAtTimeCode: {at_time_code},
 \t\tAtTimeModifier: {at_time_modifier}, // {at_time_modifier_comment}
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
-\t\tLetter: "{letter}",
+\t\tLetterIndex: {letter_index}, // {letter_comment}
 \t}},
 """
 
@@ -117,10 +136,22 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Zone Context
+// String constants.
 // ---------------------------------------------------------------------------
 
-const TzDatabaseVersion string = "{tz_version}"
+const (
+\t// All ZoneEra.Format entries concatenated together.
+\tFormatBuffer = "{formatBuffer}"
+)
+
+var (
+\t// Byte offset into FormatBuffer for each index. The actual Format string
+\t// at index `i` given by the `ZoneEra.Format` field is
+\t// `FormatBuffer[FormatOffsets[i]:FormatOffsets[i+1]]`.
+\tFormatOffsets = []uint16{{
+{formatOffsets}
+\t}}
+)
 
 // ---------------------------------------------------------------------------
 // Supported zones: {numInfos}
@@ -187,7 +218,7 @@ var Zone{zoneNormalizedName} = zoneinfo.ZoneInfo{{
 \t// {raw_line}
 \t{{
 \t\tZonePolicy: {zone_policy},
-\t\tFormat: "{format}",
+\t\tFormatIndex: {format_index}, // {format_comment}
 \t\tOffsetCode: {offset_code},
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
 \t\tUntilYear: {until_year},
@@ -217,10 +248,29 @@ import (
 \t"github.com/bxparks/AceTimeGo/zoneinfo"
 )
 
+// ---------------------------------------------------------------------------
+// Zone Context
+// ---------------------------------------------------------------------------
+
+const TzDatabaseVersion string = "{tz_version}"
+
+var Context = zoneinfo.ZoneContext{{
+\tLetterBuffer: LetterBuffer,
+\tLetterOffsets: LetterOffsets,
+\tFormatBuffer: FormatBuffer,
+\tFormatOffsets: FormatOffsets,
+\tZoneRegistry: ZoneAndLinkRegistry,
+\tTzDatabaseVersion: TzDatabaseVersion,
+}}
+
+// ---------------------------------------------------------------------------
+
 // Supported Zones: {numZones}
 var ZoneRegistry = []*zoneinfo.ZoneInfo{{
 {zoneItems}
 }}
+
+// ---------------------------------------------------------------------------
 
 // Supported Zones and Links: {numZonesAndLinks}
 var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
@@ -258,7 +308,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         self.notable_policies = zidb['notable_policies']
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
-        self.formats_map = zidb['formats_map']
+        self.letters_map = zidb['go_letters_map']
+        self.formats_map = zidb['go_formats_map']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -292,6 +343,11 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
+        letter_buffer = ''.join(self.letters_map.keys())
+        letter_offsets = _render_offsets(
+            [x[1] for x in self.letters_map.values()]
+        )
+
         return self.ZONE_POLICIES_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
@@ -303,7 +359,10 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             numRemovedPolicies=len(self.removed_policies),
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
-            notablePolicyItems=notable_policy_items)
+            notablePolicyItems=notable_policy_items,
+            letterBuffer=letter_buffer,
+            letterOffsets=letter_offsets,
+        )
 
     def _generate_policy_items(
         self,
@@ -327,9 +386,14 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
                 delta_seconds=rule['delta_seconds_truncated'],
                 scope='extended',  # AceTimeGo supports only extended
             )
+
+            # Find the index for the 'letter' field.
             letter = rule['letter']
             if letter == '-':
                 letter = ''
+            entry = self.letters_map[letter]
+            letter_index = entry[0]  # entry[1] is the byte offset
+
             rule_items += self.ZONE_RULE_ITEM.format(
                 policyName=normalize_name(name),
                 raw_line=normalize_raw(rule['raw_line']),
@@ -343,7 +407,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
                 at_time_modifier_comment=at_time_modifier_comment,
                 delta_code=rule['delta_code_encoded'],
                 delta_code_comment=delta_code_comment,
-                letter=letter,
+                letter_index=letter_index,
+                letter_comment=f'"{letter}"',
             )
         return self.ZONE_POLICY_ITEM.format(
             policyName=normalize_name(name),
@@ -363,6 +428,11 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             self.merged_notable_zones)
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
+
+        format_buffer = ''.join(self.formats_map.keys())
+        format_offsets = _render_offsets(
+            [x[1] for x in self.formats_map.values()]
+        )
 
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
@@ -384,6 +454,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             removedLinkItems=removed_link_items,
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
+            formatBuffer=format_buffer,
+            formatOffsets=format_offsets,
         )
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
@@ -450,10 +522,16 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
             suffix=era['until_time_suffix'],
         )
 
+        # Find the index for the 'format' field.
+        format_short = era['format_short']
+        entry = self.formats_map[format_short]
+        format_index = entry[0]  # entry[1] is the byte offset
+
         return self.ZONE_ERA_ITEM.format(
             raw_line=normalize_raw(era['raw_line']),
             zone_policy=zone_policy,
-            format=era['format_short'],
+            format_index=format_index,
+            format_comment=f'"{format_short}"',
             offset_code=era['offset_code'],
             delta_code=era['delta_code_encoded'],
             delta_code_comment=delta_code_comment,
@@ -645,3 +723,29 @@ def _get_rule_delta_code_comment(
         return f"(delta_minutes={delta_minutes})/15 + 4"
     else:
         return f"(delta_minutes={delta_minutes})/15"
+
+
+def _render_offsets(offsets: Iterable[int], prefix: str = '\t\t') -> str:
+    """Return a comma-separated list integers as a string suitable for Golang,
+    with a newline added every 10 elements for readability. The logic to
+    correctly handle trailing commas, spaces, and newlines properly was trickier
+    than I thought it would be.
+    """
+    items_per_line = 10
+    count = 0
+    s = ''
+    for n in offsets:
+        if count == 0:
+            s += f'{prefix}{n}'
+        elif count % items_per_line == 0:
+            s += f',\n{prefix}{n}'
+        else:
+            s += f', {n}'
+        count += 1
+
+    # Add terminating delimiters
+    if count == 0:
+        pass
+    else:
+        s += ','
+    return s

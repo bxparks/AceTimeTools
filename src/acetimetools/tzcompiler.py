@@ -66,6 +66,7 @@ from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
 from acetimetools.transformer.commenter import Commenter
+from acetimetools.transformer.gotransformer import GoTransformer
 from acetimetools.generator.argenerator import ArduinoGenerator
 from acetimetools.generator.cgenerator import CGenerator
 from acetimetools.generator.gogenerator import GoGenerator
@@ -415,6 +416,8 @@ def main() -> None:
         letters_per_policy={},
         letters_map={},
         formats_map={},
+        go_letters_map={},
+        go_formats_map={},
         fragments_map={},
         compressed_names={},
     )
@@ -472,6 +475,12 @@ def main() -> None:
     commenter = Commenter()
     commenter.transform(tresult)
     commenter.print_summary(tresult)
+
+    # Generate the fields for the Arduino zoneinfo data.
+    logging.info('======== Updating Go letters and formats')
+    go_transformer = GoTransformer()
+    go_transformer.transform(tresult)
+    go_transformer.print_summary(tresult)
 
     # Collect TZ DB data into a single JSON-serializable object.
     zidb = create_zone_info_database(

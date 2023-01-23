@@ -10,6 +10,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Set
+from typing import Tuple
 from typing import Union
 from typing import cast
 from typing_extensions import TypedDict
@@ -168,6 +169,11 @@ LinksMap = Dict[str, str]
 # artransformer.py.
 IndexMap = Dict[str, int]
 
+# Map of {str -> [index, offset]}, to store a sorted list of all LETTER strings
+# with their associated self-index into the map, along with the byte offset into
+# the concatenated string buffer. Created by gotransformer.py.
+OffsetMap = Dict[str, Tuple[int, int]]
+
 # Map of LETTER strings that are more than 1-character long, grouped by
 # ZonePolicy. Allows the 'letter' index to be localzed to the given ZonePolicy
 # (i.e. will only be 0 or 1). Created by artransformer.py. map{policy_name ->
@@ -212,6 +218,8 @@ class TransformerResult:
     * formats_map: {format -> index}
     * fragments_map: {fragment -> index}
     * compressed_names: {zoneName -> compressedName}
+    * go_letters_map: {letter -> byte_offset}
+    * go_formats_map: {format -> byte_offset}
     """
     zones_map: ZonesMap
     policies_map: PoliciesMap
@@ -231,6 +239,8 @@ class TransformerResult:
     formats_map: IndexMap
     fragments_map: IndexMap
     compressed_names: Dict[str, str]
+    go_letters_map: OffsetMap
+    go_formats_map: OffsetMap
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:
@@ -317,9 +327,13 @@ class ZoneInfoDatabase(TypedDict):
     link_ids: Dict[str, int]  # hash(linkName)
     letters_per_policy: LettersPerPolicy  # multi-char letters by zonePolicy
     letters_map: IndexMap  # all multi-character letters
-    formats_map: IndexMap  # shortened format strings.
+    formats_map: IndexMap  # all format strings
     fragments_map: IndexMap  # zoneName fragment -> index
     compressed_names: Dict[str, str]  # zoneName -> compressedName
+
+    # Data from GoTransformer
+    go_letters_map: OffsetMap  # all letter strings
+    go_formats_map: OffsetMap  # all format strings
 
 
 def create_zone_info_database(
@@ -382,6 +396,10 @@ def create_zone_info_database(
         'formats_map': tresult.formats_map,
         'fragments_map': tresult.fragments_map,
         'compressed_names': tresult.compressed_names,
+
+        # Data from GoTransformer
+        'go_letters_map': tresult.go_letters_map,
+        'go_formats_map': tresult.go_formats_map,
     }
 
 
