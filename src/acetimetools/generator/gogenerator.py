@@ -7,6 +7,7 @@ Generate the 'zone_infos.py' and 'zone_policies.py' files for Go lang.
 
 import logging
 import os
+from typing import Iterable
 from typing import List
 from typing import Tuple
 
@@ -60,7 +61,7 @@ var (
 \t// at index `i` given by the `ZoneRule.Letter` field is
 \t// `LetterBuffer[LetterOffsets[i]:LetterOffsets[i+1]]`.
 \tLetterOffsets = []uint8{{
-\t\t{lettersOffsets},
+{letterOffsets}
 \t}}
 )
 
@@ -148,7 +149,7 @@ var (
 \t// at index `i` given by the `ZoneEra.Format` field is
 \t// `FormatBuffer[FormatOffsets[i]:FormatOffsets[i+1]]`.
 \tFormatOffsets = []uint16{{
-\t\t{formatOffsets},
+{formatOffsets}
 \t}}
 )
 
@@ -343,9 +344,9 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         notable_policy_items = _render_comments_map(self.notable_policies)
 
         letter_buffer = ''.join(self.letters_map.keys())
-        letter_offsets = ', '.join([
-            str(x[1]) for x in self.letters_map.values()
-        ])
+        letter_offsets = _render_offsets(
+            [x[1] for x in self.letters_map.values()]
+        )
 
         return self.ZONE_POLICIES_FILE.format(
             invocation=self.invocation,
@@ -360,7 +361,7 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             numNotablePolicies=len(self.notable_policies),
             notablePolicyItems=notable_policy_items,
             letterBuffer=letter_buffer,
-            lettersOffsets=letter_offsets,
+            letterOffsets=letter_offsets,
         )
 
     def _generate_policy_items(
@@ -429,9 +430,9 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         notable_link_items = _render_comments_map(self.notable_links)
 
         format_buffer = ''.join(self.formats_map.keys())
-        format_offsets = ', '.join([
-            str(x[1]) for x in self.formats_map.values()
-        ])
+        format_offsets = _render_offsets(
+            [x[1] for x in self.formats_map.values()]
+        )
 
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
@@ -722,3 +723,29 @@ def _get_rule_delta_code_comment(
         return f"(delta_minutes={delta_minutes})/15 + 4"
     else:
         return f"(delta_minutes={delta_minutes})/15"
+
+
+def _render_offsets(offsets: Iterable[int], prefix: str = '\t\t') -> str:
+    """Return a comma-separated list integers as a string suitable for Golang,
+    with a newline added every 10 elements for readability. The logic to
+    correctly handle trailing commas, spaces, and newlines properly was trickier
+    than I thought it would be.
+    """
+    items_per_line = 10
+    count = 0
+    s = ''
+    for n in offsets:
+        if count == 0:
+            s += f'{prefix}{n}'
+        elif count % items_per_line == 0:
+            s += f',\n{prefix}{n}'
+        else:
+            s += f', {n}'
+        count += 1
+
+    # Add terminating delimiters
+    if count == 0:
+        pass
+    else:
+        s += ','
+    return s
