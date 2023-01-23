@@ -47,6 +47,24 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// String constants.
+// ---------------------------------------------------------------------------
+
+const (
+\t// All ZoneRule.Letter entries concatenated together.
+\tLettersBuffer = "{lettersBuffer}"
+)
+
+var (
+\t// Byte offset into LettersBuffer for each index. The actual Letter string
+\t// at index `i` given by the `ZoneRule.Letter` field is
+\t// `LettersBuffer[LettersOffset[i]:LettersOffset[i+1]]`.
+\tLettersOffset = []uint8{{
+\t\t{lettersOffset},
+\t}}
+)
+
+// ---------------------------------------------------------------------------
 // Supported zone policies: {numPolicies}
 // numRules: {numRules}
 // ---------------------------------------------------------------------------
@@ -93,7 +111,7 @@ var ZonePolicy{policyName} = zoneinfo.ZonePolicy{{
 \t\tAtTimeCode: {at_time_code},
 \t\tAtTimeModifier: {at_time_modifier}, // {at_time_modifier_comment}
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
-\t\tLetter: "{letter}",
+\t\tLetterIndex: {letter_index}, // {letter_comment}
 \t}},
 """
 
@@ -117,10 +135,22 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Zone Context
+// String constants.
 // ---------------------------------------------------------------------------
 
-const TzDatabaseVersion string = "{tz_version}"
+const (
+\t// All ZoneEra.Format entries concatenated together.
+\tFormatsBuffer = "{formatsBuffer}"
+)
+
+var (
+\t// Byte offset into FormatsBuffer for each index. The actual Format string
+\t// at index `i` given by the `ZoneEra.Format` field is
+\t// `FormatsBuffer[FormatsOffset[i]:FormatsOffset[i+1]]`.
+\tFormatsOffset = []uint16{{
+\t\t{formatsOffset},
+\t}}
+)
 
 // ---------------------------------------------------------------------------
 // Supported zones: {numInfos}
@@ -187,7 +217,7 @@ var Zone{zoneNormalizedName} = zoneinfo.ZoneInfo{{
 \t// {raw_line}
 \t{{
 \t\tZonePolicy: {zone_policy},
-\t\tFormat: "{format}",
+\t\tFormatIndex: {format_index}, // {format_comment}
 \t\tOffsetCode: {offset_code},
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
 \t\tUntilYear: {until_year},
@@ -217,10 +247,29 @@ import (
 \t"github.com/bxparks/AceTimeGo/zoneinfo"
 )
 
+// ---------------------------------------------------------------------------
+// Zone Context
+// ---------------------------------------------------------------------------
+
+const TzDatabaseVersion string = "{tz_version}"
+
+var Context = zoneinfo.ZoneContext{{
+\tLettersBuffer: LettersBuffer,
+\tLettersOffset: LettersOffset,
+\tFormatsBuffer: FormatsBuffer,
+\tFormatsOffset: FormatsOffset,
+\tZoneRegistry: ZoneAndLinkRegistry,
+\tTzDatabaseVersion: TzDatabaseVersion,
+}}
+
+// ---------------------------------------------------------------------------
+
 // Supported Zones: {numZones}
 var ZoneRegistry = []*zoneinfo.ZoneInfo{{
 {zoneItems}
 }}
+
+// ---------------------------------------------------------------------------
 
 // Supported Zones and Links: {numZonesAndLinks}
 var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
@@ -258,7 +307,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         self.notable_policies = zidb['notable_policies']
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
-        self.formats_map = zidb['formats_map']
+        self.letters_map = zidb['go_letters_map']
+        self.formats_map = zidb['go_formats_map']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -292,6 +342,11 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
+        letters_buffer = ''.join(self.letters_map.keys())
+        letters_offset = ', '.join([
+            str(x[1]) for x in self.letters_map.values()
+        ])
+
         return self.ZONE_POLICIES_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
@@ -303,7 +358,10 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             numRemovedPolicies=len(self.removed_policies),
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
-            notablePolicyItems=notable_policy_items)
+            notablePolicyItems=notable_policy_items,
+            lettersBuffer=letters_buffer,
+            lettersOffset=letters_offset,
+        )
 
     def _generate_policy_items(
         self,
@@ -327,9 +385,14 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
                 delta_seconds=rule['delta_seconds_truncated'],
                 scope='extended',  # AceTimeGo supports only extended
             )
+
+            # Find the index for the 'letter' field.
             letter = rule['letter']
             if letter == '-':
                 letter = ''
+            entry = self.letters_map[letter]
+            letter_index = entry[0]  # entry[1] is the byte offset
+
             rule_items += self.ZONE_RULE_ITEM.format(
                 policyName=normalize_name(name),
                 raw_line=normalize_raw(rule['raw_line']),
@@ -343,7 +406,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
                 at_time_modifier_comment=at_time_modifier_comment,
                 delta_code=rule['delta_code_encoded'],
                 delta_code_comment=delta_code_comment,
-                letter=letter,
+                letter_index=letter_index,
+                letter_comment=f'"{letter}"',
             )
         return self.ZONE_POLICY_ITEM.format(
             policyName=normalize_name(name),
@@ -363,6 +427,11 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             self.merged_notable_zones)
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
+
+        formats_buffer = ''.join(self.formats_map.keys())
+        formats_offset = ', '.join([
+            str(x[1]) for x in self.formats_map.values()
+        ])
 
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
@@ -384,6 +453,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             removedLinkItems=removed_link_items,
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
+            formatsBuffer=formats_buffer,
+            formatsOffset=formats_offset,
         )
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
@@ -450,10 +521,16 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
             suffix=era['until_time_suffix'],
         )
 
+        # Find the index for the 'format' field.
+        format_short = era['format_short']
+        entry = self.formats_map[format_short]
+        format_index = entry[0]  # entry[1] is the byte offset
+
         return self.ZONE_ERA_ITEM.format(
             raw_line=normalize_raw(era['raw_line']),
             zone_policy=zone_policy,
-            format=era['format_short'],
+            format_index=format_index,
+            format_comment=f'"{format_short}"',
             offset_code=era['offset_code'],
             delta_code=era['delta_code_encoded'],
             delta_code_comment=delta_code_comment,
