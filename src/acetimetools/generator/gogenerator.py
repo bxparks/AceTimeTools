@@ -274,15 +274,10 @@ var Context = zoneinfo.ZoneContext{{
 }}
 
 // ---------------------------------------------------------------------------
-
-// Supported Zones: {numZones}
-var ZoneRegistry = []*zoneinfo.ZoneInfo{{
-{zoneItems}
-}}
-
+// Zone Registry
+// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
-// Supported Zones and Links: {numZonesAndLinks}
 var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
 {zoneAndLinkItems}
 }}
@@ -570,38 +565,21 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
     # ------------------------------------------------------------------------
 
     def _generate_registry(self) -> str:
-        zone_items = self._generate_zone_registry_items(self.zones_map)
         zone_and_link_items = self._generate_zone_and_link_registry_items(
             self.zones_map,
             self.links_map,
         )
 
-        # TODO: Replace zoneItems with zoneAndLinkItems only
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
             tz_files=self.tz_files,
             dbNamespace=self.db_namespace,
             numZones=len(self.zones_map),
-            zoneItems=zone_items,
-            numZonesAndLinks=len(self.zones_map) + len(self.links_map),
+            numLinks=len(self.links_map),
+            numZonesAndLinks=len(self.zones_and_links),
             zoneAndLinkItems=zone_and_link_items,
         )
-
-    def _generate_zone_registry_items(self, zones_map: ZonesMap) -> str:
-        """Generate a map of (zone_name -> zoneInfo), sorted by name.
-        """
-        zone_registry_items = ''
-        for zone_name in sorted(
-                self.zones_map.keys(),
-                key=lambda x: self.zone_ids[x],
-        ):
-            normalized_name = normalize_name(zone_name)
-            zone_id = self.zone_ids[zone_name]
-            zone_registry_items += f"""\
-\t&Zone{normalized_name}, // 0x{zone_id:08x}, {zone_name}
-"""
-        return zone_registry_items
 
     def _generate_zone_and_link_registry_items(
         self,
