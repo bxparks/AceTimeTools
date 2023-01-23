@@ -52,15 +52,15 @@ import (
 
 const (
 \t// All ZoneRule.Letter entries concatenated together.
-\tLettersBuffer = "{lettersBuffer}"
+\tLetterBuffer = "{letterBuffer}"
 )
 
 var (
-\t// Byte offset into LettersBuffer for each index. The actual Letter string
+\t// Byte offset into LetterBuffer for each index. The actual Letter string
 \t// at index `i` given by the `ZoneRule.Letter` field is
-\t// `LettersBuffer[LettersOffset[i]:LettersOffset[i+1]]`.
-\tLettersOffset = []uint8{{
-\t\t{lettersOffset},
+\t// `LetterBuffer[LetterOffsets[i]:LetterOffsets[i+1]]`.
+\tLetterOffsets = []uint8{{
+\t\t{lettersOffsets},
 \t}}
 )
 
@@ -140,15 +140,15 @@ import (
 
 const (
 \t// All ZoneEra.Format entries concatenated together.
-\tFormatsBuffer = "{formatsBuffer}"
+\tFormatBuffer = "{formatBuffer}"
 )
 
 var (
-\t// Byte offset into FormatsBuffer for each index. The actual Format string
+\t// Byte offset into FormatBuffer for each index. The actual Format string
 \t// at index `i` given by the `ZoneEra.Format` field is
-\t// `FormatsBuffer[FormatsOffset[i]:FormatsOffset[i+1]]`.
-\tFormatsOffset = []uint16{{
-\t\t{formatsOffset},
+\t// `FormatBuffer[FormatOffsets[i]:FormatOffsets[i+1]]`.
+\tFormatOffsets = []uint16{{
+\t\t{formatOffsets},
 \t}}
 )
 
@@ -254,10 +254,10 @@ import (
 const TzDatabaseVersion string = "{tz_version}"
 
 var Context = zoneinfo.ZoneContext{{
-\tLettersBuffer: LettersBuffer,
-\tLettersOffset: LettersOffset,
-\tFormatsBuffer: FormatsBuffer,
-\tFormatsOffset: FormatsOffset,
+\tLetterBuffer: LetterBuffer,
+\tLetterOffsets: LetterOffsets,
+\tFormatBuffer: FormatBuffer,
+\tFormatOffsets: FormatOffsets,
 \tZoneRegistry: ZoneAndLinkRegistry,
 \tTzDatabaseVersion: TzDatabaseVersion,
 }}
@@ -342,8 +342,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
-        letters_buffer = ''.join(self.letters_map.keys())
-        letters_offset = ', '.join([
+        letter_buffer = ''.join(self.letters_map.keys())
+        letter_offsets = ', '.join([
             str(x[1]) for x in self.letters_map.values()
         ])
 
@@ -359,8 +359,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
             notablePolicyItems=notable_policy_items,
-            lettersBuffer=letters_buffer,
-            lettersOffset=letters_offset,
+            letterBuffer=letter_buffer,
+            lettersOffsets=letter_offsets,
         )
 
     def _generate_policy_items(
@@ -428,8 +428,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
-        formats_buffer = ''.join(self.formats_map.keys())
-        formats_offset = ', '.join([
+        format_buffer = ''.join(self.formats_map.keys())
+        format_offsets = ', '.join([
             str(x[1]) for x in self.formats_map.values()
         ])
 
@@ -453,8 +453,8 @@ var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
             removedLinkItems=removed_link_items,
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
-            formatsBuffer=formats_buffer,
-            formatsOffset=formats_offset,
+            formatBuffer=format_buffer,
+            formatOffsets=format_offsets,
         )
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
