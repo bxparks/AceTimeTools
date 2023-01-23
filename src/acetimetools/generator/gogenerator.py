@@ -281,6 +281,15 @@ var Context = zoneinfo.ZoneContext{{
 var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
 {zoneAndLinkItems}
 }}
+
+// ---------------------------------------------------------------------------
+// Zone IDs
+// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
+// ---------------------------------------------------------------------------
+
+const (
+{zoneAndLinkIds}
+)
 """
 
     ZONE_INFOS_FILE_NAME = 'zone_infos.go'
@@ -565,10 +574,8 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
     # ------------------------------------------------------------------------
 
     def _generate_registry(self) -> str:
-        zone_and_link_items = self._generate_zone_and_link_registry_items(
-            self.zones_map,
-            self.links_map,
-        )
+        zone_and_link_items = self._generate_zone_and_link_registry_items()
+        zone_and_link_ids = self._generate_zone_and_link_ids()
 
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
@@ -579,13 +586,10 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
             zoneAndLinkItems=zone_and_link_items,
+            zoneAndLinkIds=zone_and_link_ids,
         )
 
-    def _generate_zone_and_link_registry_items(
-        self,
-        zones_map: ZonesMap,
-        links_map: LinksMap,
-    ) -> str:
+    def _generate_zone_and_link_registry_items(self) -> str:
         """Generate a map of (zone_name -> zoneInfo), for all zones and links,
         sorted by name.
         """
@@ -606,6 +610,21 @@ var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
 \t&Zone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
 """
         return zone_and_link_registry_items
+
+    def _generate_zone_and_link_ids(self) -> str:
+        """Generate a list of constants of the form ZoneID{zoneName},
+        sorted by name.
+        """
+        s = ''
+        for name in sorted(self.zones_and_links):
+            zone_id = self.zone_and_link_ids.get(name)
+            if zone_id is None:
+                raise Exception(f'Zone or Link "{name}" not found')
+            normalized_name = normalize_name(name)
+            s += f"""\
+\tZoneID{normalized_name} uint32 = 0x{zone_id:08x} // {name}
+"""
+        return s
 
 
 def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
