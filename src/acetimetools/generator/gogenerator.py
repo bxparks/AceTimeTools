@@ -53,13 +53,13 @@ import (
 
 const (
 \t// All ZoneRule.Letter entries concatenated together.
-\tLetterBuffer = "{letterBuffer}"
+\tLetterData = "{letterData}"
 )
 
 var (
-\t// Byte offset into LetterBuffer for each index. The actual Letter string
+\t// Byte offset into LetterData for each index. The actual Letter string
 \t// at index `i` given by the `ZoneRule.Letter` field is
-\t// `LetterBuffer[LetterOffsets[i]:LetterOffsets[i+1]]`.
+\t// `LetterData[LetterOffsets[i]:LetterOffsets[i+1]]`.
 \tLetterOffsets = []uint8{{
 {letterOffsets}
 \t}}
@@ -141,23 +141,23 @@ import (
 
 const (
 \t// All ZoneEra.Format entries concatenated together.
-\tFormatBuffer = "{formatBuffer}"
+\tFormatData = "{formatData}"
 
 \t// All ZoneInfo.Name entries concatenated togther.
-\tNameBuffer = "{nameBuffer}"
+\tNameData = "{nameData}"
 )
 
 var (
-\t// Byte offset into FormatBuffer for each index. The actual Format string
+\t// Byte offset into FormatData for each index. The actual Format string
 \t// at index `i` given by the `ZoneEra.Format` field is
-\t// `FormatBuffer[FormatOffsets[i]:FormatOffsets[i+1]]`.
+\t// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
 \tFormatOffsets = []uint16{{
 {formatOffsets}
 \t}}
 
-\t// Byte offset into NameBuffer for each index. The actual Letter string
+\t// Byte offset into NameData for each index. The actual Letter string
 \t// at index `i` given by the `ZoneRule.Name` field is
-\t// `NameBuffer[NameOffsets[i]:NameOffsets[i+1]]`.
+\t// `NameData[NameOffsets[i]:NameOffsets[i+1]]`.
 \tNameOffsets = []uint16{{
 {nameOffsets}
 \t}}
@@ -263,11 +263,11 @@ import (
 const TzDatabaseVersion string = "{tz_version}"
 
 var Context = zoneinfo.ZoneContext{{
-\tLetterBuffer: LetterBuffer,
+\tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
-\tFormatBuffer: FormatBuffer,
+\tFormatData: FormatData,
 \tFormatOffsets: FormatOffsets,
-\tNameBuffer: NameBuffer,
+\tNameData: NameData,
 \tNameOffsets: NameOffsets,
 \tZoneRegistry: ZoneAndLinkRegistry,
 \tTzDatabaseVersion: TzDatabaseVersion,
@@ -358,7 +358,7 @@ const (
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
-        letter_buffer = ''.join(self.letters_map.keys())
+        letter_data = ''.join(self.letters_map.keys())
         letter_offsets = _render_offsets(
             [x[1] for x in self.letters_map.values()]
         )
@@ -375,7 +375,7 @@ const (
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
             notablePolicyItems=notable_policy_items,
-            letterBuffer=letter_buffer,
+            letterData=letter_data,
             letterOffsets=letter_offsets,
         )
 
@@ -444,12 +444,12 @@ const (
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
-        format_buffer = ''.join(self.formats_map.keys())
+        format_data = ''.join(self.formats_map.keys())
         format_offsets = _render_offsets(
             [x[1] for x in self.formats_map.values()]
         )
 
-        name_buffer = ''.join(self.names_map.keys())
+        name_data = ''.join(self.names_map.keys())
         name_offsets = _render_offsets(
             [x[1] for x in self.names_map.values()]
         )
@@ -474,9 +474,9 @@ const (
             removedLinkItems=removed_link_items,
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
-            formatBuffer=format_buffer,
+            formatData=format_data,
             formatOffsets=format_offsets,
-            nameBuffer=name_buffer,
+            nameData=name_data,
             nameOffsets=name_offsets,
         )
 
