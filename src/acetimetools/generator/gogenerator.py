@@ -74,14 +74,18 @@ var (
 // numRules: {numRules}
 // ---------------------------------------------------------------------------
 
+var ZoneRules = []zoneinfo.ZoneRule{{
 {zoneRules}
+}}
 
 // ---------------------------------------------------------------------------
 // ZonePolicies are indexes into the ZoneRules.
 // Supported zone policies: {numPolicies}
 // ---------------------------------------------------------------------------
 
+var ZonePolicies = []zoneinfo.ZonePolicy{{
 {zonePolicies}
+}}
 
 // ---------------------------------------------------------------------------
 // Unsupported zone policies: {numRemovedPolicies}
@@ -151,7 +155,9 @@ var (
 // numEras: {numEras}
 // ---------------------------------------------------------------------------
 
+var ZoneEras = []zoneinfo.ZoneEra{{
 {zoneEras}
+}}
 
 // ---------------------------------------------------------------------------
 // ZoneInfos is an array of zoneinfo.ZoneInfo items concatenated together.
@@ -159,7 +165,9 @@ var (
 // Total: {numZonesAndLinks} ({numInfos} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
+var ZoneInfos = []zoneinfo.ZoneInfo{{
 {zoneInfos}
+}}
 
 // ---------------------------------------------------------------------------
 // Unsuported zones: {numRemovedInfos}
@@ -384,18 +392,13 @@ const (
         return index_map, rules_index
 
     def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
-        zone_rules_string = """\
-var ZoneRules = []zoneinfo.ZoneRule{
-"""
+        zone_rules_string = ''
         rule_index = 0
         for policy_name, rules in sorted(policies_map.items()):
             zone_rules_string += self._generate_rule_items_string(
                 policy_name, rule_index, rules)
             rule_index += len(rules)
             zone_rules_string += '\n'
-        zone_rules_string += """\
-}
-"""
         return zone_rules_string
 
     def _generate_rule_items_string(
@@ -457,10 +460,7 @@ var ZoneRules = []zoneinfo.ZoneRule{
         return rule_items_string
 
     def _generate_policies_string(self, policy_index_map: IndexSizeMap) -> str:
-        zone_policies_string = """\
-var ZonePolicies = []zoneinfo.ZonePolicy{
-"""
-
+        zone_policies_string = ''
         for policy_name, indexes in policy_index_map.items():
             index = indexes[0]
             rule_index = indexes[1]
@@ -470,9 +470,6 @@ var ZonePolicies = []zoneinfo.ZonePolicy{
             zone_policies_string += f"""\
 \t{{RuleIndex: {rule_index}, RuleCount: {size}}}, \
 // {index}: PolicyName: {policy_name}
-"""
-        zone_policies_string += """\
-}
 """
         return zone_policies_string
 
@@ -543,17 +540,12 @@ var ZonePolicies = []zoneinfo.ZonePolicy{
         return index_map, eras_index
 
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
-        zone_eras_string = """\
-var ZoneEras = []zoneinfo.ZoneEra{
-"""
+        zone_eras_string = ''
         era_index = 0
         for zone_name, eras in sorted(self.zones_map.items()):
             zone_eras_string += self._generate_era_items_string(
                 zone_name, era_index, eras, self.policy_index_map)
             era_index += len(eras)
-        zone_eras_string += """\
-}
-"""
         return zone_eras_string
 
     def _generate_era_items_string(
@@ -623,11 +615,9 @@ var ZoneEras = []zoneinfo.ZoneEra{
         return era_items_string
 
     def _generate_infos_string(self) -> str:
-        zone_infos_string = """\
-var ZoneInfos = []zoneinfo.ZoneInfo{
-"""
-        # Loop over all zones and links, sorted by zoneId/linkId.
+        zone_infos_string = ''
         combined_index = 0
+        # Loop over all zones and links, sorted by zoneId/linkId.
         for name in self.zone_and_link_index_map:
             target_name = self.links_map.get(name)
             if target_name is None:  # Zone
@@ -660,10 +650,6 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 \t}},
 """
             combined_index += 1
-
-        zone_infos_string += """\
-}
-"""
         return zone_infos_string
 
     # ------------------------------------------------------------------------
