@@ -18,6 +18,7 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
@@ -227,12 +228,27 @@ var Context = zoneinfo.ZoneContext{{
 }}
 
 // ---------------------------------------------------------------------------
-// Zone IDs
+// Zone IDs. Unique stable uint32 identifier for each zone which can be given to
+// ZoneManager.NewTimeZoneFromID(). Useful for microcontroller environments
+// where saving variable length strings is more difficult than a fixed width
+// integer.
+//
 // Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
 const (
 {zoneAndLinkIds}
+)
+
+// ---------------------------------------------------------------------------
+// Zone Indexes. Index into the ZoneInfos array. Intended for unit tests
+// which need direct access to the zoneinfo.ZoneInfo struct.
+//
+// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
+// ---------------------------------------------------------------------------
+
+const (
+{zoneAndLinkIndexes}
 )
 """
 
@@ -277,6 +293,7 @@ const (
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
 
+        self.zone_and_link_index_map = self._generate_zone_and_link_index_map()
         self.policy_index_map, self.num_rules = self._generate_policy_index_map(
             self.policies_map
         )
@@ -299,6 +316,20 @@ const (
         with open(full_filename, 'w', encoding='utf-8') as output_file:
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
+
+    def _generate_zone_and_link_index_map(self) -> IndexMap:
+        """ Create a combined IndexMap of zones and links, sorted by zoneId to
+        allow binary searchon zoneId.
+        """
+        zone_and_link_index_map: IndexMap = {}
+        index = 0
+        for name in sorted(
+            self.zones_and_links,
+            key=lambda x: self.zone_and_link_ids[x],
+        ):
+            zone_and_link_index_map[name] = index
+            index += 1
+        return zone_and_link_index_map
 
     # ------------------------------------------------------------------------
     # Zone Policies
@@ -595,24 +626,21 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 """
         # Loop over all zones and links, sorted by zoneId/linkId.
         combined_index = 0
-        for zone_name in sorted(
-            self.zones_and_links,
-            key=lambda x: self.zone_and_link_ids[x],
-        ):
-            target_name = self.links_map.get(zone_name)
+        for name in self.zone_and_link_index_map:
+            target_name = self.links_map.get(name)
             if target_name is None:  # Zone
-                desc_name = f'Zone {zone_name}'
+                desc_name = f'Zone {name}'
                 target_index = 0
                 target_desc = ''
-                zone_id = self.zone_ids[zone_name]
-                indexes = info_index_map[zone_name]
+                zone_id = self.zone_ids[name]
+                indexes = info_index_map[name]
             else:  # Link
-                desc_name = f'Link {zone_name} -> {target_name}'
+                desc_name = f'Link {name} -> {target_name}'
                 target_index = info_index_map[target_name][0]
                 target_desc = f' // {target_name}'
-                zone_id = self.link_ids[zone_name]
+                zone_id = self.link_ids[name]
                 indexes = info_index_map[target_name]  # symlink to target
-            name_index = self.names_map[zone_name][0]
+            name_index = self.names_map[name][0]
             era_index = indexes[1]
             size = indexes[2]
 
@@ -620,7 +648,7 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 \t// {combined_index}: {desc_name}
 \t{{
 \t\tZoneID: 0x{zone_id:08x},
-\t\tNameIndex: {name_index}, // "{zone_name}"
+\t\tNameIndex: {name_index}, // "{name}"
 \t\tEraIndex: {era_index},
 \t\tEraCount: {size},
 \t\tTargetIndex: {target_index},{target_desc}
@@ -639,6 +667,7 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 
     def _generate_registry(self) -> str:
         zone_and_link_ids = self._generate_zone_and_link_ids()
+        zone_and_link_indexes = self._generate_zone_and_link_indexes()
 
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
@@ -651,6 +680,7 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
             zoneAndLinkIds=zone_and_link_ids,
+            zoneAndLinkIndexes=zone_and_link_indexes,
         )
 
     def _generate_zone_and_link_ids(self) -> str:
@@ -665,6 +695,22 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             normalized_name = normalize_name(name)
             s += f"""\
 \tZoneID{normalized_name} uint32 = 0x{zone_id:08x} // {name}
+"""
+        return s
+
+    def _generate_zone_and_link_indexes(self) -> str:
+        """Generate a list of constants of the form ZoneInfoIndex{zoneName},
+        sorted by name. These are the indexes into the ZoneInfos array and are
+        intended for unit testing and debugging.
+        """
+        s = ''
+        for name, index in sorted(self.zone_and_link_index_map.items()):
+            zone_id = self.zone_and_link_ids.get(name)
+            if zone_id is None:
+                raise Exception(f'Zone or Link "{name}" not found')
+            normalized_name = normalize_name(name)
+            s += f"""\
+\tZoneInfoIndex{normalized_name} uint16 = {index} // {name}
 """
         return s
 
