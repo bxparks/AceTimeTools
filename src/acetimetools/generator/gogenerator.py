@@ -211,23 +211,17 @@ import (
 const TzDatabaseVersion string = "{tz_version}"
 
 var Context = zoneinfo.ZoneContext{{
+\tTzDatabaseVersion: TzDatabaseVersion,
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
 \tFormatData: FormatData,
 \tFormatOffsets: FormatOffsets,
 \tNameData: NameData,
 \tNameOffsets: NameOffsets,
-\tZoneRegistry: ZoneAndLinkRegistry,
-\tTzDatabaseVersion: TzDatabaseVersion,
-}}
-
-// ---------------------------------------------------------------------------
-// Zone Registry
-// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
-// ---------------------------------------------------------------------------
-
-var ZoneAndLinkRegistry = []*zoneinfo.ZoneInfo{{
-{zoneAndLinkItems}
+\tZoneRules: ZoneRules,
+\tZonePolicies: ZonePolicies,
+\tZoneEras: ZoneEras,
+\tZoneInfos: ZoneInfos,
 }}
 
 // ---------------------------------------------------------------------------
@@ -644,7 +638,6 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
     # ------------------------------------------------------------------------
 
     def _generate_registry(self) -> str:
-        zone_and_link_items = self._generate_zone_and_link_registry_items()
         zone_and_link_ids = self._generate_zone_and_link_ids()
 
         return self.ZONE_REGISTRY_FILE.format(
@@ -655,31 +648,8 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             numZones=len(self.zones_map),
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
-            zoneAndLinkItems=zone_and_link_items,
             zoneAndLinkIds=zone_and_link_ids,
         )
-
-    def _generate_zone_and_link_registry_items(self) -> str:
-        """Generate a map of (zone_name -> zoneInfo), for all zones and links,
-        sorted by zoneId and linkId.
-        """
-        zone_and_link_registry_items = ''
-        for zone_name in sorted(
-            self.zones_and_links,
-            key=lambda x: self.zone_and_link_ids[x],
-        ):
-            normalized_name = normalize_name(zone_name)
-            zone_id = self.zone_and_link_ids[zone_name]
-            target_name = self.links_map.get(zone_name)
-            if target_name:
-                desc_name = f'{zone_name} -> {target_name}'
-            else:
-                desc_name = zone_name
-
-            zone_and_link_registry_items += f"""\
-\t&Zone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
-"""
-        return zone_and_link_registry_items
 
     def _generate_zone_and_link_ids(self) -> str:
         """Generate a list of constants of the form ZoneID{zoneName},
