@@ -212,6 +212,8 @@ const TzDatabaseVersion string = "{tz_version}"
 
 var Context = zoneinfo.ZoneContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
+\tStartYear: {startYear},
+\tUntilYear: {untilYear},
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
 \tFormatData: FormatData,
@@ -619,8 +621,6 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 \t{{
 \t\tZoneID: 0x{zone_id:08x},
 \t\tNameIndex: {name_index}, // "{zone_name}"
-\t\tStartYear: {self.start_year},
-\t\tUntilYear: {self.until_year},
 \t\tEraIndex: {era_index},
 \t\tEraCount: {size},
 \t\tTargetIndex: {target_index},{target_desc}
@@ -645,6 +645,8 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             tz_version=self.tz_version,
             tz_files=self.tz_files,
             dbNamespace=self.db_namespace,
+            startYear=self.start_year,
+            untilYear=self.until_year,
             numZones=len(self.zones_map),
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
