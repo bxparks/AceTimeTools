@@ -322,7 +322,7 @@ const (
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
-        letter_data = ''.join(self.letters_map.keys())
+        letter_data = '" +\n\t\t"'.join(self.letters_map.keys())
         letter_offsets = _render_offsets(
             [x[1] for x in self.letters_map.values()]
         )
@@ -458,12 +458,12 @@ var ZonePolicies = []zoneinfo.ZonePolicy{{
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
-        format_data = ''.join(self.formats_map.keys())
+        format_data = '" +\n\t\t"'.join(self.formats_map.keys())
         format_offsets = _render_offsets(
             [x[1] for x in self.formats_map.values()]
         )
 
-        name_data = ''.join(self.names_map.keys())
+        name_data = '" +\n\t\t"'.join(self.names_map.keys())
         name_offsets = _render_offsets(
             [x[1] for x in self.names_map.values()]
         )
