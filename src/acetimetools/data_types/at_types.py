@@ -174,6 +174,11 @@ IndexMap = Dict[str, int]
 # the concatenated string buffer. Created by gotransformer.py.
 OffsetMap = Dict[str, Tuple[int, int]]
 
+# Map of {str -> [index, offset, size]}, to store a list of zone
+# policies, its sequential index, its rule index into the ZoneRules array, and
+# the number of rules.
+IndexSizeMap = Dict[str, Tuple[int, int, int]]
+
 # Map of LETTER strings that are more than 1-character long, grouped by
 # ZonePolicy. Allows the 'letter' index to be localzed to the given ZonePolicy
 # (i.e. will only be 0 or 1). Created by artransformer.py. map{policy_name ->

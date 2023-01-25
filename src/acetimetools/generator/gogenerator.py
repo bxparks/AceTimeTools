@@ -19,6 +19,7 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
 
@@ -66,11 +67,21 @@ var (
 )
 
 // ---------------------------------------------------------------------------
+// ZoneRules is a concatenated array of zoneinfo.ZoneInfo objects from all
+// ZonePolicies.
+//
 // Supported zone policies: {numPolicies}
 // numRules: {numRules}
 // ---------------------------------------------------------------------------
 
-{policyItems}
+{zoneRules}
+
+// ---------------------------------------------------------------------------
+// ZonePolicies are indexes into the ZoneRules.
+// Supported zone policies: {numPolicies}
+// ---------------------------------------------------------------------------
+
+{zonePolicies}
 
 // ---------------------------------------------------------------------------
 // Unsupported zone policies: {numRemovedPolicies}
@@ -303,7 +314,11 @@ const (
     # ------------------------------------------------------------------------
 
     def _generate_policies(self) -> str:
-        num_rules, policy_items = self._generate_policy_items(self.policies_map)
+        zone_rules_string = self._generate_rules_string(self.policies_map)
+        policy_index_map, num_rules = self._generate_policy_index_map(
+            self.policies_map
+        )
+        zone_policies_string = self._generate_policies_string(policy_index_map)
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
@@ -319,7 +334,8 @@ const (
             dbNamespace=self.db_namespace,
             numPolicies=len(self.policies_map),
             numRules=num_rules,
-            policyItems=policy_items,
+            zoneRules=zone_rules_string,
+            zonePolicies=zone_policies_string,
             numRemovedPolicies=len(self.removed_policies),
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
@@ -328,19 +344,43 @@ const (
             letterOffsets=letter_offsets,
         )
 
-    def _generate_policy_items(
-        self,
-        policies_map: PoliciesMap,
-    ) -> Tuple[int, str]:
-        num_rules = 0
-        policy_items = ''
-        for name, rules in sorted(policies_map.items()):
-            policy_items += self._generate_policy_item(name, rules)
-            num_rules += len(rules)
-        return (num_rules, policy_items)
+    def _generate_policy_index_map(
+        self, policies_map: PoliciesMap
+    ) -> Tuple[IndexSizeMap, int]:
 
-    def _generate_policy_item(self, name: str, rules: List[ZoneRuleRaw]) -> str:
-        rule_items = ''
+        policy_index = 0
+        rules_index = 0
+        index_map: IndexSizeMap = {}
+        index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
+        for policy_name, rules in sorted(policies_map.items()):
+            index_map[policy_name] = (policy_index, rules_index, len(rules))
+            rules_index += len(rules)
+            policy_index += 1
+        return index_map, rules_index
+
+    def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
+        zone_rules_string = """\
+var ZoneRules = []zoneinfo.ZoneRule{{
+"""
+        for policy_name, rules in sorted(policies_map.items()):
+            zone_rules_string += self._generate_rule_items_string(
+                policy_name, rules)
+            zone_rules_string += '\n'
+        zone_rules_string += """\
+}}
+"""
+        return zone_rules_string
+
+    def _generate_rule_items_string(
+        self, policy_name: str, rules: List[ZoneRuleRaw]
+    ) -> str:
+        rule_items_string = f"""\
+\t// ---------------------------------------------------------------------------
+\t// Policy name: {policy_name}
+\t// Rule count: {len(rules)}
+\t// ---------------------------------------------------------------------------
+
+"""
         for rule in rules:
             at_time_modifier_comment = _get_time_modifier_comment(
                 time_seconds=rule['at_seconds_truncated'],
@@ -369,7 +409,7 @@ const (
             delta_code = rule['delta_code_encoded']
             letter_comment = f'"{letter}"'
 
-            rule_items += f"""\
+            rule_items_string += f"""\
 \t// {raw_line}
 \t{{
 \t\tFromYear: {from_year},
@@ -383,23 +423,26 @@ const (
 \t\tLetterIndex: {letter_index}, // {letter_comment}
 \t}},
 """
+        return rule_items_string
 
-        policy_name = normalize_name(name)
-        num_rules = len(rules)
-        return f"""\
-// ---------------------------------------------------------------------------
-// Policy name: {policy_name}
-// Rule count: {num_rules}
-// ---------------------------------------------------------------------------
-var ZoneRules{policy_name} = []zoneinfo.ZoneRule{{
-{rule_items}
-}}
-
-var ZonePolicy{policy_name} = zoneinfo.ZonePolicy{{
-\tRules: ZoneRules{policy_name},
-}}
-
+    def _generate_policies_string(self, policy_index_map: IndexSizeMap) -> str:
+        zone_policies_string = """\
+var ZonePolicies = []zoneinfo.ZonePolicy{{
 """
+
+        for policy_name, value in policy_index_map.items():
+            index = value[0]
+            rule_index = value[1]
+            size = value[2]
+            if policy_name == "":
+                policy_name = "(None)"
+            zone_policies_string += f"""\
+\t{rule_index, size}, // {index}: Policy {policy_name}
+"""
+        zone_policies_string += """\
+}}
+"""
+        return zone_policies_string
 
     # ------------------------------------------------------------------------
     # Zone Infos
