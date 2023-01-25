@@ -297,6 +297,7 @@ const (
         self.policy_index_map, self.num_rules = self._generate_policy_index_map(
             self.policies_map
         )
+        # Zones only
         self.info_index_map, self.num_eras = self._generate_info_index_map(
             self.zones_map
         )
@@ -481,7 +482,7 @@ var ZonePolicies = []zoneinfo.ZonePolicy{
 
     def _generate_infos(self) -> str:
         zone_eras_string = self._generate_eras_string(self.zones_map)
-        zone_infos_string = self._generate_infos_string(self.info_index_map)
+        zone_infos_string = self._generate_infos_string()
 
         removed_info_items = _render_comments_map(self.removed_zones)
         # notable_info_items = _render_comments_map(self.notable_zones)
@@ -530,6 +531,7 @@ var ZonePolicies = []zoneinfo.ZonePolicy{
     def _generate_info_index_map(
         self, zones_map: ZonesMap
     ) -> Tuple[IndexSizeMap, int]:
+        """Create a map of {zone_name -> (info_index, era_index, era_size)}."""
 
         info_index = 0
         eras_index = 0
@@ -620,7 +622,7 @@ var ZoneEras = []zoneinfo.ZoneEra{
 
         return era_items_string
 
-    def _generate_infos_string(self, info_index_map: IndexSizeMap) -> str:
+    def _generate_infos_string(self) -> str:
         zone_infos_string = """\
 var ZoneInfos = []zoneinfo.ZoneInfo{
 """
@@ -630,19 +632,22 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             target_name = self.links_map.get(name)
             if target_name is None:  # Zone
                 desc_name = f'Zone {name}'
+                zone_id = self.zone_ids[name]
+                indexes = self.info_index_map[name]
+                era_index = indexes[1]
+                era_count = indexes[2]
+                era_count_desc = ''
                 target_index = 0
                 target_desc = ''
-                zone_id = self.zone_ids[name]
-                indexes = info_index_map[name]
             else:  # Link
                 desc_name = f'Link {name} -> {target_name}'
-                target_index = info_index_map[target_name][0]
-                target_desc = f' // {target_name}'
                 zone_id = self.link_ids[name]
-                indexes = info_index_map[target_name]  # symlink to target
+                era_index = 0
+                era_count = 0
+                era_count_desc = ' // IsLink=true'
+                target_index = self.zone_and_link_index_map[target_name]
+                target_desc = f' // {target_name}'
             name_index = self.names_map[name][0]
-            era_index = indexes[1]
-            size = indexes[2]
 
             zone_infos_string += f"""\
 \t// {combined_index}: {desc_name}
@@ -650,7 +655,7 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
 \t\tZoneID: 0x{zone_id:08x},
 \t\tNameIndex: {name_index}, // "{name}"
 \t\tEraIndex: {era_index},
-\t\tEraCount: {size},
+\t\tEraCount: {era_count},{era_count_desc}
 \t\tTargetIndex: {target_index},{target_desc}
 \t}},
 """
@@ -666,8 +671,8 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
     # ------------------------------------------------------------------------
 
     def _generate_registry(self) -> str:
-        zone_and_link_ids = self._generate_zone_and_link_ids()
-        zone_and_link_indexes = self._generate_zone_and_link_indexes()
+        zone_and_link_ids_string = self._generate_zone_and_link_ids()
+        zone_and_link_indexes_string = self._generate_zone_and_link_indexes()
 
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
@@ -679,8 +684,8 @@ var ZoneInfos = []zoneinfo.ZoneInfo{
             numZones=len(self.zones_map),
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
-            zoneAndLinkIds=zone_and_link_ids,
-            zoneAndLinkIndexes=zone_and_link_indexes,
+            zoneAndLinkIds=zone_and_link_ids_string,
+            zoneAndLinkIndexes=zone_and_link_indexes_string,
         )
 
     def _generate_zone_and_link_ids(self) -> str:
