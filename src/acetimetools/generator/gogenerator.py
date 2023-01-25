@@ -14,7 +14,6 @@ from typing import Tuple
 from acetimetools.data_types.at_types import ZoneEraRaw
 from acetimetools.data_types.at_types import ZoneRuleRaw
 from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
@@ -134,7 +133,7 @@ var (
 \t// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
 \tFormatOffsets = []uint16{{
 {formatOffsets}
-\t}}
+}}
 
 \t// Byte offset into NameData for each index. The actual Letter string
 \t// at index `i` given by the `ZoneRule.Name` field is
@@ -145,17 +144,21 @@ var (
 )
 
 // ---------------------------------------------------------------------------
+// ZoneEras is an array of zoneinfo.ZoneEra items concatenated together.
+//
 // Supported zones: {numInfos}
 // numEras: {numEras}
 // ---------------------------------------------------------------------------
 
-{infoItems}
+{zoneEras}
 
 // ---------------------------------------------------------------------------
-// Supported links: {numLinks}
+// ZoneInfos is an array of zoneinfo.ZoneInfo items concatenated together.
+//
+// Total: {numZonesAndLinks} ({numInfos} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
-{linkItems}
+{zoneInfos}
 
 // ---------------------------------------------------------------------------
 // Unsuported zones: {numRemovedInfos}
@@ -180,21 +183,6 @@ var (
 // ---------------------------------------------------------------------------
 
 {notableLinkItems}
-"""
-
-    ZONE_ERA_ITEM = """\
-\t// {raw_line}
-\t{{
-\t\tZonePolicy: {zone_policy},
-\t\tFormatIndex: {format_index}, // {format_comment}
-\t\tOffsetCode: {offset_code},
-\t\tDeltaCode: {delta_code}, // {delta_code_comment}
-\t\tUntilYear: {until_year},
-\t\tUntilMonth: {until_month},
-\t\tUntilDay: {until_day},
-\t\tUntilTimeCode: {until_time_code},
-\t\tUntilTimeModifier: {until_time_modifier}, // {until_time_modifier_comment}
-\t}},
 """
 
     ZONE_REGISTRY_FILE = """\
@@ -293,6 +281,13 @@ const (
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
 
+        self.policy_index_map, self.num_rules = self._generate_policy_index_map(
+            self.policies_map
+        )
+        self.info_index_map, self.num_eras = self._generate_info_index_map(
+            self.zones_map
+        )
+
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
                          self._generate_policies())
@@ -315,10 +310,9 @@ const (
 
     def _generate_policies(self) -> str:
         zone_rules_string = self._generate_rules_string(self.policies_map)
-        policy_index_map, num_rules = self._generate_policy_index_map(
-            self.policies_map
-        )
-        zone_policies_string = self._generate_policies_string(policy_index_map)
+        zone_policies_string = self._generate_policies_string(
+            self.policy_index_map)
+
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
@@ -333,7 +327,7 @@ const (
             tz_files=self.tz_files,
             dbNamespace=self.db_namespace,
             numPolicies=len(self.policies_map),
-            numRules=num_rules,
+            numRules=self.num_rules,
             zoneRules=zone_rules_string,
             zonePolicies=zone_policies_string,
             numRemovedPolicies=len(self.removed_policies),
@@ -351,7 +345,10 @@ const (
         policy_index = 0
         rules_index = 0
         index_map: IndexSizeMap = {}
+
         index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
+        policy_index += 1
+
         for policy_name, rules in sorted(policies_map.items()):
             index_map[policy_name] = (policy_index, rules_index, len(rules))
             rules_index += len(rules)
@@ -360,24 +357,30 @@ const (
 
     def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
         zone_rules_string = """\
-var ZoneRules = []zoneinfo.ZoneRule{{
+var ZoneRules = []zoneinfo.ZoneRule{
 """
+        rule_index = 0
         for policy_name, rules in sorted(policies_map.items()):
             zone_rules_string += self._generate_rule_items_string(
-                policy_name, rules)
+                policy_name, rule_index, rules)
+            rule_index += len(rules)
             zone_rules_string += '\n'
         zone_rules_string += """\
-}}
+}
 """
         return zone_rules_string
 
     def _generate_rule_items_string(
-        self, policy_name: str, rules: List[ZoneRuleRaw]
+        self,
+        policy_name: str,
+        rule_index: int,
+        rules: List[ZoneRuleRaw]
     ) -> str:
         rule_items_string = f"""\
 \t// ---------------------------------------------------------------------------
-\t// Policy name: {policy_name}
-\t// Rule count: {len(rules)}
+\t// PolicyName: {policy_name}
+\t// RuleIndex: {rule_index}
+\t// RuleCount: {len(rules)}
 \t// ---------------------------------------------------------------------------
 
 """
@@ -427,20 +430,21 @@ var ZoneRules = []zoneinfo.ZoneRule{{
 
     def _generate_policies_string(self, policy_index_map: IndexSizeMap) -> str:
         zone_policies_string = """\
-var ZonePolicies = []zoneinfo.ZonePolicy{{
+var ZonePolicies = []zoneinfo.ZonePolicy{
 """
 
-        for policy_name, value in policy_index_map.items():
-            index = value[0]
-            rule_index = value[1]
-            size = value[2]
+        for policy_name, indexes in policy_index_map.items():
+            index = indexes[0]
+            rule_index = indexes[1]
+            size = indexes[2]
             if policy_name == "":
                 policy_name = "(None)"
             zone_policies_string += f"""\
-\t{rule_index, size}, // {index}: Policy {policy_name}
+\t{{RuleIndex: {rule_index}, RuleCount: {size}}}, \
+// {index}: PolicyName: {policy_name}
 """
         zone_policies_string += """\
-}}
+}
 """
         return zone_policies_string
 
@@ -449,8 +453,9 @@ var ZonePolicies = []zoneinfo.ZonePolicy{{
     # ------------------------------------------------------------------------
 
     def _generate_infos(self) -> str:
-        (num_eras, info_items) = self._generate_info_items(self.zones_map)
-        link_items = self._generate_link_items(self.links_map)
+        zone_eras_string = self._generate_eras_string(self.zones_map)
+        zone_infos_string = self._generate_infos_string(self.info_index_map)
+
         removed_info_items = _render_comments_map(self.removed_zones)
         # notable_info_items = _render_comments_map(self.notable_zones)
         notable_info_items = _render_merged_comments_map(
@@ -475,11 +480,12 @@ var ZonePolicies = []zoneinfo.ZonePolicy{{
             dbNamespace=self.db_namespace,
             start_year=self.start_year,
             until_year=self.until_year,
+            numEras=self.num_eras,
             numInfos=len(self.zones_map),
-            numEras=num_eras,
-            infoItems=info_items,
             numLinks=len(self.links_map),
-            linkItems=link_items,
+            numZonesAndLinks=len(self.zones_and_links),
+            zoneEras=zone_eras_string,
+            zoneInfos=zone_infos_string,
             numRemovedInfos=len(self.removed_zones),
             removedInfoItems=removed_info_items,
             numNotableInfos=len(self.notable_zones),
@@ -494,108 +500,144 @@ var ZonePolicies = []zoneinfo.ZonePolicy{{
             nameOffsets=name_offsets,
         )
 
-    def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
-        info_items = ''
-        num_eras = 0
-        for name, eras in sorted(self.zones_map.items()):
-            info_items += self._generate_info_item(name, eras)
-            num_eras += len(eras)
-        return (num_eras, info_items)
+    def _generate_info_index_map(
+        self, zones_map: ZonesMap
+    ) -> Tuple[IndexSizeMap, int]:
 
-    # TODO: Remove {link -> map} array
-    def _generate_link_items(self, links_map: LinksMap) -> str:
-        link_items = ''
-        for link_name, zone_name in sorted(links_map.items()):
-            link_normalized_name = normalize_name(link_name)
-            zone_normalized_name = normalize_name(zone_name)
-            start_year = self.start_year
-            until_year = self.until_year
-            link_id = self.link_ids[link_name]
-            name_index = self.names_map[link_name][0]
+        info_index = 0
+        eras_index = 0
+        index_map: IndexSizeMap = {}
+        for zone_name, eras in sorted(zones_map.items()):
+            index_map[zone_name] = (info_index, eras_index, len(eras))
+            eras_index += len(eras)
+            info_index += 1
+        return index_map, eras_index
 
-            link_items += f"""\
-// Link: {link_name} -> {zone_name}
-var Zone{link_normalized_name} = zoneinfo.ZoneInfo{{
-\tNameIndex: {name_index}, // "{link_name}"
-\tZoneID: 0x{link_id:08x},
-\tStartYear: {start_year},
-\tUntilYear: {until_year},
-\tEras: nil,
-\tTarget: &Zone{zone_normalized_name},
-}}
-
+    def _generate_eras_string(self, zones_map: ZonesMap) -> str:
+        zone_eras_string = """\
+var ZoneEras = []zoneinfo.ZoneEra{
 """
-        return link_items
+        era_index = 0
+        for zone_name, eras in sorted(self.zones_map.items()):
+            zone_eras_string += self._generate_era_items_string(
+                zone_name, era_index, eras, self.policy_index_map)
+            era_index += len(eras)
+        zone_eras_string += """\
+}
+"""
+        return zone_eras_string
 
-    def _generate_info_item(
-        self, zone_name: str, eras: List[ZoneEraRaw],
+    def _generate_era_items_string(
+        self,
+        zone_name: str,
+        era_index: int,
+        eras: List[ZoneEraRaw],
+        policy_index_map: IndexSizeMap,
     ) -> str:
-        era_items = ''
-        for era in eras:
-            era_items += self._generate_era_item(era)
-
-        name_index = self.names_map[zone_name][0]
-
-        zone_normalized_name = normalize_name(zone_name)
-        zone_id = self.zone_ids[zone_name]
-        num_eras = len(eras)
-        return f"""\
-// ---------------------------------------------------------------------------
-// Zone name: {zone_name}
-// Era count: {num_eras}
-// ---------------------------------------------------------------------------
-
-var ZoneEra{zone_normalized_name} = []zoneinfo.ZoneEra{{
-{era_items}
-}}
-
-var Zone{zone_normalized_name} = zoneinfo.ZoneInfo{{
-\tZoneID: 0x{zone_id:08x},
-\tNameIndex: {name_index}, // "{zone_name}"
-\tStartYear: {self.start_year},
-\tUntilYear: {self.until_year},
-\tEras: ZoneEra{zone_normalized_name},
-\tTarget: nil,
-}}
+        era_items_string = f"""\
+\t// ---------------------------------------------------------------------------
+\t// ZoneName: {zone_name}
+\t// EraIndex: {era_index}
+\t// EraCount: {len(eras)}
+\t// ---------------------------------------------------------------------------
 
 """
+        for era in eras:
+            policy_name = era['rules']
+            if policy_name in ['-', ':']:
+                policy_name = ""
+            zone_policy_index = policy_index_map[policy_name][0]
+            if policy_name == "":
+                policy_name = "(none)"
 
-    def _generate_era_item(self, era: ZoneEraRaw) -> str:
-        policy_name = era['rules']
-        if policy_name in ['-', ':']:
-            zone_policy = "nil"
-        else:
-            zone_policy = f'&ZonePolicy{normalize_name(policy_name)}'
-        delta_code_comment = _get_era_delta_code_comment(
-            offset_seconds=era['offset_seconds_truncated'],
-            delta_seconds=era['rules_delta_seconds_truncated'],
-            scope='extended',
-        )
-        until_time_modifier_comment = _get_time_modifier_comment(
-            time_seconds=era['until_seconds_truncated'],
-            suffix=era['until_time_suffix'],
-        )
+            delta_code_comment = _get_era_delta_code_comment(
+                offset_seconds=era['offset_seconds_truncated'],
+                delta_seconds=era['rules_delta_seconds_truncated'],
+                scope='extended',
+            )
+            until_time_modifier_comment = _get_time_modifier_comment(
+                time_seconds=era['until_seconds_truncated'],
+                suffix=era['until_time_suffix'],
+            )
 
-        # Find the index for the 'format' field.
-        format_short = era['format_short']
-        entry = self.formats_map[format_short]
-        format_index = entry[0]  # entry[1] is the byte offset
+            # Find the index for the 'format' field.
+            format_short = era['format_short']
+            entry = self.formats_map[format_short]
+            format_index = entry[0]  # (index, offset)
 
-        return self.ZONE_ERA_ITEM.format(
-            raw_line=normalize_raw(era['raw_line']),
-            zone_policy=zone_policy,
-            format_index=format_index,
-            format_comment=f'"{format_short}"',
-            offset_code=era['offset_code'],
-            delta_code=era['delta_code_encoded'],
-            delta_code_comment=delta_code_comment,
-            until_year=era['until_year'],
-            until_month=era['until_month'],
-            until_day=era['until_day'],
-            until_time_code=era['until_time_code'],
-            until_time_modifier=era['until_time_modifier'],
-            until_time_modifier_comment=until_time_modifier_comment,
-        )
+            raw_line = normalize_raw(era['raw_line'])
+            format_comment = f'"{format_short}"'
+            offset_code = era['offset_code']
+            delta_code = era['delta_code_encoded']
+            until_year = era['until_year']
+            until_month = era['until_month']
+            until_day = era['until_day']
+            until_time_code = era['until_time_code']
+            until_time_modifier = era['until_time_modifier']
+
+            era_items_string += f"""\
+\t// {raw_line}
+\t{{
+\t\tPolicyIndex: {zone_policy_index}, // PolicyName: {policy_name}
+\t\tFormatIndex: {format_index}, // {format_comment}
+\t\tOffsetCode: {offset_code},
+\t\tDeltaCode: {delta_code}, // {delta_code_comment}
+\t\tUntilYear: {until_year},
+\t\tUntilMonth: {until_month},
+\t\tUntilDay: {until_day},
+\t\tUntilTimeCode: {until_time_code},
+\t\tUntilTimeModifier: {until_time_modifier}, // {until_time_modifier_comment}
+\t}},
+"""
+            era_items_string += '\n'
+
+        return era_items_string
+
+    def _generate_infos_string(self, info_index_map: IndexSizeMap) -> str:
+        zone_infos_string = """\
+var ZoneInfos = []zoneinfo.ZoneInfo{
+"""
+        # Loop over all zones and links, sorted by zoneId/linkId.
+        combined_index = 0
+        for zone_name in sorted(
+            self.zones_and_links,
+            key=lambda x: self.zone_and_link_ids[x],
+        ):
+            target_name = self.links_map.get(zone_name)
+            if target_name is None:  # Zone
+                desc_name = f'Zone {zone_name}'
+                target_index = 0
+                target_desc = ''
+                zone_id = self.zone_ids[zone_name]
+                indexes = info_index_map[zone_name]
+            else:  # Link
+                desc_name = f'Link {zone_name} -> {target_name}'
+                target_index = info_index_map[target_name][0]
+                target_desc = f' // {target_name}'
+                zone_id = self.link_ids[zone_name]
+                indexes = info_index_map[target_name]  # symlink to target
+            name_index = self.names_map[zone_name][0]
+            era_index = indexes[1]
+            size = indexes[2]
+
+            zone_infos_string += f"""\
+\t// {combined_index}: {desc_name}
+\t{{
+\t\tZoneID: 0x{zone_id:08x},
+\t\tNameIndex: {name_index}, // "{zone_name}"
+\t\tStartYear: {self.start_year},
+\t\tUntilYear: {self.until_year},
+\t\tEraIndex: {era_index},
+\t\tEraCount: {size},
+\t\tTargetIndex: {target_index},{target_desc}
+\t}},
+"""
+            combined_index += 1
+
+        zone_infos_string += """\
+}
+"""
+        return zone_infos_string
 
     # ------------------------------------------------------------------------
     # Zone Registry
@@ -619,7 +661,7 @@ var Zone{zone_normalized_name} = zoneinfo.ZoneInfo{{
 
     def _generate_zone_and_link_registry_items(self) -> str:
         """Generate a map of (zone_name -> zoneInfo), for all zones and links,
-        sorted by name.
+        sorted by zoneId and linkId.
         """
         zone_and_link_registry_items = ''
         for zone_name in sorted(
