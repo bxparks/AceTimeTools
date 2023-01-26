@@ -22,6 +22,10 @@ from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
+from acetimetools.generator.byteutils import convert_to_go_string
+from acetimetools.generator.byteutils import write_u8
+from acetimetools.generator.byteutils import write_u16
+from acetimetools.generator.byteutils import write_u32
 
 
 class GoGenerator:
@@ -67,25 +71,39 @@ var (
 )
 
 // ---------------------------------------------------------------------------
-// ZoneRules is a concatenated array of zoneinfo.ZoneInfo objects from all
-// ZonePolicies.
+// ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
+// from all ZonePolicyRecords.
 //
 // Supported zone policies: {numPolicies}
 // numRules: {numRules}
 // ---------------------------------------------------------------------------
 
-var ZoneRules = []zoneinfo.ZoneRule{{
+var ZoneRuleRecords = []zoneinfo.ZoneRuleRecord{{
 {zoneRules}
 }}
 
+const ZoneRuleCount = {zoneRuleCount}
+
+const ZoneRuleChunkSize = {zoneRuleChunkSize}
+
+// ZoneRulesData contains the ZoneRuleRecords data as a hex encoded string.
+const ZoneRulesData = {zoneRulesData}
+
 // ---------------------------------------------------------------------------
-// ZonePolicies are indexes into the ZoneRules.
+// ZonePolicyRecords contain indexes into the ZoneRuleRecords.
 // Supported zone policies: {numPolicies}
 // ---------------------------------------------------------------------------
 
-var ZonePolicies = []zoneinfo.ZonePolicy{{
+var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
 {zonePolicies}
 }}
+
+const ZonePolicyCount = {zonePolicyCount}
+
+const ZonePolicyChunkSize = {zonePolicyChunkSize}
+
+// ZonePoliciesData contains the ZonePolicyRecords data as a hex encoded string.
+const ZonePoliciesData = {zonePoliciesData}
 
 // ---------------------------------------------------------------------------
 // Unsupported zone policies: {numRemovedPolicies}
@@ -149,25 +167,41 @@ var (
 )
 
 // ---------------------------------------------------------------------------
-// ZoneEras is an array of zoneinfo.ZoneEra items concatenated together.
+// ZoneEraRecords is an array of zoneinfo.ZoneEraRecord items concatenated
+// together.
 //
 // Supported zones: {numInfos}
 // numEras: {numEras}
 // ---------------------------------------------------------------------------
 
-var ZoneEras = []zoneinfo.ZoneEra{{
+var ZoneEraRecords = []zoneinfo.ZoneEraRecord{{
 {zoneEras}
 }}
 
+const ZoneEraCount = {zoneEraCount}
+
+const ZoneEraChunkSize = {zoneEraChunkSize}
+
+// ZoneErasData contains the ZoneEraRecords data as a hex encoded string.
+const ZoneErasData = {zoneErasData}
+
 // ---------------------------------------------------------------------------
-// ZoneInfos is an array of zoneinfo.ZoneInfo items concatenated together.
+// ZoneInfoRecords is an array of zoneinfo.ZoneInfoRecord items concatenated
+// together.
 //
 // Total: {numZonesAndLinks} ({numInfos} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
-var ZoneInfos = []zoneinfo.ZoneInfo{{
+var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
 {zoneInfos}
 }}
+
+const ZoneInfoCount = {zoneInfoCount}
+
+const ZoneInfoChunkSize = {zoneInfoChunkSize}
+
+// ZoneInfosData contains the ZoneInfoRecords data as a hex encoded string.
+const ZoneInfosData = {zoneInfosData}
 
 // ---------------------------------------------------------------------------
 // Unsuported zones: {numRemovedInfos}
@@ -219,7 +253,7 @@ import (
 
 const TzDatabaseVersion string = "{tz_version}"
 
-var Context = zoneinfo.ZoneContext{{
+var RecordContext = zoneinfo.ZoneRecordContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
 \tStartYear: {startYear},
 \tUntilYear: {untilYear},
@@ -229,10 +263,34 @@ var Context = zoneinfo.ZoneContext{{
 \tFormatOffsets: FormatOffsets,
 \tNameData: NameData,
 \tNameOffsets: NameOffsets,
-\tZoneRules: ZoneRules,
-\tZonePolicies: ZonePolicies,
-\tZoneEras: ZoneEras,
-\tZoneInfos: ZoneInfos,
+\tZoneRuleRecords: ZoneRuleRecords,
+\tZonePolicyRecords: ZonePolicyRecords,
+\tZoneEraRecords: ZoneEraRecords,
+\tZoneInfoRecords: ZoneInfoRecords,
+}}
+
+var DataContext = zoneinfo.ZoneDataContext{{
+\tTzDatabaseVersion: TzDatabaseVersion,
+\tStartYear: {startYear},
+\tUntilYear: {untilYear},
+\tLetterData: LetterData,
+\tLetterOffsets: LetterOffsets,
+\tFormatData: FormatData,
+\tFormatOffsets: FormatOffsets,
+\tNameData: NameData,
+\tNameOffsets: NameOffsets,
+\tZoneRuleChunkSize: ZoneRuleChunkSize,
+\tZonePolicyChunkSize: ZonePolicyChunkSize,
+\tZoneEraChunkSize: ZoneEraChunkSize,
+\tZoneInfoChunkSize: ZoneInfoChunkSize,
+\tZoneRuleCount: ZoneRuleCount,
+\tZonePolicyCount: ZonePolicyCount,
+\tZoneEraCount: ZoneEraCount,
+\tZoneInfoCount: ZoneInfoCount,
+\tZoneRulesData: ZoneRulesData,
+\tZonePoliciesData: ZonePoliciesData,
+\tZoneErasData: ZoneErasData,
+\tZoneInfosData: ZoneInfosData,
 }}
 
 // ---------------------------------------------------------------------------
@@ -249,7 +307,7 @@ const (
 )
 
 // ---------------------------------------------------------------------------
-// Zone Indexes. Index into the ZoneInfos array. Intended for unit tests
+// Zone Indexes. Index into the ZoneInfoRecords array. Intended for unit tests
 // which need direct access to the zoneinfo.ZoneInfo struct.
 //
 // Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
@@ -346,8 +404,21 @@ const (
 
     def _generate_policies(self) -> str:
         zone_rules_string = self._generate_rules_string(self.policies_map)
+        zone_rules_data, chunk_size, count = self._generate_rules_data(
+            self.policies_map)
+        zone_rules_data_string = convert_to_go_string(
+            zone_rules_data, chunk_size, '\t\t')
+        zone_rule_chunk_size = chunk_size
+        zone_rule_count = count
+
         zone_policies_string = self._generate_policies_string(
             self.policy_index_map)
+        zone_policies_data, chunk_size, count = self._generate_policies_data(
+            self.policy_index_map)
+        zone_policies_data_string = convert_to_go_string(
+            zone_policies_data, chunk_size, '\t\t')
+        zone_policy_chunk_size = chunk_size
+        zone_policy_count = count
 
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
@@ -365,7 +436,13 @@ const (
             numPolicies=len(self.policies_map),
             numRules=self.num_rules,
             zoneRules=zone_rules_string,
+            zoneRulesData=zone_rules_data_string,
+            zoneRuleChunkSize=zone_rule_chunk_size,
+            zoneRuleCount=zone_rule_count,
             zonePolicies=zone_policies_string,
+            zonePoliciesData=zone_policies_data_string,
+            zonePolicyChunkSize=zone_policy_chunk_size,
+            zonePolicyCount=zone_policy_count,
             numRemovedPolicies=len(self.removed_policies),
             removedPolicyItems=removed_policy_items,
             numNotablePolicies=len(self.notable_policies),
@@ -459,19 +536,69 @@ const (
 """
         return rule_items_string
 
+    def _generate_rules_data(
+        self, policies_map: PoliciesMap
+    ) -> Tuple[bytearray, int, int]:
+        """Return the bytearray encoding of the ZoneRuleRecords, and the size of
+        each encoded ZoneRule.
+        """
+
+        chunk_size = 11
+        data = bytearray()
+        count = 0
+        for policy_name, rules in sorted(policies_map.items()):
+            count += len(rules)
+            for rule in rules:
+                self._generate_rule_data(data, rule)
+        return data, chunk_size, count
+
+    def _generate_rule_data(self, data: bytearray, rule: ZoneRuleRaw) -> None:
+        # Find the index for the 'letter' field.
+        letter = rule['letter']
+        if letter == '-':
+            letter = ''
+        entry = self.letters_map[letter]
+        letter_index = entry[0]  # entry[1] is the byte offset
+
+        # chunk_size = 11 bytes
+        write_u16(data, rule['from_year'])
+        write_u16(data, rule['to_year'])
+        write_u8(data, rule['in_month'])
+        write_u8(data, rule['on_day_of_week'])
+        write_u8(data, rule['on_day_of_month'])
+        write_u8(data, rule['at_time_code'])
+        write_u8(data, rule['at_time_modifier'])
+        write_u8(data, rule['delta_code_encoded'])
+        write_u8(data, letter_index)
+
     def _generate_policies_string(self, policy_index_map: IndexSizeMap) -> str:
         zone_policies_string = ''
         for policy_name, indexes in policy_index_map.items():
             index = indexes[0]
             rule_index = indexes[1]
-            size = indexes[2]
+            rule_count = indexes[2]
             if policy_name == "":
                 policy_name = "(None)"
             zone_policies_string += f"""\
-\t{{RuleIndex: {rule_index}, RuleCount: {size}}}, \
+\t{{RuleIndex: {rule_index}, RuleCount: {rule_count}}}, \
 // {index}: PolicyName: {policy_name}
 """
         return zone_policies_string
+
+    def _generate_policies_data(
+        self, policy_index_map: IndexSizeMap
+    ) -> Tuple[bytearray, int, int]:
+        """Return the bytearray encoding of the ZonePolicyRecords, and the size
+        of each encoded ZonePolicy.
+        """
+        chunk_size = 4
+        data = bytearray()
+        for policy_name, indexes in policy_index_map.items():
+            rule_index = indexes[1]
+            rule_count = indexes[2]
+            write_u16(data, rule_index)
+            write_u16(data, rule_count)
+        return data, chunk_size, len(policy_index_map)
 
     # ------------------------------------------------------------------------
     # Zone Infos
@@ -479,7 +606,19 @@ const (
 
     def _generate_infos(self) -> str:
         zone_eras_string = self._generate_eras_string(self.zones_map)
+        zone_eras_data, chunk_size, count = self._generate_eras_data(
+            self.zones_map)
+        zone_eras_data_string = convert_to_go_string(
+            zone_eras_data, chunk_size, '\t\t')
+        zone_era_chunk_size = chunk_size
+        zone_era_count = count
+
         zone_infos_string = self._generate_infos_string()
+        zone_infos_data, chunk_size, count = self._generate_infos_data()
+        zone_infos_data_string = convert_to_go_string(
+            zone_infos_data, chunk_size, '\t\t')
+        zone_info_chunk_size = chunk_size
+        zone_info_count = count
 
         removed_info_items = _render_comments_map(self.removed_zones)
         # notable_info_items = _render_comments_map(self.notable_zones)
@@ -510,7 +649,13 @@ const (
             numLinks=len(self.links_map),
             numZonesAndLinks=len(self.zones_and_links),
             zoneEras=zone_eras_string,
+            zoneErasData=zone_eras_data_string,
+            zoneEraChunkSize=zone_era_chunk_size,
+            zoneEraCount=zone_era_count,
             zoneInfos=zone_infos_string,
+            zoneInfosData=zone_infos_data_string,
+            zoneInfoChunkSize=zone_info_chunk_size,
+            zoneInfoCount=zone_info_count,
             numRemovedInfos=len(self.removed_zones),
             removedInfoItems=removed_info_items,
             numNotableInfos=len(self.notable_zones),
@@ -567,7 +712,7 @@ const (
             policy_name = era['rules']
             if policy_name in ['-', ':']:
                 policy_name = ""
-            zone_policy_index = policy_index_map[policy_name][0]
+            policy_index = policy_index_map[policy_name][0]
             if policy_name == "":
                 policy_name = "(none)"
 
@@ -599,7 +744,7 @@ const (
             era_items_string += f"""\
 \t// {raw_line}
 \t{{
-\t\tPolicyIndex: {zone_policy_index}, // PolicyName: {policy_name}
+\t\tPolicyIndex: {policy_index}, // PolicyName: {policy_name}
 \t\tFormatIndex: {format_index}, // {format_comment}
 \t\tOffsetCode: {offset_code},
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
@@ -613,6 +758,48 @@ const (
             era_items_string += '\n'
 
         return era_items_string
+
+    def _generate_eras_data(
+        self, zones_map: ZonesMap
+    ) -> Tuple[bytearray, int, int]:
+        count = 0
+        chunk_size = 11
+        data = bytearray()
+        for zone_name, eras in sorted(self.zones_map.items()):
+            count += len(eras)
+            for era in eras:
+                self._generate_era_data(data, era)
+        return data, chunk_size, count
+
+    def _generate_era_data(self, data: bytearray, era: ZoneEraRaw) -> None:
+        policy_name = era['rules']
+        if policy_name in ['-', ':']:
+            policy_name = ""
+        policy_index = self.policy_index_map[policy_name][0]
+
+        # Find the index for the 'format' field.
+        format_short = era['format_short']
+        entry = self.formats_map[format_short]
+        format_index = entry[0]  # (index, offset)
+
+        offset_code = era['offset_code']
+        delta_code = era['delta_code_encoded']
+        until_year = era['until_year']
+        until_month = era['until_month']
+        until_day = era['until_day']
+        until_time_code = era['until_time_code']
+        until_time_modifier = era['until_time_modifier']
+
+        # chunk size = 11 bytes
+        write_u16(data, format_index)
+        write_u8(data, policy_index)
+        write_u8(data, offset_code)
+        write_u8(data, delta_code)
+        write_u16(data, until_year)
+        write_u8(data, until_month)
+        write_u8(data, until_day)
+        write_u8(data, until_time_code)
+        write_u8(data, until_time_modifier)
 
     def _generate_infos_string(self) -> str:
         zone_infos_string = ''
@@ -651,6 +838,32 @@ const (
 """
             combined_index += 1
         return zone_infos_string
+
+    def _generate_infos_data(self) -> Tuple[bytearray, int, int]:
+        chunk_size = 12
+        data = bytearray()
+        # Loop over all zones and links, sorted by zoneId/linkId.
+        for name in self.zone_and_link_index_map:
+            target_name = self.links_map.get(name)
+            if target_name is None:  # Zone
+                zone_id = self.zone_ids[name]
+                indexes = self.info_index_map[name]
+                era_index = indexes[1]
+                era_count = indexes[2]
+                target_index = 0
+            else:  # Link
+                zone_id = self.link_ids[name]
+                era_index = 0
+                era_count = 0
+                target_index = self.zone_and_link_index_map[target_name]
+            name_index = self.names_map[name][0]
+
+            write_u32(data, zone_id)
+            write_u16(data, name_index)
+            write_u16(data, era_index)
+            write_u16(data, era_count)
+            write_u16(data, target_index)
+        return data, chunk_size, len(self.zone_and_link_index_map)
 
     # ------------------------------------------------------------------------
     # Zone Registry
@@ -691,8 +904,8 @@ const (
 
     def _generate_zone_and_link_indexes(self) -> str:
         """Generate a list of constants of the form ZoneInfoIndex{zoneName},
-        sorted by name. These are the indexes into the ZoneInfos array and are
-        intended for unit testing and debugging.
+        sorted by name. These are the indexes into the ZoneInfoRecords array and
+        are intended for unit testing and debugging.
         """
         s = ''
         for name, index in sorted(self.zone_and_link_index_map.items()):
