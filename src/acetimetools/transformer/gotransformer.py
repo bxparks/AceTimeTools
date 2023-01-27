@@ -31,20 +31,25 @@ class GoTransformer:
 
     def transform(self, tresult: TransformerResult) -> None:
         letters_map = _collect_letter_strings(tresult.policies_map)
-        formats_map = _collect_format_strings(tresult.zones_map)
-        names_map = _collect_name_strings(
-            tresult.zones_map.keys(),
-            tresult.links_map.keys(),
-        )
+        if letters_map['~'][1] > 255:
+            raise Exception("Total letter strings exceeds uint8 max of 255")
 
-        zones_and_links = (
+        formats_map = _collect_format_strings(tresult.zones_map)
+        if formats_map['~'][1] > 65535:
+            raise Exception("Total format strings exceeds uint16 max of 65535")
+
+        zone_and_link_names = (
             list(tresult.zones_map.keys())
             + list(tresult.links_map.keys())
         )
+        names_map = _collect_name_strings(zone_and_link_names)
+        if names_map['~'][1] > 65535:
+            raise Exception("Total name strings exceeds uint16 max of 65535")
+
         zone_and_link_ids = tresult.zone_ids.copy()
         zone_and_link_ids.update(tresult.link_ids)
         zone_and_link_index_map = _generate_zone_and_link_index_map(
-            zones_and_links, zone_and_link_ids)
+            zone_and_link_names, zone_and_link_ids)
 
         policy_index_size_map, rule_count = _generate_policy_index_size_map(
             tresult.policies_map)
@@ -133,15 +138,11 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
     return formats_map
 
 
-def _collect_name_strings(
-    zone_names: Iterable[str],
-    link_names: Iterable[str],
-) -> OffsetMap:
+def _collect_name_strings(zone_and_link_names: Iterable[str]) -> OffsetMap:
 
     names: Set[str] = set()
     names.add('')  # always include the empty string
-    names.update(zone_names)
-    names.update(link_names)
+    names.update(zone_and_link_names)
 
     # Create a map of name to byte offset
     index = 0
@@ -161,7 +162,7 @@ def _collect_name_strings(
 
 
 def _generate_zone_and_link_index_map(
-    zones_and_links: List[str],
+    zone_and_link_names: List[str],
     zone_and_link_ids: Dict[str, int],
 ) -> IndexMap:
     """ Create a combined IndexMap of zones and links, sorted by zoneId to
@@ -170,7 +171,7 @@ def _generate_zone_and_link_index_map(
     zone_and_link_index_map: IndexMap = {}
     index = 0
     for name in sorted(
-        zones_and_links,
+        zone_and_link_names,
         key=lambda x: zone_and_link_ids[x],
     ):
         zone_and_link_index_map[name] = index
