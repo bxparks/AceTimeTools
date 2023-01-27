@@ -6,8 +6,11 @@ Generate the 'format' OffsetMap, and the 'letters' OffsetMap for the AceTimeGo
 library.
 """
 
+from typing import Dict
 from typing import Iterable
+from typing import List
 from typing import Set
+from typing import Tuple
 import logging
 from collections import OrderedDict
 
@@ -15,6 +18,8 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import OffsetMap
+from acetimetools.data_types.at_types import IndexMap
+from acetimetools.data_types.at_types import IndexSizeMap
 
 
 class GoTransformer:
@@ -32,13 +37,35 @@ class GoTransformer:
             tresult.links_map.keys(),
         )
 
+        zones_and_links = (
+            list(tresult.zones_map.keys())
+            + list(tresult.links_map.keys())
+        )
+        zone_and_link_ids = tresult.zone_ids.copy()
+        zone_and_link_ids.update(tresult.link_ids)
+        zone_and_link_index_map = _generate_zone_and_link_index_map(
+            zones_and_links, zone_and_link_ids)
+
+        policy_index_size_map, rule_count = _generate_policy_index_size_map(
+            tresult.policies_map)
+
+        info_index_size_map, era_count = _generate_info_index_size_map(
+            tresult.zones_map)
+
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
         tresult.go_names_map = names_map
+        tresult.go_zone_and_link_index_map = zone_and_link_index_map
+        tresult.go_policy_index_size_map = policy_index_size_map
+        tresult.go_rule_count = rule_count
+        tresult.go_info_index_size_map = info_index_size_map
+        tresult.go_era_count = era_count
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
-            "Summary"
+            "Summary: "
+            f"{len(tresult.go_info_index_size_map)} Zones"
+            f"; {len(tresult.go_policy_index_size_map)} Policies"
             f": {len(tresult.go_letters_map)} Letters"
             f"; {len(tresult.go_formats_map)} Formats"
             f"; {len(tresult.go_names_map)} Names"
@@ -131,3 +158,59 @@ def _collect_name_strings(
         raise Exception(f"Total size of Names ({offset}) is >= 65536")
 
     return names_map
+
+
+def _generate_zone_and_link_index_map(
+    zones_and_links: List[str],
+    zone_and_link_ids: Dict[str, int],
+) -> IndexMap:
+    """ Create a combined IndexMap of zones and links, sorted by zoneId to
+    allow binary searchon zoneId.
+    """
+    zone_and_link_index_map: IndexMap = {}
+    index = 0
+    for name in sorted(
+        zones_and_links,
+        key=lambda x: zone_and_link_ids[x],
+    ):
+        zone_and_link_index_map[name] = index
+        index += 1
+    return zone_and_link_index_map
+
+
+def _generate_policy_index_size_map(
+    policies_map: PoliciesMap
+) -> Tuple[IndexSizeMap, int]:
+    """Return the {policy -> (index, offset, size)}, and the total number of
+    rules.
+    """
+
+    policy_index = 0
+    rules_index = 0
+    index_map: IndexSizeMap = {}
+
+    index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
+    policy_index += 1
+
+    for policy_name, rules in sorted(policies_map.items()):
+        index_map[policy_name] = (policy_index, rules_index, len(rules))
+        rules_index += len(rules)
+        policy_index += 1
+    return index_map, rules_index
+
+
+def _generate_info_index_size_map(
+    zones_map: ZonesMap
+) -> Tuple[IndexSizeMap, int]:
+    """Create a map of {zone_name -> (info_index, era_index, era_size)}, along
+    with the total number of eras.
+    """
+
+    info_index = 0
+    eras_index = 0
+    index_map: IndexSizeMap = {}
+    for zone_name, eras in sorted(zones_map.items()):
+        index_map[zone_name] = (info_index, eras_index, len(eras))
+        eras_index += len(eras)
+        info_index += 1
+    return index_map, eras_index

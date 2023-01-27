@@ -18,7 +18,6 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
-from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
@@ -351,6 +350,11 @@ const (
         self.letters_map = zidb['go_letters_map']
         self.formats_map = zidb['go_formats_map']
         self.names_map = zidb['go_names_map']
+        self.zone_and_link_index_map = zidb['go_zone_and_link_index_map']
+        self.policy_index_size_map = zidb['go_policy_index_size_map']
+        self.num_rules = zidb['go_rule_count']
+        self.info_index_size_map = zidb['go_info_index_size_map']
+        self.num_eras = zidb['go_era_count']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -358,15 +362,6 @@ const (
         )
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
-
-        self.zone_and_link_index_map = self._generate_zone_and_link_index_map()
-        self.policy_index_map, self.num_rules = self._generate_policy_index_map(
-            self.policies_map
-        )
-        # Zones only
-        self.info_index_map, self.num_eras = self._generate_info_index_map(
-            self.zones_map
-        )
 
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
@@ -384,20 +379,6 @@ const (
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
 
-    def _generate_zone_and_link_index_map(self) -> IndexMap:
-        """ Create a combined IndexMap of zones and links, sorted by zoneId to
-        allow binary searchon zoneId.
-        """
-        zone_and_link_index_map: IndexMap = {}
-        index = 0
-        for name in sorted(
-            self.zones_and_links,
-            key=lambda x: self.zone_and_link_ids[x],
-        ):
-            zone_and_link_index_map[name] = index
-            index += 1
-        return zone_and_link_index_map
-
     # ------------------------------------------------------------------------
     # Zone Policies
     # ------------------------------------------------------------------------
@@ -412,9 +393,9 @@ const (
         zone_rule_count = count
 
         zone_policies_string = self._generate_policies_string(
-            self.policy_index_map)
+            self.policy_index_size_map)
         zone_policies_data, chunk_size, count = self._generate_policies_data(
-            self.policy_index_map)
+            self.policy_index_size_map)
         zone_policies_data_string = convert_to_go_string(
             zone_policies_data, chunk_size, '\t\t')
         zone_policy_chunk_size = chunk_size
@@ -450,23 +431,6 @@ const (
             letterData=letter_data,
             letterOffsets=letter_offsets,
         )
-
-    def _generate_policy_index_map(
-        self, policies_map: PoliciesMap
-    ) -> Tuple[IndexSizeMap, int]:
-
-        policy_index = 0
-        rules_index = 0
-        index_map: IndexSizeMap = {}
-
-        index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
-        policy_index += 1
-
-        for policy_name, rules in sorted(policies_map.items()):
-            index_map[policy_name] = (policy_index, rules_index, len(rules))
-            rules_index += len(rules)
-            policy_index += 1
-        return index_map, rules_index
 
     def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
         zone_rules_string = ''
@@ -571,9 +535,11 @@ const (
         write_u8(data, rule['delta_code_encoded'])
         write_u8(data, letter_index)
 
-    def _generate_policies_string(self, policy_index_map: IndexSizeMap) -> str:
+    def _generate_policies_string(
+        self, policy_index_size_map: IndexSizeMap
+    ) -> str:
         zone_policies_string = ''
-        for policy_name, indexes in policy_index_map.items():
+        for policy_name, indexes in policy_index_size_map.items():
             index = indexes[0]
             rule_index = indexes[1]
             rule_count = indexes[2]
@@ -586,19 +552,19 @@ const (
         return zone_policies_string
 
     def _generate_policies_data(
-        self, policy_index_map: IndexSizeMap
+        self, policy_index_size_map: IndexSizeMap
     ) -> Tuple[bytearray, int, int]:
         """Return the bytearray encoding of the ZonePolicyRecords, and the size
         of each encoded ZonePolicy.
         """
         chunk_size = 4
         data = bytearray()
-        for policy_name, indexes in policy_index_map.items():
+        for policy_name, indexes in policy_index_size_map.items():
             rule_index = indexes[1]
             rule_count = indexes[2]
             write_u16(data, rule_index)
             write_u16(data, rule_count)
-        return data, chunk_size, len(policy_index_map)
+        return data, chunk_size, len(policy_index_size_map)
 
     # ------------------------------------------------------------------------
     # Zone Infos
@@ -670,26 +636,12 @@ const (
             nameOffsets=name_offsets,
         )
 
-    def _generate_info_index_map(
-        self, zones_map: ZonesMap
-    ) -> Tuple[IndexSizeMap, int]:
-        """Create a map of {zone_name -> (info_index, era_index, era_size)}."""
-
-        info_index = 0
-        eras_index = 0
-        index_map: IndexSizeMap = {}
-        for zone_name, eras in sorted(zones_map.items()):
-            index_map[zone_name] = (info_index, eras_index, len(eras))
-            eras_index += len(eras)
-            info_index += 1
-        return index_map, eras_index
-
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
         zone_eras_string = ''
         era_index = 0
         for zone_name, eras in sorted(self.zones_map.items()):
             zone_eras_string += self._generate_era_items_string(
-                zone_name, era_index, eras, self.policy_index_map)
+                zone_name, era_index, eras, self.policy_index_size_map)
             era_index += len(eras)
         return zone_eras_string
 
@@ -698,7 +650,7 @@ const (
         zone_name: str,
         era_index: int,
         eras: List[ZoneEraRaw],
-        policy_index_map: IndexSizeMap,
+        policy_index_size_map: IndexSizeMap,
     ) -> str:
         era_items_string = f"""\
 \t// ---------------------------------------------------------------------------
@@ -712,7 +664,7 @@ const (
             policy_name = era['rules']
             if policy_name in ['-', ':']:
                 policy_name = ""
-            policy_index = policy_index_map[policy_name][0]
+            policy_index = policy_index_size_map[policy_name][0]
             if policy_name == "":
                 policy_name = "(none)"
 
@@ -775,7 +727,7 @@ const (
         policy_name = era['rules']
         if policy_name in ['-', ':']:
             policy_name = ""
-        policy_index = self.policy_index_map[policy_name][0]
+        policy_index = self.policy_index_size_map[policy_name][0]
 
         # Find the index for the 'format' field.
         format_short = era['format_short']
@@ -810,7 +762,7 @@ const (
             if target_name is None:  # Zone
                 desc_name = f'Zone {name}'
                 zone_id = self.zone_ids[name]
-                indexes = self.info_index_map[name]
+                indexes = self.info_index_size_map[name]
                 era_index = indexes[1]
                 era_count = indexes[2]
                 era_count_desc = ''
@@ -847,7 +799,7 @@ const (
             target_name = self.links_map.get(name)
             if target_name is None:  # Zone
                 zone_id = self.zone_ids[name]
-                indexes = self.info_index_map[name]
+                indexes = self.info_index_size_map[name]
                 era_index = indexes[1]
                 era_count = indexes[2]
                 target_index = 0
