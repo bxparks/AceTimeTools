@@ -421,6 +421,7 @@ def main() -> None:
         go_letters_map={},
         go_formats_map={},
         go_names_map={},
+        go_zone_and_link_index_map={},
     )
 
     # Transform the TZ zones and rules

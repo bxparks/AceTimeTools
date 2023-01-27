@@ -226,6 +226,7 @@ class TransformerResult:
     * go_letters_map: {letter -> byte_offset}
     * go_formats_map: {format -> byte_offset}
     * go_names_map: {name -> byte_offset}
+    * go_zone_and_link_index_map: {name -> name -> index}
     """
     zones_map: ZonesMap
     policies_map: PoliciesMap
@@ -248,6 +249,7 @@ class TransformerResult:
     go_letters_map: OffsetMap
     go_formats_map: OffsetMap
     go_names_map: OffsetMap
+    go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:
@@ -342,6 +344,7 @@ class ZoneInfoDatabase(TypedDict):
     go_letters_map: OffsetMap  # all letter strings
     go_formats_map: OffsetMap  # all format strings
     go_names_map: OffsetMap  # all name strings
+    go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
 
 
 def create_zone_info_database(
@@ -409,6 +412,7 @@ def create_zone_info_database(
         'go_letters_map': tresult.go_letters_map,
         'go_formats_map': tresult.go_formats_map,
         'go_names_map': tresult.go_names_map,
+        'go_zone_and_link_index_map': tresult.go_zone_and_link_index_map,
     }
 
 

@@ -18,7 +18,6 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
-from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
@@ -351,6 +350,7 @@ const (
         self.letters_map = zidb['go_letters_map']
         self.formats_map = zidb['go_formats_map']
         self.names_map = zidb['go_names_map']
+        self.zone_and_link_index_map = zidb['go_zone_and_link_index_map']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -359,7 +359,6 @@ const (
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
 
-        self.zone_and_link_index_map = self._generate_zone_and_link_index_map()
         self.policy_index_map, self.num_rules = self._generate_policy_index_map(
             self.policies_map
         )
@@ -383,20 +382,6 @@ const (
         with open(full_filename, 'w', encoding='utf-8') as output_file:
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
-
-    def _generate_zone_and_link_index_map(self) -> IndexMap:
-        """ Create a combined IndexMap of zones and links, sorted by zoneId to
-        allow binary searchon zoneId.
-        """
-        zone_and_link_index_map: IndexMap = {}
-        index = 0
-        for name in sorted(
-            self.zones_and_links,
-            key=lambda x: self.zone_and_link_ids[x],
-        ):
-            zone_and_link_index_map[name] = index
-            index += 1
-        return zone_and_link_index_map
 
     # ------------------------------------------------------------------------
     # Zone Policies

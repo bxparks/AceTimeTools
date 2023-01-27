@@ -6,7 +6,9 @@ Generate the 'format' OffsetMap, and the 'letters' OffsetMap for the AceTimeGo
 library.
 """
 
+from typing import Dict
 from typing import Iterable
+from typing import List
 from typing import Set
 import logging
 from collections import OrderedDict
@@ -15,6 +17,7 @@ from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import OffsetMap
+from acetimetools.data_types.at_types import IndexMap
 
 
 class GoTransformer:
@@ -32,9 +35,19 @@ class GoTransformer:
             tresult.links_map.keys(),
         )
 
+        zones_and_links = (
+            list(tresult.zones_map.keys())
+            + list(tresult.links_map.keys())
+        )
+        zone_and_link_ids = tresult.zone_ids.copy()
+        zone_and_link_ids.update(tresult.link_ids)
+        zone_and_link_index_map = _generate_zone_and_link_index_map(
+            zones_and_links, zone_and_link_ids)
+
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
         tresult.go_names_map = names_map
+        tresult.go_zone_and_link_index_map = zone_and_link_index_map
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -131,3 +144,21 @@ def _collect_name_strings(
         raise Exception(f"Total size of Names ({offset}) is >= 65536")
 
     return names_map
+
+
+def _generate_zone_and_link_index_map(
+    zones_and_links: List[str],
+    zone_and_link_ids: Dict[str, int],
+) -> IndexMap:
+    """ Create a combined IndexMap of zones and links, sorted by zoneId to
+    allow binary searchon zoneId.
+    """
+    zone_and_link_index_map: IndexMap = {}
+    index = 0
+    for name in sorted(
+        zones_and_links,
+        key=lambda x: zone_and_link_ids[x],
+    ):
+        zone_and_link_index_map[name] = index
+        index += 1
+    return zone_and_link_index_map
