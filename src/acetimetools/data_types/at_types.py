@@ -253,6 +253,8 @@ class TransformerResult:
     go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
     go_policy_index_size_map: IndexSizeMap  # policy -> (index, offset, size)
     go_rule_count: int  # total num rules across all policies
+    go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
+    go_era_count: int  # total num eras across all zone infos
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:
@@ -350,6 +352,8 @@ class ZoneInfoDatabase(TypedDict):
     go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
     go_policy_index_size_map: IndexSizeMap  # policy -> (index, offset, size)
     go_rule_count: int  # total num rules across all policies
+    go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
+    go_era_count: int  # total num eras across all zone infos
 
 
 def create_zone_info_database(
@@ -420,6 +424,8 @@ def create_zone_info_database(
         'go_zone_and_link_index_map': tresult.go_zone_and_link_index_map,
         'go_policy_index_size_map': tresult.go_policy_index_size_map,
         'go_rule_count': tresult.go_rule_count,
+        'go_info_index_size_map': tresult.go_info_index_size_map,
+        'go_era_count': tresult.go_era_count,
     }
 
 

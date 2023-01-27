@@ -424,6 +424,8 @@ def main() -> None:
         go_zone_and_link_index_map={},
         go_policy_index_size_map={},
         go_rule_count=0,
+        go_info_index_size_map={},
+        go_era_count=0,
     )
 
     # Transform the TZ zones and rules

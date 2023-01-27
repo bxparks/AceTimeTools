@@ -49,16 +49,23 @@ class GoTransformer:
         policy_index_size_map, rule_count = _generate_policy_index_size_map(
             tresult.policies_map)
 
+        info_index_size_map, era_count = _generate_info_index_size_map(
+            tresult.zones_map)
+
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
         tresult.go_names_map = names_map
         tresult.go_zone_and_link_index_map = zone_and_link_index_map
         tresult.go_policy_index_size_map = policy_index_size_map
         tresult.go_rule_count = rule_count
+        tresult.go_info_index_size_map = info_index_size_map
+        tresult.go_era_count = era_count
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
-            "Summary"
+            "Summary: "
+            f"{len(tresult.go_info_index_size_map)} Zones"
+            f"; {len(tresult.go_policy_index_size_map)} Policies"
             f": {len(tresult.go_letters_map)} Letters"
             f"; {len(tresult.go_formats_map)} Formats"
             f"; {len(tresult.go_names_map)} Names"
@@ -190,3 +197,20 @@ def _generate_policy_index_size_map(
         rules_index += len(rules)
         policy_index += 1
     return index_map, rules_index
+
+
+def _generate_info_index_size_map(
+    zones_map: ZonesMap
+) -> Tuple[IndexSizeMap, int]:
+    """Create a map of {zone_name -> (info_index, era_index, era_size)}, along
+    with the total number of eras.
+    """
+
+    info_index = 0
+    eras_index = 0
+    index_map: IndexSizeMap = {}
+    for zone_name, eras in sorted(zones_map.items()):
+        index_map[zone_name] = (info_index, eras_index, len(eras))
+        eras_index += len(eras)
+        info_index += 1
+    return index_map, eras_index

@@ -353,6 +353,8 @@ const (
         self.zone_and_link_index_map = zidb['go_zone_and_link_index_map']
         self.policy_index_size_map = zidb['go_policy_index_size_map']
         self.num_rules = zidb['go_rule_count']
+        self.info_index_size_map = zidb['go_info_index_size_map']
+        self.num_eras = zidb['go_era_count']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -360,11 +362,6 @@ const (
         )
         self.zone_and_link_ids = self.zone_ids.copy()
         self.zone_and_link_ids.update(self.link_ids)
-
-        # Zones only
-        self.info_index_map, self.num_eras = self._generate_info_index_map(
-            self.zones_map
-        )
 
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
@@ -639,20 +636,6 @@ const (
             nameOffsets=name_offsets,
         )
 
-    def _generate_info_index_map(
-        self, zones_map: ZonesMap
-    ) -> Tuple[IndexSizeMap, int]:
-        """Create a map of {zone_name -> (info_index, era_index, era_size)}."""
-
-        info_index = 0
-        eras_index = 0
-        index_map: IndexSizeMap = {}
-        for zone_name, eras in sorted(zones_map.items()):
-            index_map[zone_name] = (info_index, eras_index, len(eras))
-            eras_index += len(eras)
-            info_index += 1
-        return index_map, eras_index
-
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
         zone_eras_string = ''
         era_index = 0
@@ -779,7 +762,7 @@ const (
             if target_name is None:  # Zone
                 desc_name = f'Zone {name}'
                 zone_id = self.zone_ids[name]
-                indexes = self.info_index_map[name]
+                indexes = self.info_index_size_map[name]
                 era_index = indexes[1]
                 era_count = indexes[2]
                 era_count_desc = ''
@@ -816,7 +799,7 @@ const (
             target_name = self.links_map.get(name)
             if target_name is None:  # Zone
                 zone_id = self.zone_ids[name]
-                indexes = self.info_index_map[name]
+                indexes = self.info_index_size_map[name]
                 era_index = indexes[1]
                 era_count = indexes[2]
                 target_index = 0
