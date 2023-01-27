@@ -10,6 +10,7 @@ from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Set
+from typing import Tuple
 import logging
 from collections import OrderedDict
 
@@ -18,6 +19,7 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import OffsetMap
 from acetimetools.data_types.at_types import IndexMap
+from acetimetools.data_types.at_types import IndexSizeMap
 
 
 class GoTransformer:
@@ -44,10 +46,15 @@ class GoTransformer:
         zone_and_link_index_map = _generate_zone_and_link_index_map(
             zones_and_links, zone_and_link_ids)
 
+        policy_index_size_map, rule_count = _generate_policy_index_size_map(
+            tresult.policies_map)
+
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
         tresult.go_names_map = names_map
         tresult.go_zone_and_link_index_map = zone_and_link_index_map
+        tresult.go_policy_index_size_map = policy_index_size_map
+        tresult.go_rule_count = rule_count
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -162,3 +169,24 @@ def _generate_zone_and_link_index_map(
         zone_and_link_index_map[name] = index
         index += 1
     return zone_and_link_index_map
+
+
+def _generate_policy_index_size_map(
+    policies_map: PoliciesMap
+) -> Tuple[IndexSizeMap, int]:
+    """Return the {policy -> (index, offset, size)}, and the total number of
+    rules.
+    """
+
+    policy_index = 0
+    rules_index = 0
+    index_map: IndexSizeMap = {}
+
+    index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
+    policy_index += 1
+
+    for policy_name, rules in sorted(policies_map.items()):
+        index_map[policy_name] = (policy_index, rules_index, len(rules))
+        rules_index += len(rules)
+        policy_index += 1
+    return index_map, rules_index
