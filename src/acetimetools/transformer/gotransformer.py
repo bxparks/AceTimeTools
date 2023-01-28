@@ -53,9 +53,17 @@ class GoTransformer:
 
         policy_index_size_map, rule_count = _generate_policy_index_size_map(
             tresult.policies_map)
+        if rule_count > 65535:
+            raise Exception("Rule count exceeds uint16 max of 65536")
+        if len(policy_index_size_map) > 255:
+            raise Exception("Policy count exceeds uint8 max of 255")
 
         info_index_size_map, era_count = _generate_info_index_size_map(
             tresult.zones_map)
+        if era_count > 65535:
+            raise Exception("Era count exceeds uint16 max of 65536")
+        if len(info_index_size_map) > 65535:
+            raise Exception("Info count exceeds uint16 max of 65535")
 
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
@@ -102,10 +110,6 @@ def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
         offset += len(letter)
     letters_map["~"] = (index, offset)  # final sentinel marker
 
-    # Check that the letters_buffer fits using a uint8 type.
-    if offset >= 256:
-        raise Exception(f"Total size of LETTERS ({offset}) is >= 256")
-
     return letters_map
 
 
@@ -131,10 +135,6 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
         offset += len(format)
     formats_map["~"] = (index, offset)  # final sentinel marker
 
-    # Check that the formats_buffer fits using a uint16 type.
-    if offset >= 65536:
-        raise Exception(f"Total size of FORMATS ({offset}) is >= 65536")
-
     return formats_map
 
 
@@ -153,10 +153,6 @@ def _collect_name_strings(zone_and_link_names: Iterable[str]) -> OffsetMap:
         index += 1
         offset += len(name)
     names_map["~"] = (index, offset)  # final sentinel marker
-
-    # Check that the names_buffer fits using a uint16 type.
-    if offset >= 65536:
-        raise Exception(f"Total size of Names ({offset}) is >= 65536")
 
     return names_map
 
