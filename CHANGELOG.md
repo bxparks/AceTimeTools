@@ -1,8 +1,9 @@
 # Changelog
 
 * Unreleased
-    * Add `gotransfomer.py` and `gogeneratoer.py` to generate ZoneDB files for
-      the AceTimeGo library.
+* v1.4.0 (2023-01-29)
+    * Support the AceTimeGo library through `gotransfomer.py` and
+      `gogenerator.py`.
     * Simplify calling API of various `XxxTransformer` classes.
 * v1.3.0 (2023-01-17)
     * `copytz.sh`
