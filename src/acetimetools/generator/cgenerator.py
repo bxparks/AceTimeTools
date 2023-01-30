@@ -1128,18 +1128,11 @@ const AtcZoneInfo * const kAtcZoneRegistry[{numZones}] {progmem} = {{
 }};
 
 //---------------------------------------------------------------------------
-// Zone and Link (fat) Info registry. Sorted by zoneId. Links act like Zones.
+// Zone and Link Info registry. Sorted by zoneId. Links act like Zones.
 //---------------------------------------------------------------------------
 const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{numZonesAndLinks}] \
 {progmem} = {{
 {zoneAndLinkRegistryItems}
-}};
-
-//---------------------------------------------------------------------------
-// Link (thin) Entry registry. Sorted by linkId. Links are references to Zones.
-//---------------------------------------------------------------------------
-const AtcLinkEntry kAtcLinkRegistry[{numLinks}] {progmem} = {{
-{linkRegistryItems}
 }};
 """
 
@@ -1246,24 +1239,6 @@ extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
   &kAtcZone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
 """
 
-        # Generate Link table, sorted by linkId.
-        link_registry_items = ''
-        for link_name in sorted(
-            self.links_map,
-            key=lambda x: self.link_ids[x],
-        ):
-            zone_name = self.links_map[link_name]
-            link_id = self.link_ids[link_name]
-            zone_id = self.zone_ids[zone_name]
-
-            normalized_link_name = normalize_name(link_name)
-            normalized_zone_name = normalize_name(zone_name)
-
-            link_registry_items += f"""\
-  {{ kAtcZoneId{normalized_link_name}, kAtcZoneId{normalized_zone_name} }}, \
-// 0x{link_id:08x} -> 0x{zone_id:08x}
-"""
-
         return self.ZONE_REGISTRY_C_FILE.format(
             invocation=self.invocation,
             tz_files=self.tz_files,
@@ -1276,7 +1251,6 @@ extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
             numLinks=len(self.links_map),
             zoneRegistryItems=zone_registry_items,
             zoneAndLinkRegistryItems=zone_and_link_registry_items,
-            linkRegistryItems=link_registry_items,
             progmem='',
         )
 
