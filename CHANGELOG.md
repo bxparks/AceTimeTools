@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.4.1 (2023-01-29)
     * `argenerator.py`
         * Remove LinkRegistry.
         * Add `targetInfo` to `ZoneInfo` to unify fat and symbolic Links.
