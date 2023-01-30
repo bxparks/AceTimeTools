@@ -247,8 +247,8 @@ const AtcZonePolicy kAtcZonePolicy{policyName} {progmem} = {{
 
 """
 
-    SIZEOF_ZONE_RULE_8 = 9
-    SIZEOF_ZONE_RULE_32 = 12  # 9 rounded to 4-byte alignment
+    SIZEOF_ZONE_RULE_8 = 11
+    SIZEOF_ZONE_RULE_32 = 12  # 11 rounded to 4-byte alignment
     SIZEOF_ZONE_POLICY_8 = 6
     SIZEOF_ZONE_POLICY_32 = 12  # 10 rounded to 4-byte alignment
 
@@ -682,10 +682,10 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
   }},
 """  # noqa
 
-    SIZEOF_ZONE_ERA_8 = 11
-    SIZEOF_ZONE_ERA_32 = 16  # 15 rounded to 4-byte alignment
-    SIZEOF_ZONE_INFO_8 = 11
-    SIZEOF_ZONE_INFO_32 = 20  # 18 rounded to 4-byte alignment
+    SIZEOF_ZONE_ERA_8 = 12
+    SIZEOF_ZONE_ERA_32 = 16  # 16 rounded to 4-byte alignment
+    SIZEOF_ZONE_INFO_8 = 13
+    SIZEOF_ZONE_INFO_32 = 24  # 21 rounded to 4-byte alignment
 
     def __init__(
         self,
@@ -1166,10 +1166,6 @@ extern const AtcZoneInfo * const kAtcZoneRegistry[{numZones}];
 #define kAtcZoneAndLinkRegistrySize {numZonesAndLinks}
 extern const AtcZoneInfo * \
 const kAtcZoneAndLinkRegistry[{numZonesAndLinks}];
-
-// Link Entries
-#define kAtcLinkRegistrySize {numLinks}
-extern const AtcLinkEntry kAtcLinkRegistry[{numLinks}];
 
 #ifdef __cplusplus
 }}
