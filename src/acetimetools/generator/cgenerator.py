@@ -661,6 +661,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
   &kAtcZoneContext /*zone_context*/,
   {numEras} /*num_eras*/,
   kAtcZoneEra{zoneNormalizedName} /*eras*/,
+  NULL /*targetInfo*/,
 }};
 
 """
@@ -1066,8 +1067,9 @@ const AtcZoneInfo kAtcZone{linkNormalizedName} {progmem} = {{
   kAtcZoneName{linkNormalizedName} /*name*/,
   0x{linkId:08x} /*zoneId*/,
   &kAtcZoneContext /*zoneContext*/,
-  0 /*numEras*/,
-  &kAtcZone{zoneNormalizedName} /*eras(info)*/,
+  {numEras} /*numEras*/,
+  kAtcZoneEra{zoneNormalizedName} /*eras*/,
+  &kAtcZone{zoneNormalizedName} /*targetInfo*/,
 }};
 
 """
