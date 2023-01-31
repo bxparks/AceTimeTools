@@ -13,69 +13,66 @@
 #
 # Usage:
 #
-#   $ tzcompiler.sh --tag {tag} [--skip_checkout] [tzcompiler_py_flags...]
+#   $ tzcompiler.sh -tzrepo repo [--tag tag] [tzcompiler_py_flags...]
 
 set -eu
 
 # Can't use $(realpath $(dirname $0)) because realpath doesn't exist on MacOS
 DIRNAME=$(dirname $0)
 
-# The master TZ git repository, assumed to be a sibling of AceTime repository.
-TZDB_REPO=$(realpath $DIRNAME/../tz)
-
 # Location of the TZDB files
-TZDB_FILES=$PWD/tzfiles
+TZFILES=$PWD/tzfiles
 
 # Output generated code to the current directory
 OUTPUT_DIR=$PWD
 
 function usage() {
-    echo 'Usage: tzcompiler.sh --tag tag [--tzfiles tzfiles] [--skip_checkout]'
-    echo '    [--skip_cleanup] [...other python_flags...]'
+    echo 'Usage: tzcompiler.sh --tzrepo repo [--tag tag] [python_flags...]'
     exit 1
 }
 
-pass_thru_flags=''
+function clean_tzfiles() {
+    echo "+ rm -rf $TZFILES"
+    rm -fr $TZFILES
+}
+
 tag=''
-skip_checkout=0
-skip_cleanup=0
-tzfiles=$TZDB_FILES
+tzrepo=''
 while [[ $# -gt 0 ]]; do
     case $1 in
         --tag) shift; tag=$1 ;;
-        --tzfiles) shift; tzfiles=$1 ;;
-        --skip_checkout) skip_checkout=1 ;;
-        --skip_cleanup) skip_cleanup=1 ;;
+        --tzrepo) shift; tzrepo=$1 ;;
         --help|-h) usage ;;
         -*) break ;;
         *) break ;;
     esac
     shift
 done
-if [[ "$tag" == '' ]]; then
-    usage
+if [[ "$tzrepo" == '' ]]; then
+    echo 'ERROR: Must provide --tzrepo flag'
+    exit 1
 fi
 
-# Check out the TZDB repo at the specified tag
-if [[ $skip_checkout == 0 ]]; then
-    echo "+ $DIRNAME/copytz.sh --tag $tag $TZDB_REPO $tzfiles"
-    $DIRNAME/copytz.sh --tag $tag $TZDB_REPO $tzfiles
+# Copy the tz git repo at the specified tag. If no tag given, copy the current
+# state of the repo and label it HEAD. Create a 'trap' to auto-clean up the
+# 'tzfiles' temporary directory.
+echo "+ $DIRNAME/copytz.sh --tag '$tag' $tzrepo $TZFILES"
+$DIRNAME/copytz.sh --tag "$tag" $tzrepo $TZFILES
+if [[ "$tag" == '' ]]; then
+    tz_version='HEAD'
+else
+    tz_version=$tag
 fi
+trap clean_tzfiles EXIT
 
 # Run the tzcompiler.py.
 echo "+ $DIRNAME/src/acetimetools/tzcompiler.py" \
-    --input_dir $tzfiles \
+    --input_dir $TZFILES \
     --output_dir $OUTPUT_DIR \
-    --tz_version $tag \
+    --tz_version $tz_version \
     $@
 $DIRNAME/src/acetimetools/tzcompiler.py \
-    --input_dir $tzfiles \
+    --input_dir $TZFILES \
     --output_dir $OUTPUT_DIR \
-    --tz_version $tag \
+    --tz_version $tz_version \
     "$@"
-
-# Clean up the tzfiles/ directory
-if [[ $skip_cleanup == 0 ]]; then
-    echo "+ rm -rf $tzfiles"
-    rm -rf $tzfiles
-fi
