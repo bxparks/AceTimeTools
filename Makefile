@@ -34,7 +34,7 @@ flake8:
 
 # The TZ DB version used for internal testing targets defined below. This does
 # not affect the zonedb files generated in AceTime or AceTimePython.
-TZ_VERSION := 2022b
+TZ_VERSION := 2022g
 TZ_REPO := $(abspath ../tz)
 
 # Generate zonedb.json for testing purposes.

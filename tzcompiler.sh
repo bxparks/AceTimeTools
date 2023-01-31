@@ -16,11 +16,12 @@
 #   $ tzcompiler.sh -tzrepo repo [--tag tag] [tzcompiler_py_flags...]
 
 set -eu
+shopt -s extglob # needed by copy_tzfiles()
 
 # Can't use $(realpath $(dirname $0)) because realpath doesn't exist on MacOS
 DIRNAME=$(dirname $0)
 
-# Location of the TZDB files
+# Location of the TZDB files after copying them from the source git repo.
 TZFILES=$PWD/tzfiles
 
 # Output generated code to the current directory
@@ -36,12 +37,72 @@ function clean_tzfiles() {
     rm -fr $TZFILES
 }
 
+# Copy the tz git repo at the specified tag. If no tag given, copy the current
+# state of the repo and label it HEAD. Create a 'trap' to auto-clean up the
+# 'tzfiles' temporary directory.
+function copy_tzfiles() {
+    local src=$1
+    local dst=$2
+
+    # Check for existence of $dst.
+    if [[ -e "$dst" ]]; then
+        echo "ERROR: Cannot overwrite existing '$dst'"
+        exit 1
+    fi
+
+    # Copy or clone the repo, depending on the $tag.
+    if [[ "$tag" == '' ]]; then
+        echo "+ cp -a $src/ $dst/"
+        cp -a $src/ $dst/
+    else
+        # Check out TZDB repo at the $tag, unless --skip_checkout flag is given.
+        echo "+ git clone --quiet --branch $tag $src $dst"
+        git -c advice.detachedHead=false clone --quiet --branch $tag $src $dst
+    fi
+
+    # Remove all files other than the zone info files with Rule and Zone
+    # entries. In particular, remove *.c and *.h to prevent EpoxyDuino from
+    # trying to compile them recursively in the zonedb/ and zonedbx/
+    # directories. See src/acetimetools/extractor/extractor.py for the master
+    # list of zone info files. This requires the 'shopt -s extglob' to be set.
+    echo "+ rm -rf $dst/{clutter}"
+    (cd $dst; rm -rf !(\
+africa|\
+antarctica|\
+asia|\
+australasia|\
+backward|\
+etcetera|\
+europe|\
+northamerica|\
+southamerica|\
+backzone|\
+systemv))
+}
+
+# Run the tzcompiler.py.
+function run_tzcompiler() {
+    echo "+ $DIRNAME/src/acetimetools/tzcompiler.py" \
+        --input_dir $TZFILES \
+        --output_dir $OUTPUT_DIR \
+        --tz_version $tz_version \
+        $@
+    $DIRNAME/src/acetimetools/tzcompiler.py \
+        --input_dir $TZFILES \
+        --output_dir $OUTPUT_DIR \
+        --tz_version $tz_version \
+        "$@"
+}
+
+# Parse command line flags.
 tag=''
 tzrepo=''
+cleanup=1
 while [[ $# -gt 0 ]]; do
     case $1 in
         --tag) shift; tag=$1 ;;
         --tzrepo) shift; tzrepo=$1 ;;
+        --nocleanup) cleanup=0 ;;
         --help|-h) usage ;;
         -*) break ;;
         *) break ;;
@@ -52,27 +113,18 @@ if [[ "$tzrepo" == '' ]]; then
     echo 'ERROR: Must provide --tzrepo flag'
     exit 1
 fi
-
-# Copy the tz git repo at the specified tag. If no tag given, copy the current
-# state of the repo and label it HEAD. Create a 'trap' to auto-clean up the
-# 'tzfiles' temporary directory.
-echo "+ $DIRNAME/copytz.sh --tag '$tag' $tzrepo $TZFILES"
-$DIRNAME/copytz.sh --tag "$tag" $tzrepo $TZFILES
 if [[ "$tag" == '' ]]; then
     tz_version='HEAD'
 else
     tz_version=$tag
 fi
-trap clean_tzfiles EXIT
 
-# Run the tzcompiler.py.
-echo "+ $DIRNAME/src/acetimetools/tzcompiler.py" \
-    --input_dir $TZFILES \
-    --output_dir $OUTPUT_DIR \
-    --tz_version $tz_version \
-    $@
-$DIRNAME/src/acetimetools/tzcompiler.py \
-    --input_dir $TZFILES \
-    --output_dir $OUTPUT_DIR \
-    --tz_version $tz_version \
-    "$@"
+# Install a trap to delete the tzfile/ temp directory, but disable it if
+# --nocleanup given for debugging.
+if [[ $cleanup == 1 ]]; then
+    trap clean_tzfiles EXIT
+fi
+
+# Do the actual work.
+copy_tzfiles $tzrepo $TZFILES
+run_tzcompiler "$@"
