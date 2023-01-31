@@ -1,6 +1,14 @@
 # Changelog
 
 * Unreleased
+    * `tzcompiler.sh`:
+        * Incorporate `copytz.sh` functionality directly to avoid dependency on
+          another shell script.
+        * If `--tag` is not given, then copy the TZDB repo instead of doing a
+          `git clone`.
+        * Add `trap` statement to perform auto-cleanup of the `tzfiles/`
+          temporary directory.
+        * Add `--tzrepo` to specify the location of the TZDB repo explicitly.
 * v1.4.1 (2023-01-29)
     * `argenerator.py`
         * Remove LinkRegistry.
