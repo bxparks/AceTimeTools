@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.4.2 (2023-02-02)
     * `tzcompiler.sh`:
         * Incorporate `copytz.sh` functionality directly to avoid dependency on
           another shell script.
