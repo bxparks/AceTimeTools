@@ -10,7 +10,6 @@ import os
 import logging
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
@@ -21,7 +20,6 @@ from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import IndexMap
-from acetimetools.data_types.at_types import LettersPerPolicy
 from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import BufSizeMap
 from acetimetools.transformer.transformer import normalize_name
@@ -80,7 +78,6 @@ class CGenerator:
             removed_policies=zidb['removed_policies'],
             notable_zones=zidb['notable_zones'],
             notable_policies=zidb['notable_policies'],
-            letters_per_policy=zidb['letters_per_policy'],
             letters_map=zidb['letters_map'],
         )
         self.zone_infos_generator = ZoneInfosGenerator(
@@ -109,6 +106,7 @@ class CGenerator:
             link_ids=zidb['link_ids'],
             formats_map=zidb['formats_map'],
             fragments_map=zidb['fragments_map'],
+            letters_map=zidb['letters_map'],
             compressed_names=zidb['compressed_names'],
         )
         self.zone_registry_generator = ZoneRegistryGenerator(
@@ -236,13 +234,9 @@ static const AtcZoneRule kAtcZoneRules{policyName}[] {progmem} = {{
 {ruleItems}
 }};
 
-{letterArray}
-
 const AtcZonePolicy kAtcZonePolicy{policyName} {progmem} = {{
   kAtcZoneRules{policyName} /*rules*/,
-  {letterArrayRef} /*letters*/,
   {numRules} /*num_rules*/,
-  {numLetters} /*num_letters*/,
 }};
 
 """
@@ -266,7 +260,6 @@ const AtcZonePolicy kAtcZonePolicy{policyName} {progmem} = {{
         removed_policies: CommentsMap,
         notable_zones: CommentsMap,
         notable_policies: CommentsMap,
-        letters_per_policy: LettersPerPolicy,
         letters_map: IndexMap,
     ):
         self.invocation = invocation
@@ -281,7 +274,6 @@ const AtcZonePolicy kAtcZonePolicy{policyName} {progmem} = {{
         self.removed_policies = removed_policies
         self.notable_zones = notable_zones
         self.notable_policies = notable_policies
-        self.letters_per_policy = letters_per_policy
         self.letters_map = letters_map
 
         self.db_header_namespace = self.db_namespace.upper()
@@ -318,11 +310,9 @@ extern const AtcZonePolicy kAtcZonePolicy{policyName};
         memory32 = 0
         num_rules = 0
         for name, rules in sorted(self.policies_map.items()):
-            indexed_letters: Optional[IndexMap] = \
-                self.letters_per_policy.get(name)
             num_rules += len(rules)
             policy_item, policy_memory8, policy_memory32 = \
-                self._generate_policy_item(name, rules, indexed_letters)
+                self._generate_policy_item(name, rules)
             policy_items += policy_item
             memory8 += policy_memory8
             memory32 += policy_memory32
@@ -349,7 +339,6 @@ extern const AtcZonePolicy kAtcZonePolicy{policyName};
         self,
         name: str,
         rules: List[ZoneRuleRaw],
-        indexed_letters: Optional[IndexMap],
     ) -> Tuple[str, int, int]:
         ZONE_POLICIES_C_RULE_ITEM = """\
   // {raw_line}
@@ -362,13 +351,8 @@ extern const AtcZonePolicy kAtcZonePolicy{policyName};
     {at_time_code} /*at_time_code*/,
     {at_time_modifier} /*at_time_modifier ({at_time_modifier_comment})*/,
     {delta_code} /*delta_code ({delta_code_comment})*/,
-    {letter} /*letter{letterComment}*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
   }},
-"""
-        ZONE_POLICIES_LETTER_ARRAY = """\
-static const char * const kLetters{policyName}[] {progmem} = {{
-{letterItems}
-}};
 """
 
         # Generate kAtcZoneRules*[]
@@ -396,27 +380,6 @@ static const char * const kLetters{policyName}[] {progmem} = {{
                 to_year = rule['to_year_tiny']
                 to_year_label = 'to_year_tiny'
 
-            # Single-character 'letter' values are represented as themselves
-            # using the C++ 'char' type ('A'-'Z'). But some 'letter' fields hold
-            # a multi-character string. We can encode these multi-character
-            # strings as an index into an array of NUL-terminated strings.
-            # ASCII codes less than 32 (space) are non-printable control
-            # characters so they will not collide with the printable characters
-            # 'A' - 'Z'. Therefore we can hold to up to 31 multi-character
-            # strings per-zone. In practice, for a single zone, the maximum
-            # number of multi-character strings that I've seen is 2.
-            letter = rule['letter']
-            if len(letter) == 1:
-                letterComment = ''
-                letter = f"'{letter}'"
-            elif len(letter) > 1:
-                letterComment = f' (index to "{letter}")'
-                letter = str(rule['letter_index_per_policy'])
-            else:
-                raise Exception(
-                    'len(%s) == 0; should not happen'
-                    % rule['letter'])
-
             rule_items += ZONE_POLICIES_C_RULE_ITEM.format(
                 raw_line=normalize_raw(rule['raw_line']),
                 from_year=from_year,
@@ -431,41 +394,20 @@ static const char * const kLetters{policyName}[] {progmem} = {{
                 at_time_modifier_comment=at_time_modifier_comment,
                 delta_code=delta_code,
                 delta_code_comment=delta_code_comment,
-                letter=letter,
-                letterComment=letterComment)
-
-        # Generate kLetters*[]
-        policy_name = normalize_name(name)
-        num_letters = len(indexed_letters) if indexed_letters else 0
-        memory_letters8 = 0
-        memory_letters32 = 0
-        if num_letters:
-            assert indexed_letters is not None
-            letter_array_ref = f'kLetters{policy_name}'
-            letterItems = ''
-            for name, index in indexed_letters.items():
-                letterItems += f'  /*{index}*/ "{name}",\n'
-                memory_letters8 += len(name) + 1 + 2  # NUL terminated
-                memory_letters32 += len(name) + 1 + 4  # NUL terminated
-            letter_array = ZONE_POLICIES_LETTER_ARRAY.format(
-                policyName=policy_name,
-                letterItems=letterItems,
-                progmem='')
-        else:
-            letter_array_ref = 'NULL'
-            letter_array = ''
+                letter=rule['letter'],
+                letter_index=rule['letter_index'],
+            )
 
         # Calculate the memory consumed by structs and arrays
         num_rules = len(rules)
         memory8 = (
             1 * self.SIZEOF_ZONE_POLICY_8
-            + num_rules * self.SIZEOF_ZONE_RULE_8
-            + memory_letters8)
+            + num_rules * self.SIZEOF_ZONE_RULE_8)
         memory32 = (
             1 * self.SIZEOF_ZONE_POLICY_32
-            + num_rules * self.SIZEOF_ZONE_RULE_32
-            + memory_letters32)
+            + num_rules * self.SIZEOF_ZONE_RULE_32)
 
+        policy_name = normalize_name(name)
         policy_item = self.ZONE_POLICIES_C_POLICY_ITEM.format(
             scope=self.scope,
             policyName=policy_name,
@@ -473,9 +415,6 @@ static const char * const kLetters{policyName}[] {progmem} = {{
             memory8=memory8,
             memory32=memory32,
             ruleItems=rule_items,
-            numLetters=num_letters,
-            letterArrayRef=letter_array_ref,
-            letterArray=letter_array,
             progmem='')
 
         return (policy_item, memory8, memory32)
@@ -618,12 +557,18 @@ const char * const kAtcFragments[] = {{
 {fragments}
 }};
 
+const char* const kAtcLetters[] = {{
+{letters}
+}};
+
 const AtcZoneContext kAtcZoneContext = {{
   {start_year} /*startYear*/,
   {until_year} /*untilYear*/,
   kAtcTzDatabaseVersion /*tzVersion*/,
   {numFragments} /*numFragments*/,
+  {numLetters} /*numLetters*/,
   kAtcFragments /*fragments*/,
+  kAtcLetters /*letters*/,
 }};
 
 //---------------------------------------------------------------------------
@@ -714,6 +659,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         link_ids: Dict[str, int],
         formats_map: IndexMap,
         fragments_map: IndexMap,
+        letters_map: IndexMap,
         compressed_names: Dict[str, str],
     ):
         self.invocation = invocation
@@ -741,6 +687,7 @@ const AtcZoneInfo kAtcZone{zoneNormalizedName} {progmem} = {{
         self.link_ids = link_ids
         self.formats_map = formats_map
         self.fragments_map = fragments_map
+        self.letters_map = letters_map
         self.compressed_names = compressed_names
 
         self.db_header_namespace = self.db_namespace.upper()
@@ -854,6 +801,12 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
         for fragment, index in self.fragments_map.items():
             fragments += f'/*\\x{index:02x}*/ "{fragment}",\n'
 
+        # Generate array of letters.
+        num_letters = len(self.letters_map)
+        letters = ''
+        for letter, index in self.letters_map.items():
+            letters += f'/*{index}*/ "{letter}",\n'
+
         # Estimate size of entire ZoneInfo database, factoring in deduping
         # of strings
         num_infos = len(self.zones_map)
@@ -946,7 +899,9 @@ extern const AtcZoneInfo kAtcZone{linkNormalizedName}; \
             infoItems=info_items,
             linkItems=link_items,
             numFragments=num_fragments,
+            numLetters=num_letters,
             fragments=fragments,
+            letters=letters,
         )
 
     def _generate_info_item(
