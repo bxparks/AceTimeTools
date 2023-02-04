@@ -9,7 +9,6 @@ import os
 import logging
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
@@ -20,7 +19,6 @@ from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import MergedCommentsMap
 from acetimetools.data_types.at_types import IndexMap
-from acetimetools.data_types.at_types import LettersPerPolicy
 from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import BufSizeMap
 from acetimetools.transformer.transformer import normalize_name
@@ -76,7 +74,6 @@ class ArduinoGenerator:
             removed_policies=zidb['removed_policies'],
             notable_zones=zidb['notable_zones'],
             notable_policies=zidb['notable_policies'],
-            letters_per_policy=zidb['letters_per_policy'],
             letters_map=zidb['letters_map'],
         )
         self.zone_infos_generator = ZoneInfosGenerator(
@@ -262,7 +259,6 @@ const {scope}::ZonePolicy kZonePolicy{policyName} {progmem} = {{
         removed_policies: CommentsMap,
         notable_zones: CommentsMap,
         notable_policies: CommentsMap,
-        letters_per_policy: LettersPerPolicy,
         letters_map: IndexMap,
     ):
         self.invocation = invocation
@@ -277,7 +273,6 @@ const {scope}::ZonePolicy kZonePolicy{policyName} {progmem} = {{
         self.removed_policies = removed_policies
         self.notable_zones = notable_zones
         self.notable_policies = notable_policies
-        self.letters_per_policy = letters_per_policy
         self.letters_map = letters_map
 
         self.db_header_namespace = self.db_namespace.upper()
@@ -314,11 +309,9 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
         memory32 = 0
         num_rules = 0
         for name, rules in sorted(self.policies_map.items()):
-            indexed_letters: Optional[IndexMap] = \
-                self.letters_per_policy.get(name)
             num_rules += len(rules)
             policy_item, policy_memory8, policy_memory32 = \
-                self._generate_policy_item(name, rules, indexed_letters)
+                self._generate_policy_item(name, rules)
             policy_items += policy_item
             memory8 += policy_memory8
             memory32 += policy_memory32
@@ -345,7 +338,6 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
         self,
         name: str,
         rules: List[ZoneRuleRaw],
-        indexed_letters: Optional[IndexMap],
     ) -> Tuple[str, int, int]:
         ZONE_POLICIES_CPP_RULE_ITEM = """\
   // {raw_line}
