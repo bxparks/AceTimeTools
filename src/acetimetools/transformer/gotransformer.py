@@ -95,10 +95,7 @@ def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
     all_letters.add('')  # always include the empty string
     for policy_name, rules in policies_map.items():
         for rule in rules:
-            letter = rule['letter']
-            if letter == '-':  # replace '-' with just an empty string
-                letter = ''
-            all_letters.add(letter)
+            all_letters.add(rule['letter'])
 
     # Create a map of letter to byte_offset.
     index = 0

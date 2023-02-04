@@ -105,6 +105,7 @@ class ArduinoGenerator:
             link_ids=zidb['link_ids'],
             formats_map=zidb['formats_map'],
             fragments_map=zidb['fragments_map'],
+            letters_map=zidb['letters_map'],
             compressed_names=zidb['compressed_names'],
         )
         self.zone_registry_generator = ZoneRegistryGenerator(
@@ -235,13 +236,9 @@ static const {scope}::ZoneRule kZoneRules{policyName}[] {progmem} = {{
 {ruleItems}
 }};
 
-{letterArray}
-
 const {scope}::ZonePolicy kZonePolicy{policyName} {progmem} = {{
   kZoneRules{policyName} /*rules*/,
-  {letterArrayRef} /*letters*/,
   {numRules} /*numRules*/,
-  {numLetters} /*numLetters*/,
 }};
 
 """
@@ -361,15 +358,9 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
     {at_time_code} /*atTimeCode*/,
     {at_time_modifier} /*atTimeModifier ({at_time_modifier_comment})*/,
     {delta_code} /*deltaCode ({delta_code_comment})*/,
-    {letter} /*letter{letterComment}*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
   }},
 """
-        ZONE_POLICIES_LETTER_ARRAY = """\
-static const char* const kLetters{policyName}[] {progmem} = {{
-{letterItems}
-}};
-"""
-
         # Generate kZoneRules*[]
         rule_items = ''
         for rule in rules:
@@ -395,27 +386,6 @@ static const char* const kLetters{policyName}[] {progmem} = {{
                 to_year = rule['to_year_tiny']
                 to_year_label = 'toYearTiny'
 
-            # Single-character 'letter' values are represented as themselves
-            # using the C++ 'char' type ('A'-'Z'). But some 'letter' fields hold
-            # a multi-character string. We can encode these multi-character
-            # strings as an index into an array of NUL-terminated strings.
-            # ASCII codes less than 32 (space) are non-printable control
-            # characters so they will not collide with the printable characters
-            # 'A' - 'Z'. Therefore we can hold to up to 31 multi-character
-            # strings per-zone. In practice, for a single zone, the maximum
-            # number of multi-character strings that I've seen is 2.
-            letter = rule['letter']
-            if len(letter) == 1:
-                letterComment = ''
-                letter = f"'{letter}'"
-            elif len(letter) > 1:
-                letterComment = f' (index to "{letter}")'
-                letter = str(rule['letter_index_per_policy'])
-            else:
-                raise Exception(
-                    'len(%s) == 0; should not happen'
-                    % rule['letter'])
-
             rule_items += ZONE_POLICIES_CPP_RULE_ITEM.format(
                 raw_line=normalize_raw(rule['raw_line']),
                 from_year=from_year,
@@ -430,41 +400,20 @@ static const char* const kLetters{policyName}[] {progmem} = {{
                 at_time_modifier_comment=at_time_modifier_comment,
                 delta_code=delta_code,
                 delta_code_comment=delta_code_comment,
-                letter=letter,
-                letterComment=letterComment)
-
-        # Generate kLetters*[]
-        policy_name = normalize_name(name)
-        num_letters = len(indexed_letters) if indexed_letters else 0
-        memory_letters8 = 0
-        memory_letters32 = 0
-        if num_letters:
-            assert indexed_letters is not None
-            letter_array_ref = f'kLetters{policy_name}'
-            letterItems = ''
-            for name, index in indexed_letters.items():
-                letterItems += f'  /*{index}*/ "{name}",\n'
-                memory_letters8 += len(name) + 1 + 2  # NUL terminated
-                memory_letters32 += len(name) + 1 + 4  # NUL terminated
-            letter_array = ZONE_POLICIES_LETTER_ARRAY.format(
-                policyName=policy_name,
-                letterItems=letterItems,
-                progmem='ACE_TIME_PROGMEM')
-        else:
-            letter_array_ref = 'nullptr'
-            letter_array = ''
+                letter=rule['letter'],
+                letter_index=rule['letter_index'],
+            )
 
         # Calculate the memory consumed by structs and arrays
         num_rules = len(rules)
         memory8 = (
             1 * self.SIZEOF_ZONE_POLICY_8
-            + num_rules * self.SIZEOF_ZONE_RULE_8
-            + memory_letters8)
+            + num_rules * self.SIZEOF_ZONE_RULE_8)
         memory32 = (
             1 * self.SIZEOF_ZONE_POLICY_32
-            + num_rules * self.SIZEOF_ZONE_RULE_32
-            + memory_letters32)
+            + num_rules * self.SIZEOF_ZONE_RULE_32)
 
+        policy_name = normalize_name(name)
         policy_item = self.ZONE_POLICIES_CPP_POLICY_ITEM.format(
             scope=self.scope,
             policyName=policy_name,
@@ -472,9 +421,6 @@ static const char* const kLetters{policyName}[] {progmem} = {{
             memory8=memory8,
             memory32=memory32,
             ruleItems=rule_items,
-            numLetters=num_letters,
-            letterArrayRef=letter_array_ref,
-            letterArray=letter_array,
             progmem='ACE_TIME_PROGMEM')
 
         return (policy_item, memory8, memory32)
@@ -617,12 +563,18 @@ const char* const kFragments[] = {{
 {fragments}
 }};
 
+const char* const kLetters[] = {{
+{letters}
+}};
+
 const internal::ZoneContext kZoneContext = {{
   {start_year} /*startYear*/,
   {until_year} /*untilYear*/,
   kTzDatabaseVersion /*tzVersion*/,
   {numFragments} /*numFragments*/,
+  {numLetters} /*numLetters*/,
   kFragments /*fragments*/,
+  kLetters /*letters*/,
 }};
 
 //---------------------------------------------------------------------------
@@ -714,6 +666,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         link_ids: Dict[str, int],
         formats_map: IndexMap,
         fragments_map: IndexMap,
+        letters_map: IndexMap,
         compressed_names: Dict[str, str],
     ):
         self.invocation = invocation
@@ -741,6 +694,7 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         self.link_ids = link_ids
         self.formats_map = formats_map
         self.fragments_map = fragments_map
+        self.letters_map = letters_map
         self.compressed_names = compressed_names
 
         self.db_header_namespace = self.db_namespace.upper()
@@ -846,11 +800,17 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             link_item = self._generate_link_item(link_name, zone_name)
             link_items += link_item
 
-        # Generate fragments.
+        # Generate array of fragments.
         num_fragments = len(self.fragments_map) + 1
-        fragments = '/*\\x00*/ nullptr,\n'
+        fragments = '/*\\x00*/ nullptr,\n'  # '\x00' reference cannot exist
         for fragment, index in self.fragments_map.items():
             fragments += f'/*\\x{index:02x}*/ "{fragment}",\n'
+
+        # Generate array of letters.
+        num_letters = len(self.letters_map)
+        letters = ''
+        for letter, index in self.letters_map.items():
+            letters += f'/*{index}*/ "{letter}",\n'
 
         # Estimate size of entire ZoneInfo database, factoring in deduping
         # of strings
@@ -944,7 +904,9 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             infoItems=info_items,
             linkItems=link_items,
             numFragments=num_fragments,
+            numLetters=num_letters,
             fragments=fragments,
+            letters=letters,
         )
 
     def _generate_info_item(

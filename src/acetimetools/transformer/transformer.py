@@ -154,6 +154,7 @@ class Transformer:
             policies_map)
         policies_map = self._create_rules_with_on_day_expansion(policies_map)
         policies_map = self._create_rules_with_anchor_transition(policies_map)
+        policies_map = self._normalize_letters(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_with_border_transitions(
                 policies_map)
@@ -914,6 +915,14 @@ class Transformer:
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
+
+    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
+        """Convert '-' into ''"""
+        for name, rules in policies_map.items():
+            for rule in rules:
+                if rule['letter'] == '-':
+                    rule['letter'] = ''
+        return policies_map
 
     def _remove_rules_long_dst_letter(
         self,

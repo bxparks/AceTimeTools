@@ -468,8 +468,6 @@ const (
 
             # Find the index for the 'letter' field.
             letter = rule['letter']
-            if letter == '-':
-                letter = ''
             entry = self.letters_map[letter]
             letter_index = entry[0]  # entry[1] is the byte offset
 

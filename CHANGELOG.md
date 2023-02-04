@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+    * Simplify encoding of `Rule.LETTER` as an index into `ZoneContext.letters`.
 * v1.4.2 (2023-02-02)
     * `tzcompiler.sh`:
         * Incorporate `copytz.sh` functionality directly to avoid dependency on

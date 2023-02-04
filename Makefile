@@ -1,4 +1,4 @@
-.PHONY: all mypy flake8 tests
+.PHONY: all mypy flake8 tests zonedb.json zonedbx.json
 
 #------------------------------------------------------------------------------
 # Tests, validation, mypy.

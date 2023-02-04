@@ -3,7 +3,6 @@
 # MIT License
 
 from typing import NamedTuple
-from typing import Optional
 from typing import Dict
 from typing import List
 from typing import Set
@@ -116,9 +115,11 @@ class ArduinoTransformer:
                     letter=letter,
                     indexed_letters=letters_map,
                 )
+                indexed_letters = letters_per_policy.get(policy_name)
+                assert indexed_letters is not None
                 rule['letter_index_per_policy'] = _to_letter_index(
                     letter=letter,
-                    indexed_letters=letters_per_policy.get(policy_name),
+                    indexed_letters=indexed_letters,
                 )
                 if len(letter) > 1:
                     add_comment(
@@ -187,16 +188,20 @@ def _collect_letter_strings(
     1) a sorted collection of all multi-LETTERs, with their self index,
     2) collection of multi-LETTERs, grouped by policyName
     """
+
+    # Create a global set() of letters, and a per-policy set() of letters
     letters_per_policy: LettersPerPolicy = OrderedDict()
     all_letters: Set[str] = set()
+    all_letters.add('')
     for policy_name, rules in sorted(policies_map.items()):
         policy_letters: Set[str] = set()
+        policy_letters.add('')
         for rule in rules:
             letter = rule['letter']
-            if len(letter) > 1:
-                all_letters.add(letter)
-                policy_letters.add(letter)
+            all_letters.add(letter)
+            policy_letters.add(letter)
 
+        # Create per-policy letters index map
         if policy_letters:
             indexed_letters: IndexMap = OrderedDict()
             index = 0
@@ -205,7 +210,7 @@ def _collect_letter_strings(
                 index += 1
             letters_per_policy[policy_name] = indexed_letters
 
-    # Create a map of all multi-letters
+    # Create a global letters index map
     index = 0
     letters_map: IndexMap = OrderedDict()
     for letter in sorted(all_letters):
@@ -402,24 +407,14 @@ def _to_offset_and_delta(
 
 def _to_letter_index(
     letter: str,
-    indexed_letters: Optional[IndexMap]
+    indexed_letters: IndexMap
 ) -> int:
     """
-    Return an index into the indexed_letters if len(letter) > 1.
-    Otherwise if letter is 1-character long, return -1.
+    Return an index into the indexed_letters.
     """
-    if len(letter) > 1:
-        if not indexed_letters:
-            raise Exception(
-                f'No indexed_letters provided for len({letter}) > 1')
-        letter_index = indexed_letters[letter]
-        if letter_index >= 32:
-            raise Exception('Number of indexed letters >= 32')
-    elif len(letter) == 1:
-        letter_index = -1
-    else:
-        raise Exception('len(letter) == 0; should not happen')
-
+    letter_index = indexed_letters[letter]
+    if letter_index < 0:
+        raise Exception(f'letter "{letter}" not found')
     return letter_index
 
 
