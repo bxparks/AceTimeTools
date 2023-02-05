@@ -92,7 +92,7 @@ def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
     exist in the TZDB.
     """
     all_letters: Set[str] = set()
-    all_letters.add('')  # always include the empty string
+    all_letters.add('')  # TODO: delete? letter '-' is normalized to ''
     for policy_name, rules in policies_map.items():
         for rule in rules:
             all_letters.add(rule['letter'])
@@ -115,7 +115,7 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
     The final entry is a sential "~" which should not exist in the TZDB.
     """
     formats: Set[str] = set()
-    formats.add('')  # always include the empty string
+    formats.add('')  # TODO: delete?
     for zone_name, eras in zones_map.items():
         for era in eras:
             format = era['format']
@@ -137,8 +137,8 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
 
 def _collect_name_strings(zone_and_link_names: Iterable[str]) -> OffsetMap:
 
+    # Don't include the empty string.
     names: Set[str] = set()
-    names.add('')  # always include the empty string
     names.update(zone_and_link_names)
 
     # Create a map of name to byte offset

@@ -192,10 +192,10 @@ def _collect_letter_strings(
     # Create a global set() of letters, and a per-policy set() of letters
     letters_per_policy: LettersPerPolicy = OrderedDict()
     all_letters: Set[str] = set()
-    all_letters.add('')
+    all_letters.add('')  # TODO: delete? letter '-' is normalized to ''
     for policy_name, rules in sorted(policies_map.items()):
         policy_letters: Set[str] = set()
-        policy_letters.add('')
+        policy_letters.add('')  # TODO: delete? letter '-' is normalized to ''
         for rule in rules:
             letter = rule['letter']
             all_letters.add(letter)
