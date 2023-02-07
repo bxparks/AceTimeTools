@@ -203,7 +203,7 @@ const ZoneInfoChunkSize = {zoneInfoChunkSize}
 const ZoneInfosData = {zoneInfosData}
 
 // ---------------------------------------------------------------------------
-// Unsuported zones: {numRemovedInfos}
+// Unsupported zones: {numRemovedInfos}
 // ---------------------------------------------------------------------------
 
 {removedInfoItems}
