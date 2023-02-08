@@ -962,7 +962,7 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
         delta_code = era['delta_code_encoded']
         delta_code_comment = _get_era_delta_code_comment(
             offset_seconds=era['offset_seconds_truncated'],
-            delta_seconds=era['rules_delta_seconds_truncated'],
+            delta_seconds=era['era_delta_seconds_truncated'],
             scope=self.scope,
         )
         if self.generate_int16_years:

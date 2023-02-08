@@ -187,7 +187,7 @@ ZONE_INFO_{zoneNormalizedName}: ZoneInfo = {{
     {{
         'offset_seconds': {offset_seconds},
         'zone_policy': {zone_policy},
-        'rules_delta_seconds': {rules_delta_seconds},
+        'era_delta_seconds': {era_delta_seconds},
         'format': '{format}',
         'until_year': {until_year},
         'until_month': {until_month},
@@ -401,7 +401,7 @@ ZONE_INFO_{link_normalized_name}: ZoneInfo = {{
             raw_line=normalize_raw(era['raw_line']),
             offset_seconds=era['offset_seconds_truncated'],
             zone_policy=zone_policy,
-            rules_delta_seconds=era['rules_delta_seconds_truncated'],
+            era_delta_seconds=era['era_delta_seconds_truncated'],
             format=era['format'],  # preserve the %s
             until_year=era['until_year'],
             until_month=era['until_month'],

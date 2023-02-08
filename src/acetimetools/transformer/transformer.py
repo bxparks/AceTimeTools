@@ -664,7 +664,7 @@ class Transformer:
         self, zones_map: ZonesMap,
     ) -> ZonesMap:
         """Expand and normalize the zone.rules field (RULES) and create
-        zone.rules_delta_seconds from zone.rules.
+        zone.era_delta_seconds from zone.rules.
 
         The RULES field can hold the following:
             1) '-' no rules
@@ -675,7 +675,7 @@ class Transformer:
         After this method, the 'zone.rules' contains 3 possible values:
             1) '-' no rules, or
             2) a string reference of the zone policy containing the rules, or
-            3) ':' which indicates that 'rules_delta_seconds' is defined.
+            3) ':' which indicates that 'era_delta_seconds' is defined.
         """
         results: ZonesMap = {}
         removed_zones: CommentsMap = {}
@@ -692,20 +692,20 @@ class Transformer:
                             f"offset in RULES '{rules_string}'")
                         break
 
-                    rules_delta_seconds = time_string_to_seconds(rules_string)
-                    if rules_delta_seconds == INVALID_SECONDS:
+                    era_delta_seconds = time_string_to_seconds(rules_string)
+                    if era_delta_seconds == INVALID_SECONDS:
                         valid = False
                         add_comment(
                             removed_zones, name,
                             f"invalid RULES string '{rules_string}'")
                         break
-                    if rules_delta_seconds == 0:
+                    if era_delta_seconds == 0:
                         valid = False
                         add_comment(
                             removed_zones, name,
                             f"unexpected 0:00 RULES string '{rules_string}'")
                         break
-                    if rules_delta_seconds not in (0, 3600):
+                    if era_delta_seconds not in (0, 3600):
                         add_comment(
                             notable_zones, name,
                             f"RULES delta offset '{rules_string}' "
@@ -713,9 +713,9 @@ class Transformer:
 
                     # Check that RULES delta is a multiple of 15-minutes
                     # (or whatever delta_granularity is set to).
-                    rules_delta_seconds_truncated = truncate_to_granularity(
-                        rules_delta_seconds, self.delta_granularity)
-                    if rules_delta_seconds != rules_delta_seconds_truncated:
+                    era_delta_seconds_truncated = truncate_to_granularity(
+                        era_delta_seconds, self.delta_granularity)
+                    if era_delta_seconds != era_delta_seconds_truncated:
                         if self.strict:
                             valid = False
                             add_comment(
@@ -726,7 +726,7 @@ class Transformer:
                             break
                         else:
                             hm = seconds_to_hm_string(
-                                rules_delta_seconds_truncated)
+                                era_delta_seconds_truncated)
                             add_comment(
                                 notable_zones, name,
                                 f"RULES delta offset '{rules_string}'"
@@ -734,7 +734,7 @@ class Transformer:
 
                     # Check that rules_delta fits inside 4-bits, because that's
                     # how it is stored in the Arduino zonedb files.
-                    rules_delta_code = rules_delta_seconds_truncated // 900
+                    rules_delta_code = era_delta_seconds_truncated // 900
                     if rules_delta_code < -4 or rules_delta_code > 11:
                         valid = False
                         add_comment(
@@ -745,13 +745,13 @@ class Transformer:
                     # Set the ZoneEra['rules'] to ':' to indicate that the RULES
                     # field is a DST offset.
                     era['rules'] = ':'
-                    era['rules_delta_seconds'] = rules_delta_seconds
-                    era['rules_delta_seconds_truncated'] = \
-                        rules_delta_seconds_truncated
+                    era['era_delta_seconds'] = era_delta_seconds
+                    era['era_delta_seconds_truncated'] = \
+                        era_delta_seconds_truncated
                 else:
                     # If '-' or named policy, set to 0.
-                    era['rules_delta_seconds'] = 0
-                    era['rules_delta_seconds_truncated'] = 0
+                    era['era_delta_seconds'] = 0
+                    era['era_delta_seconds_truncated'] = 0
             if valid:
                 results[name] = eras
 

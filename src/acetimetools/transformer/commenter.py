@@ -151,7 +151,7 @@ def _note_zones_with_odd_utc_offset(
             rule_name = era['rules']
             found_odd_offset = False
             if rule_name == ':':
-                if era['rules_delta_seconds'] % 1800 != 0:
+                if era['era_delta_seconds'] % 1800 != 0:
                     add_comment(
                         notable_zones, zone_name,
                         f'RULES ({rule_name}) not at :00 or :30 mark')

@@ -137,7 +137,7 @@ class ArduinoTransformer:
                 # Determine the current delta seconds, based on the RULES field.
                 rule_policy_name = era['rules']
                 if rule_policy_name == ':':
-                    delta_seconds = era['rules_delta_seconds_truncated']
+                    delta_seconds = era['era_delta_seconds_truncated']
                 else:
                     delta_seconds = 0
 

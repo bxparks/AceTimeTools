@@ -87,7 +87,7 @@ class ZoneInfoInliner:
                 zone_eras.append({
                     'offset_seconds': era['offset_seconds_truncated'],
                     'zone_policy': zone_policy,
-                    'rules_delta_seconds': era['rules_delta_seconds_truncated'],
+                    'era_delta_seconds': era['era_delta_seconds_truncated'],
                     'format': era['format'],
                     'until_year': era['until_year'],
                     'until_month': era['until_month'],

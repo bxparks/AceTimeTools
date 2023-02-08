@@ -1,6 +1,14 @@
 # Changelog
 
 * Unreleased
+    * Rename `rules_delta_seconds` to `era_delta_seconds` for better
+      self-documentation.
+        * This field is determined by the `RULES` column in the Zone entry when
+          it contains `hh:mm` form instead of a symbolic pointer to a Rule.
+        * This determines the DST offset of the given ZoneEra.
+    * `gotransformer.py`, `gogenerator.py`
+        * Generate STDOFF and DSTOFF in 1-second resolution instead of 1-minute
+          resolution.
 * v1.4.3 (2023-02-04)
     * `argenerator.py`, `cgenerator.py`:
         * Simplify encoding of `Rule.LETTER` as an index into

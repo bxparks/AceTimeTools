@@ -128,10 +128,10 @@ class ZoneEraRaw(TypedDict, total=False):
     offset_seconds: int  # STD offset from UTC/GMT in seconds
     offset_seconds_truncated: int  # offset_seconds truncated to granularity
     # If RULES is a DST offset string of the form # hh:mm[:ss], then 'rules' is
-    # set to ':', and'rules_delta_seconds' contains the parsed delta offset from
+    # set to ':', and'era_delta_seconds' contains the parsed delta offset from
     # UTC in seconds. If RULES is '-', then this is set to 0.
-    rules_delta_seconds: int
-    rules_delta_seconds_truncated: int  # truncated to granularity
+    era_delta_seconds: int
+    era_delta_seconds_truncated: int  # truncated to granularity
     until_day: int  # 1-31
     until_seconds: int  # until_time converted into total seconds
     until_seconds_truncated: int  # untilSeconds after truncation

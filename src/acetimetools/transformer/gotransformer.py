@@ -218,7 +218,7 @@ def _generate_offset_seconds_code(zones_map: ZonesMap) -> None:
         for era in eras:
             rule_policy_name = era['rules']
             if rule_policy_name == ':':
-                delta_seconds = era['rules_delta_seconds_truncated']
+                delta_seconds = era['era_delta_seconds_truncated']
             else:
                 delta_seconds = 0
 

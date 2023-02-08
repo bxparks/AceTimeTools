@@ -670,7 +670,7 @@ const (
                 policy_name = "(none)"
 
             offset_seconds = era['offset_seconds_truncated']
-            delta_seconds = era['rules_delta_seconds_truncated']
+            delta_seconds = era['era_delta_seconds_truncated']
             offset_seconds_code_comment = \
                 f"(offset_seconds={offset_seconds})/15"
             delta_code_comment = _get_era_delta_code_comment(
