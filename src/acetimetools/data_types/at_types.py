@@ -147,6 +147,12 @@ class ZoneEraRaw(TypedDict, total=False):
     until_time_modifier: int  # 's', 'w' or 'u' + until_time_minute
     format_short: str  # Arduino version of format with %s -> %
 
+    # Derived by gotransformer.py
+    go_offset_seconds_code: int
+    go_offset_seconds_remainder: int
+    go_delta_code: int
+    go_delta_code_encoded: int
+
 
 # Map of policyName -> ZoneRuleRaw[]. Created by extractor.py. Updated by
 # transformer.py.

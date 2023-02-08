@@ -683,7 +683,7 @@ const (
 
             raw_line = normalize_raw(era['raw_line'])
             format_comment = f'"{format_short}"'
-            offset_code = era['offset_code']
+            offset_seconds_code = era['go_offset_seconds_code']
             delta_code = era['delta_code_encoded']
             until_year = era['until_year']
             until_month = era['until_month']
@@ -696,7 +696,7 @@ const (
 \t{{
 \t\tPolicyIndex: {policy_index}, // PolicyName: {policy_name}
 \t\tFormatIndex: {format_index}, // {format_comment}
-\t\tOffsetCode: {offset_code},
+\t\tOffsetSecondsCode: {offset_seconds_code},
 \t\tDeltaCode: {delta_code}, // {delta_code_comment}
 \t\tUntilYear: {until_year},
 \t\tUntilMonth: {until_month},
@@ -732,8 +732,8 @@ const (
         entry = self.formats_map[format_short]
         format_index = entry[0]  # (index, offset)
 
-        offset_code = era['offset_code']
-        delta_code = era['delta_code_encoded']
+        offset_seconds_code = era['go_offset_seconds_code']
+        delta_code = era['go_delta_code_encoded']
         until_year = era['until_year']
         until_month = era['until_month']
         until_day = era['until_day']
@@ -743,7 +743,7 @@ const (
         # chunk size = 11 bytes
         write_u16(data, format_index)
         write_u8(data, policy_index)
-        write_u8(data, offset_code)
+        write_u16(data, offset_seconds_code)
         write_u8(data, delta_code)
         write_u16(data, until_year)
         write_u8(data, until_month)
@@ -962,11 +962,11 @@ def _get_era_delta_code_comment(
     """Create the comment that explains how the ZoneEra delta_code[_encoded] was
     calculated.
     """
-    offset_minute = offset_seconds % 900 // 60
+    offset_seconds_remainder = offset_seconds % 15
     delta_minutes = delta_seconds // 60
     if scope == 'extended':
         return (
-            f"((offset_minute={offset_minute}) << 4) + "
+            f"((offset_seconds={offset_seconds_remainder}) << 4) + "
             f"((delta_minutes={delta_minutes})/15 + 4)"
         )
     else:
