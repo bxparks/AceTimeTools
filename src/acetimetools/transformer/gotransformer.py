@@ -9,6 +9,7 @@ library.
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import NamedTuple
 from typing import Set
 from typing import Tuple
 import logging
@@ -64,6 +65,8 @@ class GoTransformer:
             raise Exception("Era count exceeds uint16 max of 65536")
         if len(info_index_size_map) > 65535:
             raise Exception("Info count exceeds uint16 max of 65535")
+
+        _generate_offset_seconds_code(tresult.zones_map)
 
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
@@ -208,3 +211,61 @@ def _generate_info_index_size_map(
         eras_index += len(eras)
         info_index += 1
     return index_map, eras_index
+
+
+def _generate_offset_seconds_code(zones_map: ZonesMap) -> None:
+    for zone_name, eras in sorted(zones_map.items()):
+        for era in eras:
+            rule_policy_name = era['rules']
+            if rule_policy_name == ':':
+                delta_seconds = era['rules_delta_seconds_truncated']
+            else:
+                delta_seconds = 0
+
+            encoded = _to_offset_and_delta(
+                offset_seconds=era['offset_seconds_truncated'],
+                delta_seconds=delta_seconds)
+
+            era['go_offset_seconds_code'] = encoded.offset_seconds_code
+            era['go_offset_seconds_remainder'] = \
+                encoded.offset_seconds_remainder
+            era['go_delta_code'] = encoded.delta_code
+            era['go_delta_code_encoded'] = encoded.delta_code_encoded
+
+
+class EncodedOffsetSecond(NamedTuple):
+    """Encode the STD offset and DST offset into a 16-bit integer fields.
+
+    * offset_seconds_code: STD offset in units of 15-seconds
+    * offset_seconds_remainder: Remainder of offset seconds. This already
+      encoded in delta_code_encoded, so this is mostly for debugging.
+    * delta_code: delta offset in units of 15-minutes
+    * delta_code_encoded:
+        * The lower 4-bits is delta_code + 4 (i.e. 1h) which allows encoding
+          from -1:00 to +2:45.
+        * The upper 4-bits holds the offset_second_remainder.
+    """
+    offset_seconds_code: int
+    offset_seconds_remainder: int
+    delta_code: int
+    delta_code_encoded: int
+
+
+def _to_offset_and_delta(
+    offset_seconds: int,
+    delta_seconds: int,
+) -> EncodedOffsetSecond:
+    """Convert offset_seconds and delta_seconds to an EncodedOffset suitable for
+    AceTimeGo.
+    """
+    offset_seconds_code = offset_seconds // 15  # truncate to -infinty
+    offset_seconds_remainder = (offset_seconds % 15)  # always positive
+    delta_code = delta_seconds // 900  # 15-minute increments
+    delta_code_encoded = (offset_seconds_remainder << 4) + (delta_code + 4)
+
+    return EncodedOffsetSecond(
+        offset_seconds_code=offset_seconds_code,
+        offset_seconds_remainder=offset_seconds_remainder,
+        delta_code=delta_code,
+        delta_code_encoded=delta_code_encoded,
+    )
