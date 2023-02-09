@@ -43,6 +43,10 @@ class GoGenerator:
 //
 // from https://github.com/eggert/tz/releases/tag/{tz_version}
 //
+// Supported Zones: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
+// Unsupported Zones: {numRemovedZonesAndLinks} \
+({numRemovedZones} zones, {numRemovedLinks} links)
+//
 // DO NOT EDIT
 
 package {dbNamespace}
@@ -129,6 +133,10 @@ const ZonePoliciesData = {zonePoliciesData}
 //
 // from https://github.com/eggert/tz/releases/tag/{tz_version}
 //
+// Supported Zones: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
+// Unsupported Zones: {numRemovedZonesAndLinks} \
+({numRemovedZones} zones, {numRemovedLinks} links)
+//
 // DO NOT EDIT
 
 package {dbNamespace}
@@ -169,7 +177,7 @@ var (
 // ZoneEraRecords is an array of zoneinfo.ZoneEraRecord items concatenated
 // together.
 //
-// Supported zones: {numInfos}
+// Supported zones: {numZones}
 // numEras: {numEras}
 // ---------------------------------------------------------------------------
 
@@ -188,7 +196,7 @@ const ZoneErasData = {zoneErasData}
 // ZoneInfoRecords is an array of zoneinfo.ZoneInfoRecord items concatenated
 // together.
 //
-// Total: {numZonesAndLinks} ({numInfos} zones, {numLinks} links)
+// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
 // ---------------------------------------------------------------------------
 
 var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
@@ -203,7 +211,7 @@ const ZoneInfoChunkSize = {zoneInfoChunkSize}
 const ZoneInfosData = {zoneInfosData}
 
 // ---------------------------------------------------------------------------
-// Unsupported zones: {numRemovedInfos}
+// Unsupported zones: {numRemovedZones}
 // ---------------------------------------------------------------------------
 
 {removedInfoItems}
@@ -237,6 +245,10 @@ const ZoneInfosData = {zoneInfosData}
 //   {tz_files}
 //
 // from https://github.com/eggert/tz/releases/tag/{tz_version}
+//
+// Supported Zones: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
+// Unsupported Zones: {numRemovedZonesAndLinks} \
+({numRemovedZones} zones, {numRemovedLinks} links)
 //
 // DO NOT EDIT
 
@@ -424,11 +436,23 @@ const (
             [x[1] for x in self.letters_map.values()]
         )
 
+        num_zones = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_zones_and_links = len(self.zones_and_links)
+        num_removed_zones = len(self.removed_zones)
+        num_removed_links = len(self.removed_links)
+        num_removed_zones_and_links = num_removed_zones + num_removed_links
         return self.ZONE_POLICIES_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
             tz_files=self.tz_files,
             dbNamespace=self.db_namespace,
+            numZones=num_zones,
+            numLinks=num_links,
+            numZonesAndLinks=num_zones_and_links,
+            numRemovedZones=num_removed_zones,
+            numRemovedLinks=num_removed_links,
+            numRemovedZonesAndLinks=num_removed_zones_and_links,
             numPolicies=len(self.policies_map),
             numRules=self.num_rules,
             zoneRules=zone_rules_string,
@@ -619,6 +643,12 @@ const (
             [x[1] for x in self.names_map.values()]
         )
 
+        num_zones = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_zones_and_links = len(self.zones_and_links)
+        num_removed_zones = len(self.removed_zones)
+        num_removed_links = len(self.removed_links)
+        num_removed_zones_and_links = num_removed_zones + num_removed_links
         return self.ZONE_INFOS_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
@@ -627,9 +657,9 @@ const (
             start_year=self.start_year,
             until_year=self.until_year,
             numEras=self.num_eras,
-            numInfos=len(self.zones_map),
-            numLinks=len(self.links_map),
-            numZonesAndLinks=len(self.zones_and_links),
+            numZones=num_zones,
+            numLinks=num_links,
+            numZonesAndLinks=num_zones_and_links,
             zoneEras=zone_eras_string,
             zoneErasData=zone_eras_data_string,
             zoneEraChunkSize=zone_era_chunk_size,
@@ -638,11 +668,12 @@ const (
             zoneInfosData=zone_infos_data_string,
             zoneInfoChunkSize=zone_info_chunk_size,
             zoneInfoCount=zone_info_count,
-            numRemovedInfos=len(self.removed_zones),
+            numRemovedZonesAndLinks=num_removed_zones_and_links,
+            numRemovedZones=num_removed_zones,
             removedInfoItems=removed_info_items,
             numNotableInfos=len(self.notable_zones),
             notableInfoItems=notable_info_items,
-            numRemovedLinks=len(self.removed_links),
+            numRemovedLinks=num_removed_links,
             removedLinkItems=removed_link_items,
             numNotableLinks=len(self.notable_links),
             notableLinkItems=notable_link_items,
@@ -847,6 +878,12 @@ const (
         zone_and_link_ids_string = self._generate_zone_and_link_ids()
         zone_and_link_indexes_string = self._generate_zone_and_link_indexes()
 
+        num_zones = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_zones_and_links = len(self.zones_and_links)
+        num_removed_zones = len(self.removed_zones)
+        num_removed_links = len(self.removed_links)
+        num_removed_zones_and_links = num_removed_zones + num_removed_links
         return self.ZONE_REGISTRY_FILE.format(
             invocation=self.invocation,
             tz_version=self.tz_version,
@@ -854,9 +891,12 @@ const (
             dbNamespace=self.db_namespace,
             startYear=self.start_year,
             untilYear=self.until_year,
-            numZones=len(self.zones_map),
-            numLinks=len(self.links_map),
-            numZonesAndLinks=len(self.zones_and_links),
+            numZones=num_zones,
+            numLinks=num_links,
+            numZonesAndLinks=num_zones_and_links,
+            numRemovedZonesAndLinks=num_removed_zones_and_links,
+            numRemovedZones=num_removed_zones,
+            numRemovedLinks=num_removed_links,
             zoneAndLinkIds=zone_and_link_ids_string,
             zoneAndLinkIndexes=zone_and_link_indexes_string,
         )
