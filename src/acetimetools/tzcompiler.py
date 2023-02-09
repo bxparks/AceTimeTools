@@ -411,6 +411,8 @@ def main() -> None:
         merged_notable_zones={},
         notable_policies={},
         notable_links={},
+        earliest_year_original=0,
+        earliest_year_generated=0,
         zone_ids={},
         link_ids={},
         letters_per_policy={},

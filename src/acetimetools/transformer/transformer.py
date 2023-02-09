@@ -115,9 +115,10 @@ class Transformer:
             len(links_map),
         )
 
-        # Part 1: Some sanity checks.
+        # Part 1: Some sanity checks and stats gathering.
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
+        earliest_year_original = _detect_earliest_year(zones_map, policies_map)
 
         # Part 2: Transform the zones_map
         zones_map = self._filter_include_zones(zones_map, self.include_list)
@@ -183,6 +184,9 @@ class Transformer:
         tresult.notable_policies = self.all_notable_policies
         tresult.notable_links = self.all_notable_links
         tresult.merged_notable_zones = self.tresult.merged_notable_zones
+        tresult.earliest_year_original = earliest_year_original
+        tresult.earliest_year_generated = _detect_earliest_year(
+            zones_map, policies_map)
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -1205,12 +1209,17 @@ class Transformer:
             'rule': Optional[ZoneRuleRaw],
         })
 
+        # Find the rule that generates the earliest transition. The `rules`
+        # array will never be empty, so this will always produce a non-empty
+        # anchor_info['rule'].
+        #
+        # NOTE: Why do I do this? It looks like this earliest Rule is copied,
+        # but most (all?) of its fields are clobbered, so I can't see why this
+        # needs to be done... The only thing preserved seems to be 'letter'.
         anchor_info: AnchorInfo = {
             'earliestDate': (MAX_UNTIL_YEAR, 12, 31),
             'rule': None,
         }
-        # rules will never be empty, so this will always produce a
-        # non-empty anchor_info['rule'].
         for rule in rules:
             from_year = rule['from_year']
             in_month = rule['in_month']
@@ -1240,6 +1249,7 @@ class Transformer:
         anchor_rule['delta_seconds'] = 0
         anchor_rule['delta_seconds_truncated'] = 0
         anchor_rule['raw_line'] = 'Anchor: ' + anchor_rule['raw_line']
+        anchor_rule['anchor'] = True
         return anchor_rule
 
     def _remove_rules_with_border_transitions(
@@ -1931,3 +1941,27 @@ def _detect_links_to_links(links_map: LinksMap) -> None:
                 f"Unsupported Link to Link: {link_name} -> {target_name}"
             )
     logging.info('Detected no links-to-links')
+
+
+def _detect_earliest_year(
+    zones_map: ZonesMap, policies_map: PoliciesMap,
+) -> int:
+    """Scan the Zone.UNTIL and RULE.FROM fields and determine the earliest year
+    in the database.
+    """
+    year = MAX_YEAR
+    for zone_name, eras in zones_map.items():
+        for era in eras:
+            era_year = era['until_year']
+            if era_year < year:
+                year = era_year
+
+    for name, rules in policies_map.items():
+        for rule in rules:
+            if rule.get('anchor', False):
+                continue
+            from_year = rule['from_year']
+            if from_year < year:
+                year = from_year
+
+    return year

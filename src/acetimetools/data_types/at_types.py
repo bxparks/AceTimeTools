@@ -89,6 +89,7 @@ class ZoneRuleRaw(TypedDict, total=False):
     delta_seconds: int  # offset from Standard time in seconds
     delta_seconds_truncated: int  # delta_seconds truncated to granularity
     used: Optional[bool]  # whether or not the rule is used by a zone
+    anchor: Optional[bool]  # True if this is an Anchor rule
 
     # Derived from above by artransformer.py
     from_year_tiny: int  # (from_year - 2000), w/ special cases for MIN and MAX
@@ -210,54 +211,33 @@ ZonesToPolicies = Dict[str, Collection[str]]
 @dataclass
 class TransformerResult:
     """Result type of Transformer.get_data().
-
-    * zones_map: (zoneName -> ZoneEraRaw[]).
-    * policies_map: (policyName -> ZoneRuleRaw[]).
-    * links_map: (linkName -> zoneName)
-    * removed_zones: {zoneName -> reasons[]}
-    * removed_policies: {policyName -> reasons[]}
-    * removed_links: {linkName -> reasons[]}
-    * notable_zones: {zoneName -> reasons[]}
-    * notable_policies: {policyName -> reasons[]}
-    * notable_links: {linkName -> reasons[]}
-    * zones_to_policies: {zoneName -> policyName[]}
-    * merged_notable_zones: {zoneName -> List[str | CommentsMap]}
-    * zone_ids: {zoneName -> zoneHash}
-    * link_ids: {linkName -> zoneHash}
-    * letters_per_policy: {policyName -> {letter -> index}}
-    * letters_map: {letter -> index}
-    * formats_map: {format -> index}
-    * fragments_map: {fragment -> index}
-    * compressed_names: {zoneName -> compressedName}
-    * go_letters_map: {letter -> byte_offset}
-    * go_formats_map: {format -> byte_offset}
-    * go_names_map: {name -> byte_offset}
-    * go_zone_and_link_index_map: {name -> name -> index}
-    * go_policy_index_size_map: {name -> (index, offset, size)}
     """
-    zones_map: ZonesMap
-    policies_map: PoliciesMap
-    links_map: LinksMap
-    removed_zones: CommentsMap
-    removed_policies: CommentsMap
-    removed_links: CommentsMap
-    notable_zones: CommentsMap
-    notable_policies: CommentsMap
-    notable_links: CommentsMap
-    zones_to_policies: ZonesToPolicies
-    merged_notable_zones: MergedCommentsMap
-    zone_ids: Dict[str, int]
-    link_ids: Dict[str, int]
-    letters_per_policy: LettersPerPolicy
-    letters_map: IndexMap
-    formats_map: IndexMap
-    fragments_map: IndexMap
-    compressed_names: Dict[str, str]
-    go_letters_map: OffsetMap
-    go_formats_map: OffsetMap
-    go_names_map: OffsetMap
-    go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
-    go_policy_index_size_map: IndexSizeMap  # policy -> (index, offset, size)
+
+    zones_map: ZonesMap  # {zoneName -> ZoneEraRaw[]}
+    policies_map: PoliciesMap  # {policyName -> ZoneRuleRaw[]}
+    links_map: LinksMap  # {linkName -> zoneName}
+    removed_zones: CommentsMap  # {zoneName -> reasons[]}
+    removed_policies: CommentsMap  # {policyName -> reasons[]}
+    removed_links: CommentsMap  # {linkName -> reasons[]}
+    notable_zones: CommentsMap  # {zoneName -> reasons[]}
+    notable_policies: CommentsMap  # {policyName -> reasons[]}
+    notable_links: CommentsMap  # {linkName -> reasons[]}
+    zones_to_policies: ZonesToPolicies  # {zoneName -> policyName[]}
+    merged_notable_zones: MergedCommentsMap  # {zoneName -> MergedCommentsMap]}
+    earliest_year_original: int  # earliest year in original TZDB
+    earliest_year_generated: int  # earliest year in generated zonedb
+    zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
+    link_ids: Dict[str, int]  # {linkName -> zoneHash}
+    letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
+    letters_map: IndexMap  # {letter -> index}
+    formats_map: IndexMap  # {format -> index}
+    fragments_map: IndexMap  # {fragment -> index}
+    compressed_names: Dict[str, str]  # {zoneName -> compressedName}
+    go_letters_map: OffsetMap  # {letter -> byte_offset}
+    go_formats_map: OffsetMap  # {format -> byte_offset}
+    go_names_map: OffsetMap  # {name -> byte_offset}
+    go_zone_and_link_index_map: IndexMap  # {zone -> index}
+    go_policy_index_size_map: IndexSizeMap  # {policy -> (index, offset, size)}
     go_rule_count: int  # total num rules across all policies
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
     go_era_count: int  # total num eras across all zone infos
@@ -337,6 +317,8 @@ class ZoneInfoDatabase(TypedDict):
     merged_notable_zones: MergedCommentsMap
     notable_links: CommentsMap
     notable_policies: CommentsMap
+    earliest_year_original: int
+    earliest_year_generated: int
 
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap
@@ -409,6 +391,8 @@ def create_zone_info_database(
             tresult.merged_notable_zones),
         'notable_links': _sort_comments(tresult.notable_links),
         'notable_policies': _sort_comments(tresult.notable_policies),
+        'earliest_year_original': tresult.earliest_year_original,
+        'earliest_year_generated': tresult.earliest_year_generated,
 
         # Data from BufSizeEstimator
         'buf_sizes': buf_size_map,
