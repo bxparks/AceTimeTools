@@ -8,20 +8,12 @@ Borrowed heavily from argenerator.py.
 
 import os
 import logging
-from typing import Dict
 from typing import List
 from typing import Tuple
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
 from acetimetools.data_types.at_types import ZoneEraRaw
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import LinksMap
-from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import MergedCommentsMap
-from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import ZoneInfoDatabase
-from acetimetools.data_types.at_types import BufSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
 from acetimetools.generator.argenerator import compressed_name_to_c_string
@@ -52,6 +44,8 @@ class CGenerator:
         # warnings about "multi-line comment [-Wcomment]".
         wrapped_invocation = '\n//     --'.join(invocation.split(' --'))
         wrapped_tzfiles = '\n//   '.join(zidb['tz_files'])
+        self.invocation = wrapped_invocation
+        self.tz_files = wrapped_tzfiles
 
         # Determine zonedb C++ namespace
         scope = zidb['scope']
@@ -65,80 +59,60 @@ class CGenerator:
                     f"db_namespace cannot be determined for scope '{scope}'"
                 )
 
-        self.zone_policies_generator = ZonePoliciesGenerator(
-            invocation=wrapped_invocation,
-            tz_files=wrapped_tzfiles,
-            db_namespace=db_namespace,
-            generate_int16_years=generate_int16_years,
-            tz_version=zidb['tz_version'],
-            scope=zidb['scope'],
-            zones_map=zidb['zones_map'],
-            policies_map=zidb['policies_map'],
-            removed_zones=zidb['removed_zones'],
-            removed_policies=zidb['removed_policies'],
-            notable_zones=zidb['notable_zones'],
-            notable_policies=zidb['notable_policies'],
-            letters_map=zidb['letters_map'],
+        self.scope = scope
+        self.db_namespace = db_namespace
+        self.compress = compress
+        self.invocation = wrapped_invocation
+        self.generate_int16_years = generate_int16_years
+
+        self.tz_files = wrapped_tzfiles
+        self.buf_sizes = zidb['buf_sizes']
+        self.compressed_names = zidb['compressed_names']
+        self.formats_map = zidb['formats_map']
+        self.fragments_map = zidb['fragments_map']
+        self.letters_map = zidb['letters_map']
+        self.link_ids = zidb['link_ids']
+        self.links_map = zidb['links_map']
+        self.max_buf_size = zidb['max_buf_size']
+        self.merged_notable_zones = zidb['merged_notable_zones']
+        self.notable_links = zidb['notable_links']
+        self.notable_policies = zidb['notable_policies']
+        self.notable_zones = zidb['notable_zones']
+        self.policies_map = zidb['policies_map']
+        self.removed_links = zidb['removed_links']
+        self.removed_policies = zidb['removed_policies']
+        self.removed_zones = zidb['removed_zones']
+        self.scope = zidb['scope']
+        self.start_year = zidb['start_year']
+        self.tz_version = zidb['tz_version']
+        self.until_year = zidb['until_year']
+        self.zone_ids = zidb['zone_ids']
+        self.zones_map = zidb['zones_map']
+
+        self.zones_and_links = (
+            list(self.zones_map.keys()) + list(self.links_map.keys())
         )
-        self.zone_infos_generator = ZoneInfosGenerator(
-            invocation=wrapped_invocation,
-            tz_files=wrapped_tzfiles,
-            db_namespace=db_namespace,
-            compress=compress,
-            generate_int16_years=generate_int16_years,
-            tz_version=zidb['tz_version'],
-            scope=zidb['scope'],
-            start_year=zidb['start_year'],
-            until_year=zidb['until_year'],
-            zones_map=zidb['zones_map'],
-            links_map=zidb['links_map'],
-            policies_map=zidb['policies_map'],
-            removed_zones=zidb['removed_zones'],
-            removed_links=zidb['removed_links'],
-            removed_policies=zidb['removed_policies'],
-            notable_zones=zidb['notable_zones'],
-            merged_notable_zones=zidb['merged_notable_zones'],
-            notable_links=zidb['notable_links'],
-            notable_policies=zidb['notable_policies'],
-            buf_sizes=zidb['buf_sizes'],
-            max_buf_size=zidb['max_buf_size'],
-            zone_ids=zidb['zone_ids'],
-            link_ids=zidb['link_ids'],
-            formats_map=zidb['formats_map'],
-            fragments_map=zidb['fragments_map'],
-            letters_map=zidb['letters_map'],
-            compressed_names=zidb['compressed_names'],
-        )
-        self.zone_registry_generator = ZoneRegistryGenerator(
-            invocation=wrapped_invocation,
-            tz_files=wrapped_tzfiles,
-            db_namespace=db_namespace,
-            tz_version=zidb['tz_version'],
-            scope=zidb['scope'],
-            zones_map=zidb['zones_map'],
-            links_map=zidb['links_map'],
-            zone_ids=zidb['zone_ids'],
-            link_ids=zidb['link_ids'],
-        )
+        self.zone_and_link_ids = self.zone_ids.copy()
+        self.zone_and_link_ids.update(self.link_ids)
 
     def generate_files(self, output_dir: str) -> None:
         # zone_policies.*
         self._write_file(output_dir, self.ZONE_POLICIES_H_FILE_NAME,
-                         self.zone_policies_generator.generate_policies_h())
+                         self.generate_policies_h())
         self._write_file(output_dir, self.ZONE_POLICIES_C_FILE_NAME,
-                         self.zone_policies_generator.generate_policies_c())
+                         self.generate_policies_c())
 
         # zone_infos.*
         self._write_file(output_dir, self.ZONE_INFOS_H_FILE_NAME,
-                         self.zone_infos_generator.generate_infos_h())
+                         self.generate_infos_h())
         self._write_file(output_dir, self.ZONE_INFOS_C_FILE_NAME,
-                         self.zone_infos_generator.generate_infos_c())
+                         self.generate_infos_c())
 
         # zone_registry.*
         self._write_file(output_dir, self.ZONE_REGISTRY_H_FILE_NAME,
-                         self.zone_registry_generator.generate_registry_h())
+                         self.generate_registry_h())
         self._write_file(output_dir, self.ZONE_REGISTRY_C_FILE_NAME,
-                         self.zone_registry_generator.generate_registry_c())
+                         self.generate_registry_c())
 
     def _write_file(self, output_dir: str, filename: str, content: str) -> None:
         full_filename = os.path.join(output_dir, filename)
@@ -146,45 +120,10 @@ class CGenerator:
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
 
-
-class ZonePoliciesGenerator:
-
     SIZEOF_ZONE_RULE_8 = 11
     SIZEOF_ZONE_RULE_32 = 12  # 11 rounded to 4-byte alignment
     SIZEOF_ZONE_POLICY_8 = 6
     SIZEOF_ZONE_POLICY_32 = 12  # 10 rounded to 4-byte alignment
-
-    def __init__(
-        self,
-        invocation: str,
-        tz_files: str,
-        db_namespace: str,
-        generate_int16_years: bool,
-        tz_version: str,
-        scope: str,
-        zones_map: ZonesMap,
-        policies_map: PoliciesMap,
-        removed_zones: CommentsMap,
-        removed_policies: CommentsMap,
-        notable_zones: CommentsMap,
-        notable_policies: CommentsMap,
-        letters_map: IndexMap,
-    ):
-        self.invocation = invocation
-        self.tz_files = tz_files
-        self.db_namespace = db_namespace
-        self.generate_int16_years = generate_int16_years
-        self.tz_version = tz_version
-        self.scope = scope
-        self.zones_map = zones_map
-        self.policies_map = policies_map
-        self.removed_zones = removed_zones
-        self.removed_policies = removed_policies
-        self.notable_zones = notable_zones
-        self.notable_policies = notable_policies
-        self.letters_map = letters_map
-
-        self.db_header_namespace = self.db_namespace.upper()
 
     def generate_policies_h(self) -> str:
         policy_items = ''
@@ -197,6 +136,7 @@ extern const AtcZonePolicy kAtcZonePolicy{policy_normalized_name};
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
 
+        db_header_namespace = self.db_namespace.upper()
         invocation = self.invocation
         tz_files = self.tz_files
         tz_version = self.tz_version
@@ -217,8 +157,8 @@ extern const AtcZonePolicy kAtcZonePolicy{policy_normalized_name};
 //
 // DO NOT EDIT
 
-#ifndef ACE_TIME_C_{self.db_header_namespace}_ZONE_POLICIES_H
-#define ACE_TIME_C_{self.db_header_namespace}_ZONE_POLICIES_H
+#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
+#define ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
 
 #include "../zone_info.h"
 
@@ -381,72 +321,10 @@ const AtcZonePolicy kAtcZonePolicy{policy_normalized_name} {progmem} = {{
 
         return (policy_item, memory8, memory32)
 
-
-class ZoneInfosGenerator:
     SIZEOF_ZONE_ERA_8 = 12
     SIZEOF_ZONE_ERA_32 = 16  # 16 rounded to 4-byte alignment
     SIZEOF_ZONE_INFO_8 = 13
     SIZEOF_ZONE_INFO_32 = 24  # 21 rounded to 4-byte alignment
-
-    def __init__(
-        self,
-        invocation: str,
-        db_namespace: str,
-        compress: bool,
-        generate_int16_years: bool,
-        tz_version: str,
-        tz_files: str,
-        scope: str,
-        start_year: int,
-        until_year: int,
-        zones_map: ZonesMap,
-        links_map: LinksMap,
-        policies_map: PoliciesMap,
-        removed_zones: CommentsMap,
-        removed_links: CommentsMap,
-        removed_policies: CommentsMap,
-        notable_zones: CommentsMap,
-        merged_notable_zones: MergedCommentsMap,
-        notable_links: CommentsMap,
-        notable_policies: CommentsMap,
-        buf_sizes: BufSizeMap,
-        max_buf_size: int,
-        zone_ids: Dict[str, int],
-        link_ids: Dict[str, int],
-        formats_map: IndexMap,
-        fragments_map: IndexMap,
-        letters_map: IndexMap,
-        compressed_names: Dict[str, str],
-    ):
-        self.invocation = invocation
-        self.db_namespace = db_namespace
-        self.compress = compress
-        self.generate_int16_years = generate_int16_years
-        self.tz_version = tz_version
-        self.tz_files = tz_files
-        self.scope = scope
-        self.start_year = start_year
-        self.until_year = until_year
-        self.zones_map = zones_map
-        self.links_map = links_map
-        self.policies_map = policies_map
-        self.removed_zones = removed_zones
-        self.removed_links = removed_links
-        self.removed_policies = removed_policies
-        self.notable_zones = notable_zones
-        self.merged_notable_zones = merged_notable_zones
-        self.notable_links = notable_links
-        self.notable_policies = notable_policies
-        self.buf_sizes = buf_sizes
-        self.max_buf_size = max_buf_size
-        self.zone_ids = zone_ids
-        self.link_ids = link_ids
-        self.formats_map = formats_map
-        self.fragments_map = fragments_map
-        self.letters_map = letters_map
-        self.compressed_names = compressed_names
-
-        self.db_header_namespace = self.db_namespace.upper()
 
     def generate_infos_h(self) -> str:
         zone_items = ''
@@ -493,6 +371,7 @@ extern const AtcZoneInfo kAtcZone{link_normalized_name}; \
         invocation = self.invocation
         tz_files = self.tz_files
         tz_version = self.tz_version
+        db_header_namespace = self.db_namespace.upper()
 
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
@@ -514,8 +393,8 @@ extern const AtcZoneInfo kAtcZone{link_normalized_name}; \
 //
 // DO NOT EDIT
 
-#ifndef ACE_TIME_C_{self.db_header_namespace}_ZONE_INFOS_H
-#define ACE_TIME_C_{self.db_header_namespace}_ZONE_INFOS_H
+#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
+#define ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
 
 #include "../zone_info.h"
 
@@ -901,7 +780,8 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
         zone_normalized_name = normalize_name(zone_name)
         num_eras = len(self.zones_map[zone_name])
         progmem = ''
-        link_item = f"""\
+
+        return f"""\
 //---------------------------------------------------------------------------
 // Link name: {link_name} -> {zone_name}
 // Strings (bytes): {link_name_size} (originally {original_link_name_size})
@@ -922,38 +802,6 @@ const AtcZoneInfo kAtcZone{link_normalized_name} {progmem} = {{
 }};
 
 """
-
-        return link_item
-
-
-class ZoneRegistryGenerator:
-
-    def __init__(
-        self,
-        invocation: str,
-        tz_files: str,
-        db_namespace: str,
-        tz_version: str,
-        scope: str,
-        zones_map: ZonesMap,
-        links_map: LinksMap,
-        zone_ids: Dict[str, int],
-        link_ids: Dict[str, int],
-    ):
-        self.invocation = invocation
-        self.tz_files = tz_files
-        self.db_namespace = db_namespace
-        self.tz_version = tz_version
-        self.scope = scope
-        self.zones_map = zones_map
-        self.links_map = links_map
-        self.zone_ids = zone_ids
-        self.link_ids = link_ids
-
-        self.db_header_namespace = self.db_namespace.upper()
-        self.zones_and_links = list(zones_map.keys()) + list(links_map.keys())
-        self.zone_and_link_ids = zone_ids.copy()
-        self.zone_and_link_ids.update(link_ids)
 
     def generate_registry_c(self) -> str:
 
@@ -1033,6 +881,7 @@ const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{num_zones_and_links}] \
         tz_version = self.tz_version
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
+        db_header_namespace = self.db_namespace.upper()
 
         return f"""\
 // This file was generated by the following script:
@@ -1047,8 +896,8 @@ const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{num_zones_and_links}] \
 //
 // DO NOT EDIT
 
-#ifndef ACE_TIME_C_{self.db_header_namespace}_ZONE_REGISTRY_H
-#define ACE_TIME_C_{self.db_header_namespace}_ZONE_REGISTRY_H
+#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
+#define ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
 
 #include "../zone_info.h"
 
