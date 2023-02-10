@@ -9,7 +9,6 @@ library.
 from typing import Dict
 from typing import Iterable
 from typing import List
-from typing import NamedTuple
 from typing import Set
 from typing import Tuple
 import logging
@@ -21,6 +20,7 @@ from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import OffsetMap
 from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
+from acetimetools.transformer.artransformer import _to_suffix_code
 
 
 class GoTransformer:
@@ -66,7 +66,8 @@ class GoTransformer:
         if len(info_index_size_map) > 65535:
             raise Exception("Info count exceeds uint16 max of 65535")
 
-        _generate_offset_seconds_code(tresult.zones_map)
+        _generate_zone_era_time_codes(tresult.zones_map)
+        _generate_zone_rule_time_codes(tresult.policies_map)
 
         tresult.go_letters_map = letters_map
         tresult.go_formats_map = formats_map
@@ -213,59 +214,54 @@ def _generate_info_index_size_map(
     return index_map, eras_index
 
 
-def _generate_offset_seconds_code(zones_map: ZonesMap) -> None:
-    for zone_name, eras in sorted(zones_map.items()):
+def _generate_zone_era_time_codes(zones_map: ZonesMap) -> None:
+    for name, eras in sorted(zones_map.items()):
         for era in eras:
-            rule_policy_name = era['rules']
-            if rule_policy_name == ':':
-                delta_seconds = era['era_delta_seconds_truncated']
-            else:
-                delta_seconds = 0
+            # OffsetSeconds
+            offset_seconds = era['offset_seconds_truncated']
+            era['go_offset_seconds_code'] = offset_seconds // 15
+            era['go_offset_seconds_remainder'] = offset_seconds % 15
 
-            encoded = _to_offset_and_delta(
-                offset_seconds=era['offset_seconds_truncated'],
-                delta_seconds=delta_seconds)
+            # DeltaMinutes
+            delta_seconds = era['era_delta_seconds_truncated']
+            era['go_era_delta_minutes'] = delta_seconds // 60
+            if delta_seconds % 60 != 0:
+                raise Exception(
+                    f"ERROR: Zone {name} should have delta_seconds "
+                    "in units of one minute"
+                )
 
-            era['go_offset_seconds_code'] = encoded.offset_seconds_code
-            era['go_offset_seconds_remainder'] = \
-                encoded.offset_seconds_remainder
-            era['go_delta_code'] = encoded.delta_code
-            era['go_delta_code_encoded'] = encoded.delta_code_encoded
-
-
-class EncodedOffsetSecond(NamedTuple):
-    """Encode the STD offset and DST offset into a 16-bit integer fields.
-
-    * offset_seconds_code: STD offset in units of 15-seconds
-    * offset_seconds_remainder: Remainder of offset seconds. This already
-      encoded in delta_code_encoded, so this is mostly for debugging.
-    * delta_code: delta offset in units of 15-minutes
-    * delta_code_encoded:
-        * The lower 4-bits is delta_code + 4 (i.e. 1h) which allows encoding
-          from -1:00 to +2:45.
-        * The upper 4-bits holds the offset_second_remainder.
-    """
-    offset_seconds_code: int
-    offset_seconds_remainder: int
-    delta_code: int
-    delta_code_encoded: int
+            # UntilSeconds
+            until_seconds = era['until_seconds_truncated']
+            era['go_until_seconds_code'] = until_seconds // 15
+            era['go_until_seconds_remainder'] = until_seconds % 15
+            era['go_until_seconds_suffix_value'] = _to_suffix_code(
+                era['until_time_suffix'])
+            era['go_until_seconds_modifier'] = (
+                era['go_until_seconds_suffix_value']
+                + era['go_until_seconds_remainder']
+            )
 
 
-def _to_offset_and_delta(
-    offset_seconds: int,
-    delta_seconds: int,
-) -> EncodedOffsetSecond:
-    """Convert offset_seconds and delta_seconds to an EncodedOffset suitable for
-    AceTimeGo.
-    """
-    offset_seconds_code = offset_seconds // 15  # truncate to -infinty
-    offset_seconds_remainder = (offset_seconds % 15)  # always positive
-    delta_code = delta_seconds // 900  # 15-minute increments
-    delta_code_encoded = (offset_seconds_remainder << 4) + (delta_code + 4)
+def _generate_zone_rule_time_codes(policies_map: PoliciesMap) -> None:
+    for name, rules in policies_map.items():
+        for rule in rules:
+            # DeltaMinutes
+            delta_seconds = rule['delta_seconds_truncated']
+            if delta_seconds % 60 != 0:
+                raise Exception(
+                    f"ERROR: Policy {name} should have delta_seconds "
+                    "in units of one minute"
+                )
+            rule['go_delta_minutes'] = delta_seconds // 60
 
-    return EncodedOffsetSecond(
-        offset_seconds_code=offset_seconds_code,
-        offset_seconds_remainder=offset_seconds_remainder,
-        delta_code=delta_code,
-        delta_code_encoded=delta_code_encoded,
-    )
+            # AtSeconds
+            at_seconds = rule['at_seconds_truncated']
+            rule['go_at_seconds_code'] = at_seconds // 15
+            rule['go_at_seconds_remainder'] = at_seconds % 15
+            rule['go_at_seconds_suffix_value'] = _to_suffix_code(
+                rule['at_time_suffix'])
+            rule['go_at_seconds_modifier'] = (
+                rule['go_at_seconds_suffix_value']
+                + rule['go_at_seconds_remainder']
+            )

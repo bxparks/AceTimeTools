@@ -738,6 +738,7 @@ class Transformer:
 
                     # Check that rules_delta fits inside 4-bits, because that's
                     # how it is stored in the Arduino zonedb files.
+                    # TODO: Move this to artransformer.py
                     rules_delta_code = era_delta_seconds_truncated // 900
                     if rules_delta_code < -4 or rules_delta_code > 11:
                         valid = False

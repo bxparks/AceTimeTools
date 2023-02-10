@@ -102,6 +102,13 @@ class ZoneRuleRaw(TypedDict, total=False):
     letter_index_per_policy: int  # index into letters_per_policy, or -1
     letter_index: int  # index into letters_map[], or -1
 
+    # gotransformer.py
+    go_at_seconds_code: int
+    go_at_seconds_remainder: int
+    go_at_seconds_suffix_value: int
+    go_at_seconds_modifier: int
+    go_delta_minutes: int
+
 
 class ZoneEraRaw(TypedDict, total=False):
     """Represents the input records corresponding to the 'ZONE' lines in a
@@ -151,8 +158,11 @@ class ZoneEraRaw(TypedDict, total=False):
     # Derived by gotransformer.py
     go_offset_seconds_code: int
     go_offset_seconds_remainder: int
-    go_delta_code: int
-    go_delta_code_encoded: int
+    go_era_delta_minutes: int
+    go_until_seconds_code: int
+    go_until_seconds_remainder: int
+    go_until_seconds_suffix_value: int
+    go_until_seconds_modifier: int
 
 
 # Map of policyName -> ZoneRuleRaw[]. Created by extractor.py. Updated by

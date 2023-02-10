@@ -482,31 +482,29 @@ const (
 
 """
         for rule in rules:
-            at_time_modifier_comment = _get_time_modifier_comment(
-                time_seconds=rule['at_seconds_truncated'],
-                suffix=rule['at_time_suffix'],
-            )
-
-            # Explain how 'delta_code' was calculated.
-            delta_seconds = rule['delta_seconds_truncated']
-            delta_minutes = delta_seconds // 60
-            delta_code_comment = f"(delta_minutes={delta_minutes})/15 + 4"
-            delta_code = rule['delta_code_encoded']
-
-            # Find the index for the 'letter' field.
-            letter = rule['letter']
-            entry = self.letters_map[letter]
-            letter_index = entry[0]  # entry[1] is the byte offset
-
             raw_line = normalize_raw(rule['raw_line'])
             from_year = rule['from_year']
             to_year = rule['to_year']
             in_month = rule['in_month']
             on_day_of_week = rule['on_day_of_week']
             on_day_of_month = rule['on_day_of_month']
-            at_time_code = rule['at_time_code']
-            at_time_modifier = rule['at_time_modifier']
+
+            letter = rule['letter']
+            entry = self.letters_map[letter]
+            letter_index = entry[0]  # entry[1] is the byte offset
             letter_comment = f'"{letter}"'
+
+            # Explain how 'delta_code' was calculated.
+            delta_minutes = rule['go_delta_minutes']
+
+            at_seconds = rule['at_seconds_truncated']
+            at_seconds_code = rule['go_at_seconds_code']
+            at_seconds_remainder = rule['go_at_seconds_remainder']
+            at_seconds_modifier = rule['go_at_seconds_modifier']
+            at_seconds_modifier_comment = _get_time_modifier_comment(
+                remainder_seconds=at_seconds_remainder,
+                suffix=rule['at_time_suffix'],
+            )
 
             rule_items_string += f"""\
 \t// {raw_line}
@@ -516,9 +514,9 @@ const (
 \t\tInMonth: {in_month},
 \t\tOnDayOfWeek: {on_day_of_week},
 \t\tOnDayOfMonth: {on_day_of_month},
-\t\tAtTimeCode: {at_time_code},
-\t\tAtTimeModifier: {at_time_modifier}, // {at_time_modifier_comment}
-\t\tDeltaCode: {delta_code}, // {delta_code_comment}
+\t\tAtSecondsCode: {at_seconds_code}, // {at_seconds} / 15
+\t\tAtSecondsModifier: {at_seconds_modifier}, // {at_seconds_modifier_comment}
+\t\tDeltaMinutes: {delta_minutes},
 \t\tLetterIndex: {letter_index}, // {letter_comment}
 \t}},
 """
@@ -531,7 +529,7 @@ const (
         each encoded ZoneRule.
         """
 
-        chunk_size = 11
+        chunk_size = 12
         data = bytearray()
         count = 0
         for policy_name, rules in sorted(policies_map.items()):
@@ -548,16 +546,16 @@ const (
         entry = self.letters_map[letter]
         letter_index = entry[0]  # entry[1] is the byte offset
 
-        # chunk_size = 11 bytes
+        # chunk_size = 12 bytes
         # WARNING: If this is changed, the chunk_size must be updated.
         write_u16(data, rule['from_year'])
         write_u16(data, rule['to_year'])
         write_u8(data, rule['in_month'])
         write_u8(data, rule['on_day_of_week'])
         write_u8(data, rule['on_day_of_month'])
-        write_u8(data, rule['at_time_code'])
-        write_u8(data, rule['at_time_modifier'])
-        write_u8(data, rule['delta_code_encoded'])
+        write_u8(data, rule['go_at_seconds_modifier'])
+        write_u16(data, rule['go_at_seconds_code'])
+        write_u8(data, rule['go_delta_minutes'])
         write_u8(data, letter_index)
 
     def _generate_policies_string(
@@ -689,6 +687,14 @@ const (
 
 """
         for era in eras:
+            raw_line = normalize_raw(era['raw_line'])
+
+            # Find the index for the 'format' field.
+            format_short = era['format_short']
+            format_comment = f'"{format_short}"'
+            entry = self.formats_map[format_short]
+            format_index = entry[0]  # (index, offset)
+
             policy_name = era['rules']
             if policy_name in ['-', ':']:
                 policy_name = ""
@@ -697,45 +703,36 @@ const (
                 policy_name = "(none)"
 
             offset_seconds = era['offset_seconds_truncated']
-            delta_seconds = era['era_delta_seconds_truncated']
-            offset_seconds_code_comment = \
-                f"(offset_seconds={offset_seconds})/15"
-            delta_code_comment = _get_era_delta_code_comment(
-                offset_seconds=offset_seconds,
-                delta_seconds=delta_seconds,
-            )
-            until_time_modifier_comment = _get_time_modifier_comment(
-                time_seconds=era['until_seconds_truncated'],
+            offset_seconds_code = era['go_offset_seconds_code']
+            offset_seconds_remainder = era['go_offset_seconds_remainder']
+
+            until_seconds = era['until_seconds_truncated']
+            until_seconds_code = era['go_until_seconds_code']
+            until_seconds_modifier = era['go_until_seconds_modifier']
+            until_seconds_modifier_comment = _get_time_modifier_comment(
+                remainder_seconds=era['go_until_seconds_remainder'],
                 suffix=era['until_time_suffix'],
             )
-
-            # Find the index for the 'format' field.
-            format_short = era['format_short']
-            entry = self.formats_map[format_short]
-            format_index = entry[0]  # (index, offset)
-
-            raw_line = normalize_raw(era['raw_line'])
-            format_comment = f'"{format_short}"'
-            offset_seconds_code = era['go_offset_seconds_code']
-            delta_code = era['go_delta_code_encoded']
             until_year = era['until_year']
             until_month = era['until_month']
             until_day = era['until_day']
-            until_time_code = era['until_time_code']
-            until_time_modifier = era['until_time_modifier']
+
+            delta_minutes = era['go_era_delta_minutes']
 
             era_items_string += f"""\
 \t// {raw_line}
 \t{{
 \t\tPolicyIndex: {policy_index}, // PolicyName: {policy_name}
 \t\tFormatIndex: {format_index}, // {format_comment}
-\t\tDeltaCode: {delta_code}, // {delta_code_comment}
-\t\tOffsetSecondsCode: {offset_seconds_code}, // {offset_seconds_code_comment}
+\t\tDeltaMinutes: {delta_minutes},
+\t\tOffsetSecondsCode: {offset_seconds_code}, // {offset_seconds} / 15
+\t\tOffsetSecondsRemainder: {offset_seconds_remainder},
 \t\tUntilYear: {until_year},
 \t\tUntilMonth: {until_month},
 \t\tUntilDay: {until_day},
-\t\tUntilTimeCode: {until_time_code},
-\t\tUntilTimeModifier: {until_time_modifier}, // {until_time_modifier_comment}
+\t\tUntilSecondsCode: {until_seconds_code}, // {until_seconds} / 15
+\t\tUntilSecondsModifier: {until_seconds_modifier}, \
+// {until_seconds_modifier_comment}
 \t}},
 """
             era_items_string += '\n'
@@ -746,7 +743,7 @@ const (
         self, zones_map: ZonesMap
     ) -> Tuple[bytearray, int, int]:
         count = 0
-        chunk_size = 12
+        chunk_size = 14
         data = bytearray()
         for zone_name, eras in sorted(self.zones_map.items()):
             count += len(eras)
@@ -766,24 +763,26 @@ const (
         format_index = entry[0]  # (index, offset)
 
         offset_seconds_code = era['go_offset_seconds_code']
-        delta_code = era['go_delta_code_encoded']
+        offset_seconds_remainder = era['go_offset_seconds_remainder']
+        delta_minutes = era['go_era_delta_minutes']
         until_year = era['until_year']
         until_month = era['until_month']
         until_day = era['until_day']
-        until_time_code = era['until_time_code']
-        until_time_modifier = era['until_time_modifier']
+        until_seconds_code = era['go_until_seconds_code']
+        until_seconds_modifier = era['go_until_seconds_modifier']
 
-        # chunk size = 12 bytes
+        # chunk size = 14 bytes
         # WARNING: If this is changed, the chunk_size must be updated.
         write_u16(data, format_index)
         write_u8(data, policy_index)
-        write_u8(data, delta_code)
+        write_u8(data, offset_seconds_remainder)
         write_u16(data, offset_seconds_code)
         write_u16(data, until_year)
+        write_u8(data, delta_minutes)
         write_u8(data, until_month)
         write_u8(data, until_day)
-        write_u8(data, until_time_code)
-        write_u8(data, until_time_modifier)
+        write_u8(data, until_seconds_modifier)
+        write_u16(data, until_seconds_code)
 
     def _generate_infos_string(self) -> str:
         zone_infos_string = ''
@@ -978,36 +977,19 @@ def _render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
 
 
 def _get_time_modifier_comment(
-    time_seconds: int,
+    remainder_seconds: int,
     suffix: str,
 ) -> str:
-    """Create the comment that explains how the until_time_code or at_time_code
-    was calculated.
+    """Create the comment that explains how the until_seconds_modifier or
+    at_seconds_modifier was calculated.
     """
     if suffix == 'w':
-        comment = 'SuffixW'
+        suffixStr = 'SuffixW'
     elif suffix == 's':
-        comment = 'SuffixS'
+        suffixStr = 'SuffixS'
     else:
-        comment = 'SuffixU'
-    remaining_time_minutes = time_seconds % 900 // 60
-    comment += f' + minute={remaining_time_minutes}'
-    return comment
-
-
-def _get_era_delta_code_comment(
-    offset_seconds: int,
-    delta_seconds: int,
-) -> str:
-    """Create the comment that explains how the ZoneEra delta_code[_encoded] was
-    calculated.
-    """
-    offset_seconds_remainder = offset_seconds % 15
-    delta_minutes = delta_seconds // 60
-    return (
-        f"((offset_seconds_remainder={offset_seconds_remainder}) << 4) + "
-        f"((delta_minutes={delta_minutes})/15 + 4)"
-    )
+        suffixStr = 'SuffixU'
+    return f'{suffixStr} + remainder={remainder_seconds}'
 
 
 def _render_offsets(offsets: Iterable[int], prefix: str = '\t\t') -> str:

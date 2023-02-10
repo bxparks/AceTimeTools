@@ -7,8 +7,10 @@
           it contains `hh:mm` form instead of a symbolic pointer to a Rule.
         * This determines the DST offset of the given ZoneEra.
     * `gotransformer.py`, `gogenerator.py`
-        * Generate STDOFF and DSTOFF in 1-second resolution instead of 1-minute
-          resolution.
+        * Support 1-second resolution instead of 1-minute resolution for
+          Zone.STDOFF, Zone.UNTIL, and Rule.AT fields.
+        * Support 1-minute resolution for Zone.DSTOFF (aka Zone.RULES) and
+          Rule.SAVE fields.
 * v1.4.3 (2023-02-04)
     * `argenerator.py`, `cgenerator.py`:
         * Simplify encoding of `Rule.LETTER` as an index into

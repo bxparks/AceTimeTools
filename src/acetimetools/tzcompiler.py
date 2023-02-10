@@ -485,7 +485,7 @@ def main() -> None:
     commenter.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
-    logging.info('======== Updating Go letters and formats')
+    logging.info('======== Transforming to Go Zones and Rules')
     go_transformer = GoTransformer()
     go_transformer.transform(tresult)
     go_transformer.print_summary(tresult)
