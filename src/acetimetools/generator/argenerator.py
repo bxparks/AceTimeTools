@@ -221,25 +221,6 @@ namespace {dbNamespace} {{
 }}
 """
 
-    ZONE_POLICIES_CPP_POLICY_ITEM = """\
-//---------------------------------------------------------------------------
-// Policy name: {policyName}
-// Rules: {numRules}
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
-//---------------------------------------------------------------------------
-
-static const {scope}::ZoneRule kZoneRules{policyName}[] {progmem} = {{
-{ruleItems}
-}};
-
-const {scope}::ZonePolicy kZonePolicy{policyName} {progmem} = {{
-  kZoneRules{policyName} /*rules*/,
-  {numRules} /*numRules*/,
-}};
-
-"""
-
     SIZEOF_ZONE_RULE_8 = 11
     SIZEOF_ZONE_RULE_32 = 12  # 11 rounded to 4-byte alignment
     SIZEOF_ZONE_POLICY_8 = 6
@@ -336,23 +317,9 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
 
     def _generate_policy_item(
         self,
-        name: str,
+        policy_name: str,
         rules: List[ZoneRuleRaw],
     ) -> Tuple[str, int, int]:
-        ZONE_POLICIES_CPP_RULE_ITEM = """\
-  // {raw_line}
-  {{
-    {from_year} /*{from_year_label}*/,
-    {to_year} /*{to_year_label}*/,
-    {in_month} /*inMonth*/,
-    {on_day_of_week} /*onDayOfWeek*/,
-    {on_day_of_month} /*onDayOfMonth*/,
-    {at_time_code} /*atTimeCode*/,
-    {at_time_modifier} /*atTimeModifier ({at_time_modifier_comment})*/,
-    {delta_code} /*deltaCode ({delta_code_comment})*/,
-    {letter_index} /*letterIndex ("{letter}")*/,
-  }},
-"""
         # Generate kZoneRules*[]
         rule_items = ''
         for rule in rules:
@@ -378,23 +345,27 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
                 to_year = rule['to_year_tiny']
                 to_year_label = 'toYearTiny'
 
-            rule_items += ZONE_POLICIES_CPP_RULE_ITEM.format(
-                raw_line=normalize_raw(rule['raw_line']),
-                from_year=from_year,
-                from_year_label=from_year_label,
-                to_year=to_year,
-                to_year_label=to_year_label,
-                in_month=rule['in_month'],
-                on_day_of_week=rule['on_day_of_week'],
-                on_day_of_month=rule['on_day_of_month'],
-                at_time_code=at_time_code,
-                at_time_modifier=at_time_modifier,
-                at_time_modifier_comment=at_time_modifier_comment,
-                delta_code=delta_code,
-                delta_code_comment=delta_code_comment,
-                letter=rule['letter'],
-                letter_index=rule['letter_index'],
-            )
+            raw_line = normalize_raw(rule['raw_line'])
+            in_month = rule['in_month']
+            on_day_of_week = rule['on_day_of_week']
+            on_day_of_month = rule['on_day_of_month']
+            letter = rule['letter']
+            letter_index = rule['letter_index']
+
+            rule_items += f"""\
+  // {raw_line}
+  {{
+    {from_year} /*{from_year_label}*/,
+    {to_year} /*{to_year_label}*/,
+    {in_month} /*inMonth*/,
+    {on_day_of_week} /*onDayOfWeek*/,
+    {on_day_of_month} /*onDayOfMonth*/,
+    {at_time_code} /*atTimeCode*/,
+    {at_time_modifier} /*atTimeModifier ({at_time_modifier_comment})*/,
+    {delta_code} /*deltaCode ({delta_code_comment})*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
+  }},
+"""
 
         # Calculate the memory consumed by structs and arrays
         num_rules = len(rules)
@@ -405,16 +376,28 @@ extern const {scope}::ZonePolicy kZonePolicy{policyName};
             1 * self.SIZEOF_ZONE_POLICY_32
             + num_rules * self.SIZEOF_ZONE_RULE_32)
 
-        policy_name = normalize_name(name)
-        policy_item = self.ZONE_POLICIES_CPP_POLICY_ITEM.format(
-            scope=self.scope,
-            policyName=policy_name,
-            numRules=num_rules,
-            memory8=memory8,
-            memory32=memory32,
-            ruleItems=rule_items,
-            progmem='ACE_TIME_PROGMEM')
+        policy_normalized_name = normalize_name(policy_name)
+        progmem = 'ACE_TIME_PROGMEM'
+        policy_item = f"""\
+//---------------------------------------------------------------------------
+// Policy name: {policy_name}
+// Rules: {num_rules}
+// Memory (8-bit): {memory8}
+// Memory (32-bit): {memory32}
+//---------------------------------------------------------------------------
 
+static const {self.scope}::ZoneRule kZoneRules{policy_normalized_name}[] \
+{progmem} = {{
+{rule_items}
+}};
+
+const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name} \
+{progmem} = {{
+  kZoneRules{policy_normalized_name} /*rules*/,
+  {num_rules} /*numRules*/,
+}};
+
+"""
         return (policy_item, memory8, memory32)
 
 
@@ -584,48 +567,6 @@ const internal::ZoneContext kZoneContext = {{
 }}
 """
 
-    ZONE_INFOS_CPP_INFO_ITEM = """\
-//---------------------------------------------------------------------------
-// Zone name: {zoneFullName}
-// Zone Eras: {numEras}
-// Strings (bytes): {stringSize} (originally {originalSize})
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
-//---------------------------------------------------------------------------
-
-static const {scope}::ZoneEra kZoneEra{zoneNormalizedName}[] {progmem} = {{
-{eraItems}
-}};
-
-static const char kZoneName{zoneNormalizedName}[] {progmem} = \
-{compressedName};
-
-const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
-  kZoneName{zoneNormalizedName} /*name*/,
-  0x{zoneId:08x} /*zoneId*/,
-  &kZoneContext /*zoneContext*/,
-  {numEras} /*numEras*/,
-  kZoneEra{zoneNormalizedName} /*eras*/,
-  nullptr /*targetInfo*/,
-}};
-
-"""
-
-    ZONE_INFOS_CPP_ERA_ITEM = """\
-  // {raw_line}
-  {{
-    {zone_policy} /*zonePolicy*/,
-    "{format}" /*format*/,
-    {offset_code} /*offsetCode*/,
-    {delta_code} /*deltaCode ({delta_code_comment})*/,
-    {until_year} /*{until_year_label}*/,
-    {until_month} /*untilMonth*/,
-    {until_day} /*untilDay*/,
-    {until_time_code} /*untilTimeCode*/,
-    {until_time_modifier} /*untilTimeModifier ({until_time_modifier_comment})*/,
-  }},
-"""  # noqa
-
     SIZEOF_ZONE_ERA_8 = 12
     SIZEOF_ZONE_ERA_32 = 16  # 16 rounded to 4-byte alignment
     SIZEOF_ZONE_INFO_8 = 13
@@ -692,58 +633,40 @@ const {scope}::ZoneInfo kZone{zoneNormalizedName} {progmem} = {{
         self.db_header_namespace = self.db_namespace.upper()
 
     def generate_infos_h(self) -> str:
-        ZONE_INFOS_H_INFO_ITEM = """\
-extern const {scope}::ZoneInfo kZone{zoneNormalizedName}; // {zoneFullName}
-"""
-        ZONE_INFOS_H_INFO_ZONE_ID = """\
-const uint32_t kZoneId{zoneNormalizedName} = 0x{zoneId:08x}; // {zoneFullName}
-"""
-        ZONE_INFOS_H_BUF_SIZE = """\
-const uint8_t kZoneBufSize{zoneNormalizedName} = {bufSize};  \
-// {zoneFullName} in {bufYear}
-"""
         info_items = ''
         info_zone_ids = ''
         info_buf_sizes = ''
         for zone_name, eras in sorted(self.zones_map.items()):
-            normalized_name = normalize_name(zone_name)
-            info_items += ZONE_INFOS_H_INFO_ITEM.format(
-                scope=self.scope,
-                zoneNormalizedName=normalized_name,
-                zoneFullName=zone_name,
-            )
-            info_zone_ids += ZONE_INFOS_H_INFO_ZONE_ID.format(
-                zoneNormalizedName=normalized_name,
-                zoneFullName=zone_name,
-                zoneId=self.zone_ids[zone_name],
-            )
-            info_buf_sizes += ZONE_INFOS_H_BUF_SIZE.format(
-                zoneNormalizedName=normalized_name,
-                zoneFullName=zone_name,
-                bufSize=self.buf_sizes[zone_name].number,
-                bufYear=self.buf_sizes[zone_name].year,
-            )
+            zone_normalized_name = normalize_name(zone_name)
 
-        ZONE_INFOS_H_LINK_ITEM = """\
-extern const {scope}::ZoneInfo kZone{linkNormalizedName}; \
-// {linkFullName} -> {zoneFullName}
+            info_items += f"""\
+extern const {self.scope}::ZoneInfo kZone{zone_normalized_name}; // {zone_name}
 """
-        ZONE_INFOS_H_LINK_ID = """\
-const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
+
+            zone_id = self.zone_ids[zone_name]
+            info_zone_ids += f"""\
+const uint32_t kZoneId{zone_normalized_name} = 0x{zone_id:08x}; // {zone_name}
 """
+
+            buf_size = self.buf_sizes[zone_name].number
+            buf_year = self.buf_sizes[zone_name].year
+            info_buf_sizes += f"""\
+const uint8_t kZoneBufSize{zone_normalized_name} = {buf_size};  \
+// {zone_name} in {buf_year}
+"""
+
         link_items = ''
         link_ids = ''
         for link_name, zone_name in sorted(self.links_map.items()):
-            link_items += ZONE_INFOS_H_LINK_ITEM.format(
-                scope=self.scope,
-                linkNormalizedName=normalize_name(link_name),
-                linkFullName=link_name,
-                zoneFullName=zone_name)
-            link_ids += ZONE_INFOS_H_LINK_ID.format(
-                linkNormalizedName=normalize_name(link_name),
-                linkFullName=link_name,
-                linkId=self.link_ids[link_name],
-            )
+            link_normalized_name = normalize_name(link_name)
+            link_items += f"""\
+extern const {self.scope}::ZoneInfo kZone{link_normalized_name}; \
+// {link_name} -> {zone_name}
+"""
+            link_id = self.link_ids[link_name]
+            link_ids += f"""\
+const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
+"""
 
         removed_info_items = render_comments_map(self.removed_zones)
         # notable_info_items = render_comments_map(self.notable_zones)
@@ -934,19 +857,39 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
 
         string_size = zone_name_size + format_size
         original_size = len(zone_name) + 1 + format_size
-        info_item = self.ZONE_INFOS_CPP_INFO_ITEM.format(
-            scope=self.scope,
-            zoneFullName=zone_name,
-            zoneNormalizedName=normalize_name(zone_name),
-            compressedName=rendered_name,
-            zoneId=self.zone_ids[zone_name],
-            numEras=num_eras,
-            stringSize=string_size,
-            originalSize=original_size,
-            memory8=data_size8 + string_size,
-            memory32=data_size32 + string_size,
-            eraItems=era_items,
-            progmem='ACE_TIME_PROGMEM')
+
+        zone_normalized_name = normalize_name(zone_name)
+        zone_id = self.zone_ids[zone_name]
+        memory8 = data_size8 + string_size
+        memory32 = data_size32 + string_size
+        progmem = 'ACE_TIME_PROGMEM'
+        info_item = f"""\
+//---------------------------------------------------------------------------
+// Zone name: {zone_name}
+// Zone Eras: {num_eras}
+// Strings (bytes): {string_size} (originally {original_size})
+// Memory (8-bit): {memory8}
+// Memory (32-bit): {memory32}
+//---------------------------------------------------------------------------
+
+static const {self.scope}::ZoneEra kZoneEra{zone_normalized_name}[] \
+{progmem} = {{
+{era_items}
+}};
+
+static const char kZoneName{zone_normalized_name}[] {progmem} = {rendered_name};
+
+const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
+  kZoneName{zone_normalized_name} /*name*/,
+  0x{zone_id:08x} /*zoneId*/,
+  &kZoneContext /*zoneContext*/,
+  {num_eras} /*numEras*/,
+  kZoneEra{zone_normalized_name} /*eras*/,
+  nullptr /*targetInfo*/,
+}};
+
+"""
+
         return info_item
 
     def _generate_era_item(
@@ -979,23 +922,23 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
             time_seconds=era['until_seconds_truncated'],
             suffix=era['until_time_suffix'],
         )
-        format_short = era['format_short']
+        format = era['format_short']
+        raw_line = normalize_raw(era['raw_line'])
 
-        era_item = self.ZONE_INFOS_CPP_ERA_ITEM.format(
-            raw_line=normalize_raw(era['raw_line']),
-            offset_code=offset_code,
-            delta_code=delta_code,
-            delta_code_comment=delta_code_comment,
-            zone_policy=zone_policy,
-            format=format_short,
-            until_year=until_year,
-            until_year_label=until_year_label,
-            until_month=until_month,
-            until_day=until_day,
-            until_time_code=until_time_code,
-            until_time_modifier=until_time_modifier,
-            until_time_modifier_comment=until_time_modifier_comment,
-        )
+        era_item = f"""\
+  // {raw_line}
+  {{
+    {zone_policy} /*zonePolicy*/,
+    "{format}" /*format*/,
+    {offset_code} /*offsetCode*/,
+    {delta_code} /*deltaCode ({delta_code_comment})*/,
+    {until_year} /*{until_year_label}*/,
+    {until_month} /*untilMonth*/,
+    {until_day} /*untilDay*/,
+    {until_time_code} /*untilTimeCode*/,
+    {until_time_modifier} /*untilTimeModifier ({until_time_modifier_comment})*/,
+  }},
+"""  # noqa
 
         return era_item
 
@@ -1004,27 +947,6 @@ const uint32_t kZoneId{linkNormalizedName} = 0x{linkId:08x}; // {linkFullName}
     ) -> str:
         """Return the Link item.
         """
-        ZONE_INFOS_CPP_LINK_ITEM = """\
-//---------------------------------------------------------------------------
-// Link name: {linkFullName} -> {zoneFullName}
-// Strings (bytes): {stringSize} (originally {originalSize})
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
-//---------------------------------------------------------------------------
-
-static const char kZoneName{linkNormalizedName}[] {progmem} = \
-{compressedName};
-
-const {scope}::ZoneInfo kZone{linkNormalizedName} {progmem} = {{
-  kZoneName{linkNormalizedName} /*name*/,
-  0x{linkId:08x} /*zoneId*/,
-  &kZoneContext /*zoneContext*/,
-  {numEras} /*numEras*/,
-  kZoneEra{zoneNormalizedName} /*eras*/,
-  &kZone{zoneNormalizedName} /*targetInfo*/,
-}};
-
-"""
         if self.compress:
             compressed_name = self.compressed_names[link_name]
         else:
@@ -1032,24 +954,35 @@ const {scope}::ZoneInfo kZone{linkNormalizedName} {progmem} = {{
         rendered_name = compressed_name_to_c_string(compressed_name)
 
         link_name_size = len(compressed_name) + 1
-        original_size = len(link_name) + 1
+        original_link_name_size = len(link_name) + 1
         memory8 = link_name_size + self.SIZEOF_ZONE_INFO_8
         memory32 = link_name_size + self.SIZEOF_ZONE_INFO_32
-        link_item = ZONE_INFOS_CPP_LINK_ITEM.format(
-            scope=self.scope,
-            linkFullName=link_name,
-            linkNormalizedName=normalize_name(link_name),
-            compressedName=rendered_name,
-            linkId=self.link_ids[link_name],
-            zoneFullName=zone_name,
-            zoneNormalizedName=normalize_name(zone_name),
-            stringSize=link_name_size,
-            originalSize=original_size,
-            memory8=memory8,
-            memory32=memory32,
-            numEras=len(self.zones_map[zone_name]),
-            progmem='ACE_TIME_PROGMEM',
-        )
+        link_normalized_name = normalize_name(link_name)
+        link_id = self.link_ids[link_name]
+        zone_normalized_name = normalize_name(zone_name)
+        num_eras = len(self.zones_map[zone_name])
+        progmem = 'ACE_TIME_PROGMEM'
+        link_item = f"""\
+//---------------------------------------------------------------------------
+// Link name: {link_name} -> {zone_name}
+// Strings (bytes): {link_name_size} (originally {original_link_name_size})
+// Memory (8-bit): {memory8}
+// Memory (32-bit): {memory32}
+//---------------------------------------------------------------------------
+
+static const char kZoneName{link_normalized_name}[] {progmem} = \
+{rendered_name};
+
+const {self.scope}::ZoneInfo kZone{link_normalized_name} {progmem} = {{
+  kZoneName{link_normalized_name} /*name*/,
+  0x{link_id:08x} /*zoneId*/,
+  &kZoneContext /*zoneContext*/,
+  {num_eras} /*numEras*/,
+  kZoneEra{zone_normalized_name} /*eras*/,
+  &kZone{zone_normalized_name} /*targetInfo*/,
+}};
+
+"""
 
         return link_item
 
