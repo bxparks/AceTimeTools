@@ -25,7 +25,8 @@ used by multiple packages.
 # Constants used by various modules.
 # -----------------------------------------------------------------------------
 
-# AceTime Epoch is 2000-01-01 00:00:00
+# AceTime Epoch is 2000-01-01. Used to generate 8-bit year fields when
+# generate_int16_years is False, so this is really not used anymore.
 EPOCH_YEAR: int = 2000
 
 # Indicate +Infinity UNTIL year (represented by empty field).
@@ -234,8 +235,10 @@ class TransformerResult:
     notable_links: CommentsMap  # {linkName -> reasons[]}
     zones_to_policies: ZonesToPolicies  # {zoneName -> policyName[]}
     merged_notable_zones: MergedCommentsMap  # {zoneName -> MergedCommentsMap]}
-    earliest_year_original: int  # earliest year in original TZDB
-    earliest_year_generated: int  # earliest year in generated zonedb
+    original_min_year: int  # min year in original TZDB
+    original_max_year: int  # max year in original TZDB
+    generated_min_year: int  # min year in generated zonedb
+    generated_max_year: int  # max year in generated zonedb
     zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
     link_ids: Dict[str, int]  # {linkName -> zoneHash}
     letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
@@ -327,8 +330,10 @@ class ZoneInfoDatabase(TypedDict):
     merged_notable_zones: MergedCommentsMap
     notable_links: CommentsMap
     notable_policies: CommentsMap
-    earliest_year_original: int
-    earliest_year_generated: int
+    original_min_year: int
+    original_max_year: int
+    generated_min_year: int
+    generated_max_year: int
 
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap
@@ -401,8 +406,10 @@ def create_zone_info_database(
             tresult.merged_notable_zones),
         'notable_links': _sort_comments(tresult.notable_links),
         'notable_policies': _sort_comments(tresult.notable_policies),
-        'earliest_year_original': tresult.earliest_year_original,
-        'earliest_year_generated': tresult.earliest_year_generated,
+        'original_min_year': tresult.original_min_year,
+        'original_max_year': tresult.original_max_year,
+        'generated_min_year': tresult.generated_min_year,
+        'generated_max_year': tresult.generated_max_year,
 
         # Data from BufSizeEstimator
         'buf_sizes': buf_size_map,

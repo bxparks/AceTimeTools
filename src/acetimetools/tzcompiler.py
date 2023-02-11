@@ -411,8 +411,10 @@ def main() -> None:
         merged_notable_zones={},
         notable_policies={},
         notable_links={},
-        earliest_year_original=0,
-        earliest_year_generated=0,
+        original_min_year=0,
+        original_max_year=0,
+        generated_min_year=0,
+        generated_max_year=0,
         zone_ids={},
         link_ids={},
         letters_per_policy={},
@@ -454,12 +456,15 @@ def main() -> None:
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')
-    logging.info('Checking years in [%d, %d)', args.start_year, args.until_year)
+    start_year = max(tresult.generated_min_year, args.start_year)
+    until_year = min(tresult.generated_max_year + 1, args.until_year)
+    logging.info('Checking years in [%d, %d)', start_year, until_year)
+
     estimator = BufSizeEstimator(
         zones_map=tresult.zones_map,
         policies_map=tresult.policies_map,
-        start_year=args.start_year,
-        until_year=args.until_year,
+        start_year=start_year,
+        until_year=until_year,
     )
     logging.info('Calculating buf_size_map')
     buf_size_map = estimator.calculate_buf_size_map()
