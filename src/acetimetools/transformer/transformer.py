@@ -118,7 +118,8 @@ class Transformer:
         # Part 1: Some sanity checks and stats gathering.
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
-        earliest_year_original = _detect_earliest_year(zones_map, policies_map)
+        original_min_year, original_max_year = \
+            _detect_tzdb_years(zones_map, policies_map)
 
         # Part 2: Transform the zones_map
         zones_map = self._filter_include_zones(zones_map, self.include_list)
@@ -184,9 +185,10 @@ class Transformer:
         tresult.notable_policies = self.all_notable_policies
         tresult.notable_links = self.all_notable_links
         tresult.merged_notable_zones = self.tresult.merged_notable_zones
-        tresult.earliest_year_original = earliest_year_original
-        tresult.earliest_year_generated = _detect_earliest_year(
-            zones_map, policies_map)
+        tresult.original_min_year = original_min_year
+        tresult.original_max_year = original_max_year
+        tresult.generated_min_year, tresult.generated_max_year = \
+            _detect_tzdb_years(zones_map, policies_map)
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -1944,25 +1946,30 @@ def _detect_links_to_links(links_map: LinksMap) -> None:
     logging.info('Detected no links-to-links')
 
 
-def _detect_earliest_year(
+def _detect_tzdb_years(
     zones_map: ZonesMap, policies_map: PoliciesMap,
-) -> int:
-    """Scan the Zone.UNTIL and RULE.FROM fields and determine the earliest year
-    in the database.
+) -> Tuple[int, int]:
+    """Scan the Zone.UNTIL and RULE.FROM fields and determine the min and max
+    years.
     """
-    year = MAX_YEAR
+    min_year = MAX_YEAR
+    max_year = MIN_YEAR
     for zone_name, eras in zones_map.items():
         for era in eras:
             era_year = era['until_year']
-            if era_year < year:
-                year = era_year
+            if era_year < min_year:
+                min_year = era_year
+            if era_year != MAX_UNTIL_YEAR and era_year > max_year:
+                max_year = era_year
 
     for name, rules in policies_map.items():
         for rule in rules:
             if rule.get('anchor', False):
                 continue
             from_year = rule['from_year']
-            if from_year < year:
-                year = from_year
+            if from_year < min_year:
+                min_year = from_year
+            if from_year != MAX_YEAR and from_year > max_year:
+                max_year = from_year
 
-    return year
+    return min_year, max_year
