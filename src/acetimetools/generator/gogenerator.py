@@ -22,6 +22,8 @@ from acetimetools.data_types.at_types import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
 from acetimetools.generator.byteutils import convert_to_go_string
+from acetimetools.generator.byteutils import write_i8
+from acetimetools.generator.byteutils import write_i16
 from acetimetools.generator.byteutils import write_u8
 from acetimetools.generator.byteutils import write_u16
 from acetimetools.generator.byteutils import write_u32
@@ -548,14 +550,14 @@ const (
 
         # chunk_size = 12 bytes
         # WARNING: If this is changed, the chunk_size must be updated.
-        write_u16(data, rule['from_year'])
-        write_u16(data, rule['to_year'])
+        write_i16(data, rule['from_year'])
+        write_i16(data, rule['to_year'])
         write_u8(data, rule['in_month'])
         write_u8(data, rule['on_day_of_week'])
-        write_u8(data, rule['on_day_of_month'])
+        write_i8(data, rule['on_day_of_month'])
         write_u8(data, rule['go_at_seconds_modifier'])
         write_u16(data, rule['go_at_seconds_code'])
-        write_u8(data, rule['go_delta_minutes'])
+        write_i8(data, rule['go_delta_minutes'])
         write_u8(data, letter_index)
 
     def _generate_policies_string(
@@ -776,9 +778,9 @@ const (
         write_u16(data, format_index)
         write_u8(data, policy_index)
         write_u8(data, offset_seconds_remainder)
-        write_u16(data, offset_seconds_code)
-        write_u16(data, until_year)
-        write_u8(data, delta_minutes)
+        write_i16(data, offset_seconds_code)
+        write_i16(data, until_year)
+        write_i8(data, delta_minutes)
         write_u8(data, until_month)
         write_u8(data, until_day)
         write_u8(data, until_seconds_modifier)

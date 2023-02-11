@@ -69,13 +69,14 @@ def write_u32(data: bytearray, x: int) -> None:
     data.append(b2)
     data.append(b3)
 
+
 def write_i32(data: bytearray, x: int) -> None:
-    if x > (1<<31-1):
+    if x > (1 << 31 - 1):
         raise ValueError(f"x={x} > {1<<31-1}, cannot write into int32")
-    if x < -(1<<31):
+    if x < -(1 << 31):
         raise ValueError(f"x={x} < {-(1<<31)}, cannot write into int32")
     if x < 0:
-        x += (1<<32)
+        x += (1 << 32)
     write_u32(data, x)
 
 
