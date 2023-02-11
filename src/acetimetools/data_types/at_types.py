@@ -25,7 +25,8 @@ used by multiple packages.
 # Constants used by various modules.
 # -----------------------------------------------------------------------------
 
-# AceTime Epoch is 2000-01-01 00:00:00
+# AceTime Epoch is 2000-01-01. Used to generate 8-bit year fields when
+# generate_int16_years is False, so this is really not used anymore.
 EPOCH_YEAR: int = 2000
 
 # Indicate +Infinity UNTIL year (represented by empty field).
