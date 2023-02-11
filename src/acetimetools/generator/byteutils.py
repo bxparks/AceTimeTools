@@ -3,6 +3,7 @@
 # MIT License
 """
 Utils for writing unsigned ints to byte arrays in little endian format.
+For negative integers, use 2's complement.
 """
 
 from typing import List
@@ -10,15 +11,28 @@ from typing import List
 
 def write_u8(data: bytearray, x: int) -> None:
     if x > 255:
-        raise Exception(f"x={x} > 255 exceeds uint8_t")
-
+        raise ValueError(f"x={x} > 255, cannot write into uint8")
+    if x < 0:
+        raise ValueError(f"x={x} < 0, cannot write into uint8")
     b0 = x & 0xff
     data.append(b0)
 
 
+def write_i8(data: bytearray, x: int) -> None:
+    if x > 127:
+        raise ValueError(f"x={x} > 127, cannot write into int8")
+    if x < -128:
+        raise ValueError(f"x={x} < -128, cannot write into int8")
+    if x < 0:
+        x += 256
+    write_u8(data, x)
+
+
 def write_u16(data: bytearray, x: int) -> None:
     if x > 65535:
-        raise Exception(f"x={x} > 65535 exceeds uint16_t")
+        raise ValueError(f"x={x} > 65535, cannot write into uint16")
+    if x < 0:
+        raise ValueError(f"x={x} < 0, cannot write into uint16")
 
     b0 = x & 0xff
     x >>= 8
@@ -27,9 +41,21 @@ def write_u16(data: bytearray, x: int) -> None:
     data.append(b1)
 
 
+def write_i16(data: bytearray, x: int) -> None:
+    if x > 32767:
+        raise ValueError(f"x={x} > 32767, cannot write into int16")
+    if x < -32768:
+        raise ValueError(f"x={x} < -32768, cannot write into int16")
+    if x < 0:
+        x += 65536
+    write_u16(data, x)
+
+
 def write_u32(data: bytearray, x: int) -> None:
     if x > 4294967295:
-        raise Exception(f"x={x} > 4294967295 exceeds uint32_t")
+        raise ValueError(f"x={x} > 4294967295, cannot write into uint32")
+    if x < 0:
+        raise ValueError(f"x={x} < 0, cannot write into uint32")
 
     b0 = x & 0xff
     x >>= 8
@@ -42,6 +68,16 @@ def write_u32(data: bytearray, x: int) -> None:
     data.append(b1)
     data.append(b2)
     data.append(b3)
+
+
+def write_i32(data: bytearray, x: int) -> None:
+    if x > (1 << 31 - 1):
+        raise ValueError(f"x={x} > {1<<31-1}, cannot write into int32")
+    if x < -(1 << 31):
+        raise ValueError(f"x={x} < {-(1<<31)}, cannot write into int32")
+    if x < 0:
+        x += (1 << 32)
+    write_u32(data, x)
 
 
 def hex_encode(data: bytearray) -> str:
