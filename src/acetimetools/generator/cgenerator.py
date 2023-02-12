@@ -178,7 +178,7 @@ extern const AtcZonePolicy kAtcZonePolicy{policy_normalized_name};
 #ifndef ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
 #define ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
 
-#include "../zone_info.h"
+#include "../zoneinfo/zone_info.h"
 
 #ifdef __cplusplus
 extern "C" {{
@@ -382,7 +382,7 @@ extern const AtcZoneInfo kAtcZone{link_normalized_name}; \
 #ifndef ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
 #define ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
 
-#include "../zone_info.h"
+#include "../zoneinfo/zone_info.h"
 
 #ifdef __cplusplus
 extern "C" {{
@@ -758,7 +758,7 @@ const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{num_zones_and_links}] \
 #ifndef ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
 #define ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
 
-#include "../zone_info.h"
+#include "../zoneinfo/zone_info.h"
 
 #ifdef __cplusplus
 extern "C" {{
