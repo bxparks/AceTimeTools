@@ -169,7 +169,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 
-#include <ace_time/internal/ZonePolicy.h>
+#include <zoneinfo/ZonePolicy.h>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -225,7 +225,7 @@ namespace {self.db_namespace} {{
 //
 """
         return self._generate_header(extra) + f"""\
-#include <ace_time/common/compat.h>
+#include <zoneinfo/compat.h>
 #include "zone_policies.h"
 
 namespace ace_time {{
@@ -380,7 +380,7 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
 
-#include <ace_time/internal/ZoneInfo.h>
+#include <zoneinfo/ZoneInfo.h>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -570,7 +570,7 @@ extern const internal::ZoneContext kZoneContext;
 """
 
         return self._generate_header(extra) + f"""\
-#include <ace_time/common/compat.h>
+#include <zoneinfo/compat.h>
 #include "zone_policies.h"
 #include "zone_infos.h"
 
@@ -815,7 +815,7 @@ const {self.scope}::ZoneInfo kZone{link_normalized_name} {progmem} = {{
         progmem = 'ACE_TIME_PROGMEM'
 
         return self._generate_header() + f"""\
-#include <ace_time/common/compat.h>
+#include <zoneinfo/compat.h>
 #include "zone_infos.h"
 #include "zone_registry.h"
 
@@ -849,7 +849,7 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
 
-#include <ace_time/internal/ZoneInfo.h>
+#include <zoneinfo/ZoneInfo.h>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
