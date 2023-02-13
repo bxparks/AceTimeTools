@@ -102,10 +102,7 @@ class ArduinoTransformer:
 
                 # These will always be integers because transformer.py
                 # truncated them to 900 seconds appropriately.
-                encoded_delta = _to_rule_offset(
-                    delta_seconds=rule['delta_seconds_truncated'],
-                    scope=self.scope,
-                )
+                encoded_delta = _to_rule_offset(rule['delta_seconds_truncated'])
                 rule['delta_code'] = encoded_delta.delta_code
                 rule['delta_code_encoded'] = encoded_delta.delta_code_encoded
 
@@ -145,7 +142,6 @@ class ArduinoTransformer:
                 encoded_offset = _to_offset_and_delta(
                     offset_seconds=era['offset_seconds_truncated'],
                     delta_seconds=delta_seconds,
-                    scope=self.scope,
                 )
                 era['offset_code'] = encoded_offset.offset_code
                 era['offset_minute'] = encoded_offset.offset_minute
@@ -340,20 +336,16 @@ class EncodedRuleOffset(NamedTuple):
     delta_code_encoded: int
 
 
-def _to_rule_offset(
-    delta_seconds: int,
-    scope: str,
-) -> EncodedRuleOffset:
+def _to_rule_offset(delta_seconds: int) -> EncodedRuleOffset:
     """Convert the delta_seconds extracted from the SAVE column of a RULE entry
     to an EncodedRuleOffset. The transformer.py ensures that all entries are in
     multiples of 15-minutes, so we don't need to worry about remainder minutes.
     """
     delta_code = delta_seconds // 900
-    # TODO: Maybe the encoding should be unified between 'basic' and 'extended'
-    if scope == 'extended':
-        delta_code_encoded = delta_code + 4
-    else:
-        delta_code_encoded = delta_code
+    delta_code_encoded = delta_code + 4
+    # Make sure this fits in 4-bits
+    if delta_code_encoded < 0 or delta_code_encoded > 15:
+        raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
     return EncodedRuleOffset(
         delta_code=delta_code,
         delta_code_encoded=delta_code_encoded,
@@ -363,15 +355,16 @@ def _to_rule_offset(
 class EncodedOffset(NamedTuple):
     """Encode the STD offset and DST offset into 2 8-bit integer fields.
 
-    * offset_code: STD offset in units of 15-minutes
+    * offset_code:
+        * STD offset in units of 15-minutes
     * offset_minute: Remainder minutes (must be always 0 for scope=basic).
         This quantity is already included in delta_code, so the purpose of
         this field is to allow the caller to check for a non-zero value
         and log a warning or error message.
-    * delta_code: delta offset in units of 15-minutes
+    * delta_code:
+        * delta offset in units of 15-minutes
     * delta_code_encoded:
-        * basic: same as delta_code
-        * extended: The lower 4-bits is delta_code + 4 (i.e. 1h). Allows
+        * The lower 4-bits is delta_code + 4 (i.e. 1h). Allows
             encoding from -1:00 to +2:45. The upper 4-bits holds the
             offset_minute.
     """
@@ -384,7 +377,6 @@ class EncodedOffset(NamedTuple):
 def _to_offset_and_delta(
     offset_seconds: int,
     delta_seconds: int,
-    scope: str,
 ) -> EncodedOffset:
     """Convert offset_seconds and delta_seconds to an EncodedOffset suitable for
     a BasicZoneProcessor or ExtendedZoneProcessor.
@@ -392,10 +384,10 @@ def _to_offset_and_delta(
     offset_code = offset_seconds // 900  # truncate to -infinty
     offset_minute = (offset_seconds % 900) // 60  # always positive
     delta_code = delta_seconds // 900
-    if scope == 'extended':
-        delta_code_encoded = (offset_minute << 4) + (delta_code + 4)
-    else:
-        delta_code_encoded = delta_code
+    delta_code_shifted = delta_code + 4
+    if delta_code_shifted < 0 or delta_code_shifted > 15:
+        raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
+    delta_code_encoded = (offset_minute << 4) + (delta_code_shifted)
 
     return EncodedOffset(
         offset_code=offset_code,

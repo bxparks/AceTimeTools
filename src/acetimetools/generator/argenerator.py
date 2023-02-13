@@ -253,8 +253,7 @@ namespace {self.db_namespace} {{
             )
             delta_code = rule['delta_code_encoded']
             delta_code_comment = _get_rule_delta_code_comment(
-                delta_seconds=rule['delta_seconds_truncated'],
-                scope=self.scope,
+                rule['delta_seconds_truncated']
             )
             if self.generate_int16_years:
                 from_year = rule['from_year']
@@ -699,7 +698,6 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         delta_code_comment = _get_era_delta_code_comment(
             offset_seconds=era['offset_seconds_truncated'],
             delta_seconds=era['era_delta_seconds_truncated'],
-            scope=self.scope,
         )
         if self.generate_int16_years:
             until_year = era['until_year']
@@ -889,37 +887,24 @@ def _get_time_modifier_comment(
     return comment
 
 
-def _get_era_delta_code_comment(
-    offset_seconds: int,
-    delta_seconds: int,
-    scope: str,
-) -> str:
+def _get_era_delta_code_comment(offset_seconds: int, delta_seconds: int) -> str:
     """Create the comment that explains how the ZoneEra delta_code[_encoded] was
     calculated.
     """
     offset_minute = offset_seconds % 900 // 60
     delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return (
-            f"((offsetMinute={offset_minute}) << 4) + "
-            f"((deltaMinutes={delta_minutes})/15 + 4)"
-        )
-    else:
-        return f"(deltaMinutes={delta_minutes})/15"
+    return (
+        f"((offsetMinute={offset_minute}) << 4) + "
+        f"((deltaMinutes={delta_minutes})/15 + 4)"
+    )
 
 
-def _get_rule_delta_code_comment(
-    delta_seconds: int,
-    scope: str,
-) -> str:
+def _get_rule_delta_code_comment(delta_seconds: int) -> str:
     """Create the comment that explains how the ZoneRule delta_code[_encoded]
     was calculated.
     """
     delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return f"(deltaMinutes={delta_minutes})/15 + 4"
-    else:
-        return f"(deltaMinutes={delta_minutes})/15"
+    return f"(deltaMinutes={delta_minutes})/15 + 4"
 
 
 def compressed_name_to_c_string(compressed_name: str) -> str:

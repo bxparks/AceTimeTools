@@ -11,6 +11,9 @@
           Zone.STDOFF, Zone.UNTIL, and Rule.AT fields.
         * Support 1-minute resolution for Zone.DSTOFF (aka Zone.RULES) and
           Rule.SAVE fields.
+    * `artransformer.py`, `argenerator.py`
+        * Unify data encoding of `ZoneInfo.deltaCode` and `ZoneRule.deltaCode`
+          for "basic" zonedb files.
 * v1.4.3 (2023-02-04)
     * `argenerator.py`, `cgenerator.py`:
         * Simplify encoding of `Rule.LETTER` as an index into
