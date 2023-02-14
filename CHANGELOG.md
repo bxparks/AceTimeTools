@@ -17,6 +17,7 @@
     * `artransformer.py`, `argenerator.py`
         * Unify data encoding of `ZoneInfo.deltaCode` and `ZoneRule.deltaCode`
           for "basic" zonedb files.
+    * Calculate min and max years for original and generated zonedb entries.
 * v1.4.3 (2023-02-04)
     * `argenerator.py`, `cgenerator.py`:
         * Simplify encoding of `Rule.LETTER` as an index into
