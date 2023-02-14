@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.5.0 (2023-02-13)
     * Rename `rules_delta_seconds` to `era_delta_seconds` for better
       self-documentation.
         * This field is determined by the `RULES` column in the Zone entry when
