@@ -12,6 +12,8 @@
           Zone.STDOFF, Zone.UNTIL, and Rule.AT fields.
         * Support 1-minute resolution for Zone.DSTOFF (aka Zone.RULES) and
           Rule.SAVE fields.
+        * Generate zonedb using signed integers variants (`write_i8()`,
+          `write_i16()`, `write_i32()`) with proper range checking.
     * `artransformer.py`, `argenerator.py`
         * Unify data encoding of `ZoneInfo.deltaCode` and `ZoneRule.deltaCode`
           for "basic" zonedb files.
