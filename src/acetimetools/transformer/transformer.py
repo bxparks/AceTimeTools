@@ -115,14 +115,15 @@ class Transformer:
             len(links_map),
         )
 
-        # Part 1: Some sanity checks and stats gathering.
+        # Part 1: Some sanity checks, gathering, and include filtering.
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
         original_min_year, original_max_year = \
             _detect_tzdb_years(zones_map, policies_map)
+        links_map = self._filter_include_links(links_map, self.include_list)
+        zones_map = self._filter_include_zones(zones_map, self.include_list)
 
         # Part 2: Transform the zones_map.
-        zones_map = self._filter_include_zones(zones_map, self.include_list)
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
@@ -166,7 +167,6 @@ class Transformer:
 
         # Part 5: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
-        links_map = self._filter_include_links(links_map, self.include_list)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
 
         # Part 6: Detect zones and links whose normalized names conflict.

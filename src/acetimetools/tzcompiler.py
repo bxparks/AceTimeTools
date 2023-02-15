@@ -5,46 +5,86 @@
 # MIT License.
 
 """
-Read the raw TZ Database files at the location specified by `--input_dir` and
-generate the zonedb files in various formats as determined by the '--action'
-flag:
+Read the raw TZ Database files at the location specified by `--input_dir`.
+Generate the zonedb files in various formats for different languages selected by
+the `--language` flag.
 
-  * --action zonedb
-      Generate zone_infos.*, zone_policies.*, and sometimes the zone_registry.*
-      files in the target language given by `--language` flag.
+The compiler has a number of stages implemented by various helper classes:
 
-The `--output_dir` flag determines the directory where various files should
-be created. If empty, it means the same as $PWD.
+* Extractor
+    * Parse and extract the raw TZDB files into internal zoneinfo (ZoneInfo,
+      ZoneEra, ZonePolicy, ZoneRule) records.
+* Transformer
+    * Mutate and remove zoneinfo records according to selected options and
+      algorithms.
+* Generator
+    * Generate the various zonedb files in the format requested by the
+      `--language` flag.
 
-For `--action zonedb` is selected, The `--language` flag is a comma-separated
-list of output file:
+Informational Flags:
 
-  * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
-  * c: Generate `zone_*.{h,cpp}` files for AceTimeC C lang library
-  * python: Generate `zone_*.py` files for AceTimePython Python library
-  * json: Generate `zonedb.json` file.
-  * zonelist: Generate a raw list of zone names in 'zones.txt' file.
+* --tz_version
+    * Pass through flag to identify the TZDB version.
 
-The raw TZ Database are parsed by extractor.py and processed by transformer.py.
-The Transformer class accepts a number of options:
+Extractor Flags:
 
-  * --scope {basic | extended)
-  * --start_year {start}
-  * --until_year {until}
-  * --granularity {seconds}
-  * --until_at_granularity {seconds}
-  * --offset_granularity {seconds}
-  * --delta_granularity {seconds}
-  * --strict, --nostrict
-  * --compress, --nocompress
+* `--input_dir`
+    * Location of the raw TZDB files.
 
-which determine which Rules or Zones are retained during the 'transformation'
-process.
+Transformer Flags:
 
-If `--language arduino` is selected, the following flags are effective:
+* --scope {basic | extended)
+    * Selects one of the 2 algorithms supported by AceTime.
+    * AceTimeC, AceTimePython, and AceTimeGo supports only 'extended'.
+* `--generate_int16_years`
+    * Output `from_year` and `to_year` as 16-bit integers instead of 8-bit
+      "tiny" integers.
+    * Retain records which are outside of the 8-bit integers.
+* --start_year {start}
+    * Truncate output so that the algorithm works for year >= start_year.
+* --until_year {until}
+    * Truncate output so that the algorithm works for year < until_year.
+* --granularity {seconds}
+    * Convenience flag that overrides the other `--xxx_granularity` flags.
+* --until_at_granularity {seconds}
+    * Truncate Zone.UNTIL fields to this granularity.
+* --offset_granularity {seconds}
+    * Truncate Zone.STDOFF field to this granularity.
+* --delta_granularity {seconds}
+    * Truncate Zone.DSTOFF (aka Zone.RULES) and Rule.SAVE to this granularity.
+* --strict, --nostrict
+    * Remove entries outside of the selected granularity.
+* `--include_list {file}`
+    * Filter the zones to include only those in this include list.
+* --compress, --nocompress
+    * Compress zone names using keyword substitution.
 
-  * --db_namespace {db_namespace}
-      Use the given identifier as the C++ namespace of the generated classes.
+Generator Flags:
+
+* `--language` flag is a comma-separated list of generator file:
+    * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
+    * c: Generate `zone_*.{h,cpp}` files for AceTimeC C lang library
+    * python: Generate `zone_*.py` files for AceTimePython Python library
+    * json: Generate `zonedb.json` file.
+    * zonelist: Generate a raw list of zone names in 'zones.txt' file.
+* `--output_dir {dir}`
+    * The directory where various files should be created.
+    * If empty, it means the same as $PWD.
+* ArduinoGenerator
+    * --db_namespace {db_namespace}
+        * Use the given identifier as the C++ namespace of the generated
+          classes.
+    * `--generate_int16_years`
+        * Generate 16-bit year fields instead of 8-bit.
+* CGenerator
+    * `--generate_int16_years`
+        * Generate 16-bit year fields instead of 8-bit.
+* GoGenerator
+    * --db_namespace {db_namespace}
+        * Specifies the Go `package` name.
+* JsonGenerator
+    * --json_file {file}
+        * Name of the JSON file (e.g. `zonedb.json`, `zonedbx.json`)
 
 Examples:
 
@@ -449,7 +489,7 @@ def main() -> None:
     transformer.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
-    if 'arduino' in languages:
+    if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
         arduino_transformer = ArduinoTransformer(scope=args.scope)
         arduino_transformer.transform(tresult)

@@ -84,16 +84,16 @@ class ArduinoTransformer:
                 rule['to_year_tiny'] = _to_tiny_year(rule['to_year'])
 
                 # Convert at_seconds to at_time_code and at_time_modifier
-                encoded_at_time = _to_encoded_time(
+                at_encoded = _to_encoded_at_or_until_time(
                     seconds=rule['at_seconds_truncated'],
                     suffix=rule['at_time_suffix'],
                 )
-                rule['at_time_code'] = encoded_at_time.time_code
-                rule['at_time_minute'] = encoded_at_time.time_minute
-                rule['at_time_modifier'] = encoded_at_time.modifier
+                rule['at_time_code'] = at_encoded.time_code
+                rule['at_time_minute'] = at_encoded.time_remainder
+                rule['at_time_modifier'] = at_encoded.time_modifier
 
                 # Check if AT is not on 15-minute boundary
-                if encoded_at_time.time_minute != 0:
+                if at_encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_policies, policy_name,
                         f"AT '{rule['at_time']}' not on 15-minute boundary"
@@ -101,9 +101,9 @@ class ArduinoTransformer:
 
                 # These will always be integers because transformer.py
                 # truncated them to 900 seconds appropriately.
-                encoded_delta = _to_rule_offset(rule['delta_seconds_truncated'])
-                rule['delta_code'] = encoded_delta.delta_code
-                rule['delta_code_encoded'] = encoded_delta.delta_code_encoded
+                rule_encoded = _to_rule_delta(rule['delta_seconds_truncated'])
+                rule['delta_code'] = rule_encoded.delta_code
+                rule['delta_code_encoded'] = rule_encoded.delta_code_encoded
 
                 # Get letter indexes, per policy and global
                 letter = rule['letter']
@@ -138,17 +138,17 @@ class ArduinoTransformer:
                     delta_seconds = 0
 
                 # Generate the STDOFF and DST delta offset codes.
-                encoded_offset = _to_offset_and_delta(
+                offset_encoded = _to_era_offset_and_delta(
                     offset_seconds=era['offset_seconds_truncated'],
                     delta_seconds=delta_seconds,
                 )
-                era['offset_code'] = encoded_offset.offset_code
-                era['offset_minute'] = encoded_offset.offset_minute
-                era['delta_code'] = encoded_offset.delta_code
-                era['delta_code_encoded'] = encoded_offset.delta_code_encoded
+                era['offset_code'] = offset_encoded.offset_code
+                era['offset_minute'] = offset_encoded.offset_remainder
+                era['delta_code'] = offset_encoded.delta_code
+                era['delta_code_encoded'] = offset_encoded.delta_code_encoded
 
                 # Check if STDOFF is not on 15-minute boundary
-                if encoded_offset.offset_minute != 0:
+                if offset_encoded.offset_remainder != 0:
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"STDOFF '{era['offset_string']}' "
@@ -157,16 +157,16 @@ class ArduinoTransformer:
 
                 # Generate the UNTIL fields needed by Arduino ZoneProcessors
                 era['until_year_tiny'] = _to_tiny_until_year(era['until_year'])
-                encoded_until_time = _to_encoded_time(
+                until_encoded = _to_encoded_at_or_until_time(
                     seconds=era['until_seconds_truncated'],
                     suffix=era['until_time_suffix'],
                 )
-                era['until_time_code'] = encoded_until_time.time_code
-                era['until_time_minute'] = encoded_until_time.time_minute
-                era['until_time_modifier'] = encoded_until_time.modifier
+                era['until_time_code'] = until_encoded.time_code
+                era['until_time_minute'] = until_encoded.time_remainder
+                era['until_time_modifier'] = until_encoded.time_modifier
 
                 # Check if UNTIL is not on 15-minute boundary
-                if encoded_until_time.time_minute != 0:
+                if until_encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
@@ -255,52 +255,52 @@ def _to_tiny_until_year(year: int) -> int:
 
 
 class EncodedTime(NamedTuple):
-    """Break apart a time in seconds with a suffix (e.g. 02:00w) into the
-    following parts so that it can be encoded in 2 bytes with a resolution of
-    1-minute:
+    """Break apart the AT or UNTIL time with its suffix (e.g. 02:00w) into the
+    components. See _to_encoded_at_or_until_time() for explanation of these
+    fields.
 
-        * time_code: Time of day, in units of 15 minutes. Since time_code will
+    * time_code
+        * Time of AT or UNTIL time, in units of 15 minutes. Since time_code will
           be placed in an 8-bit field with a range of -127 to 127 (-128 is an
           error flag), the range of time that this can represent is -31:45 to
           +31:59. I believe all time of day in the TZ database files are
           positive, but it will occasionally have time strings of "25:00" which
           means 1am the next day.
-        * time_minute: Remainder minutes (if any) which will be placed in the
-          bottom 4-bits (0-14) of the modifier. This quantity is already
-          included in modifier, so the purpose of this field is to allow
-          the caller to check for a non-zero value for logging purposes.
-        * suffix_code: An integer code that can be placed in the top 4-bits
-          (e.g. 0x00, 0x10, 0x20).
-        * modifier: suffix_code + time_minute
+    * time_remainder
+        * Remainder minutes [0-14]. Fits in lower 4-bits.
+    * suffix_code
+        * An integer version of 'w', 's', and 'u' (i.e. 0x00, 0x10, 0x20).
+        * Fits in the top 4-bits.
+    * time_modifier
+        * suffix_code + time_remainder
 
-    (Note: In hindsight, I probably should have flipped the top and bottom 4-bit
-    locations of the suffix_code an time_minute, so that the
-    EncodedTime.time_minute field is in the same location as
-    EncodedOffset.time_minute field.)
+    Note: Maybe I should have flipped the top and bottom 4-bit locations of the
+    suffix_code an time_remainder, so that the EncodedTime.time_remainder field
+    is in the same location as EncodedOffset.offset_minutes field.
     """
     time_code: int
-    time_minute: int
+    time_remainder: int
+    time_modifier: int
     suffix_code: int
-    modifier: int
 
 
-def _to_encoded_time(
+def _to_encoded_at_or_until_time(
     seconds: int,
     suffix: str,
 ) -> EncodedTime:
     """Return the EncodedTime tuple that represents the AT or UNTIL time, with a
-    resolution of 1-minute, along with an encoding of its suffix (i.e. 's', 'w',
-    'u').
+    resolution of 1-minute or 1-second, along with an encoding of its suffix
+    (i.e. 's', 'w', 'u').
     """
     time_code = seconds // 900
-    time_minute = seconds % 900 // 60
+    time_remainder = seconds % 900 // 60
     suffix_code = _to_suffix_code(suffix)
-    modifier = time_minute + suffix_code
+    time_modifier = time_remainder + suffix_code
     return EncodedTime(
         time_code=time_code,
-        time_minute=time_minute,
+        time_remainder=time_remainder,
         suffix_code=suffix_code,
-        modifier=modifier,
+        time_modifier=time_modifier,
     )
 
 
@@ -320,21 +320,19 @@ def _to_suffix_code(suffix: str) -> int:
         raise Exception(f'Unknown suffix {suffix}')
 
 
-class EncodedRuleOffset(NamedTuple):
+class EncodedRuleDelta(NamedTuple):
     """Encode the DST offset extracted from the SAVE column of the Rule entries.
 
     * delta_code: delta offset in units of 15-min
-    * delta_code_encoded:
-        * basic: same as delta_code
-        * extended: delta_code + 4 (1h)
+    * delta_code_encoded: delta_code + 4 (1h)
     """
     delta_code: int
     delta_code_encoded: int
 
 
-def _to_rule_offset(delta_seconds: int) -> EncodedRuleOffset:
+def _to_rule_delta(delta_seconds: int) -> EncodedRuleDelta:
     """Convert the delta_seconds extracted from the SAVE column of a RULE entry
-    to an EncodedRuleOffset. The transformer.py ensures that all entries are in
+    to an EncodedRuleDelta. The transformer.py ensures that all entries are in
     multiples of 15-minutes, so we don't need to worry about remainder minutes.
     """
     delta_code = delta_seconds // 900
@@ -342,7 +340,7 @@ def _to_rule_offset(delta_seconds: int) -> EncodedRuleOffset:
     # Make sure this fits in 4-bits
     if delta_code_encoded < 0 or delta_code_encoded > 15:
         raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
-    return EncodedRuleOffset(
+    return EncodedRuleDelta(
         delta_code=delta_code,
         delta_code_encoded=delta_code_encoded,
     )
@@ -353,24 +351,24 @@ class EncodedOffset(NamedTuple):
 
     * offset_code:
         * STD offset in units of 15-minutes
-    * offset_minute: Remainder minutes (must be always 0 for scope=basic).
-        This quantity is already included in delta_code, so the purpose of
-        this field is to allow the caller to check for a non-zero value
-        and log a warning or error message.
+    * offset_remainder:
+        * Remainder minutes (must be always 0 for scope=basic).
+        * Included in delta_code_encoded, so this allows the caller to
+          check for a non-zero and log a warning or error message.
     * delta_code:
         * delta offset in units of 15-minutes
     * delta_code_encoded:
-        * The lower 4-bits is delta_code + 4 (i.e. 1h). Allows
-            encoding from -1:00 to +2:45. The upper 4-bits holds the
-            offset_minute.
+        * lower 4-bits: delta_code + 4 (i.e. 1h)
+        * Allows encoding from -1:00 to +2:45.
+        * upper 4-bits: offset_remainder
     """
     offset_code: int
-    offset_minute: int
+    offset_remainder: int
     delta_code: int
     delta_code_encoded: int
 
 
-def _to_offset_and_delta(
+def _to_era_offset_and_delta(
     offset_seconds: int,
     delta_seconds: int,
 ) -> EncodedOffset:
@@ -378,16 +376,16 @@ def _to_offset_and_delta(
     a BasicZoneProcessor or ExtendedZoneProcessor.
     """
     offset_code = offset_seconds // 900  # truncate to -infinty
-    offset_minute = (offset_seconds % 900) // 60  # always positive
+    offset_remainder = (offset_seconds % 900) // 60  # always positive
     delta_code = delta_seconds // 900
-    delta_code_shifted = delta_code + 4
+    delta_code_shifted = delta_code + 4  # always positive
     if delta_code_shifted < 0 or delta_code_shifted > 15:
         raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
-    delta_code_encoded = (offset_minute << 4) + (delta_code_shifted)
+    delta_code_encoded = (offset_remainder << 4) + (delta_code_shifted)
 
     return EncodedOffset(
         offset_code=offset_code,
-        offset_minute=offset_minute,
+        offset_remainder=offset_remainder,
         delta_code=delta_code,
         delta_code_encoded=delta_code_encoded,
     )
