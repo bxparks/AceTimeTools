@@ -121,7 +121,7 @@ class Transformer:
         original_min_year, original_max_year = \
             _detect_tzdb_years(zones_map, policies_map)
 
-        # Part 2: Transform the zones_map
+        # Part 2: Transform the zones_map.
         zones_map = self._filter_include_zones(zones_map, self.include_list)
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
@@ -136,6 +136,7 @@ class Transformer:
             zones_map)
         zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
+        zones_map = self._create_short_format_strings(zones_map)
 
         # Part 3: Transformations requring both zones_map and policies_map.
         zones_map, policies_map = self._mark_rules_used_by_zones(
@@ -178,6 +179,8 @@ class Transformer:
         tresult.links_map = links_map
 
         # Part 8: Add additional results
+        tresult.zone_ids = self._generate_zone_ids(zones_map)
+        tresult.link_ids = self._generate_link_ids(links_map)
         tresult.removed_zones = self.all_removed_zones
         tresult.removed_policies = self.all_removed_policies
         tresult.removed_links = self.all_removed_links
@@ -862,6 +865,15 @@ class Transformer:
         merge_comments(self.all_removed_zones, removed_zones)
         return results
 
+    def _create_short_format_strings(self, zones_map: ZonesMap) -> ZonesMap:
+        """Convert 'format' with '%s' placeholder to 'format_short' with just a
+        '%' placeholder.
+        """
+        for name, eras in zones_map.items():
+            for era in eras:
+                era['format_short'] = era['format'].replace('%s', '%')
+        return zones_map
+
     # --------------------------------------------------------------------
     # Methods related to Rules
     # --------------------------------------------------------------------
@@ -1526,6 +1538,34 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    # --------------------------------------------------------------------
+    # Additional extractions or transformations
+    # --------------------------------------------------------------------
+
+    def _generate_zone_ids(self, zones_map: ZonesMap) -> Dict[str, int]:
+        """Generate {zoneName -> zoneId} map of zones. Must not be 0x00 because
+        0x00 is used as an error return code in certain methods of the C++ code.
+        """
+        ids: Dict[str, int] = {
+            name: hash_name(name) for name in zones_map.keys()
+        }
+        for k, v in ids.items():
+            if v == 0:
+                raise Exception(f"zoneId of {k} is 0x{v:x}")
+        return OrderedDict(sorted(ids.items()))
+
+    def _generate_link_ids(self, links_map: LinksMap) -> Dict[str, int]:
+        """Generate {linkName -> linkId} map of links. Must not be 0x00 because
+        0x00 is used as an error return code in certain methods of the C++ code.
+        """
+        ids: Dict[str, int] = {
+            name: hash_name(name) for name in links_map.keys()
+        }
+        for k, v in ids.items():
+            if v == 0:
+                raise Exception(f"zoneId of {k} is {v}")
+        return OrderedDict(sorted(ids.items()))
 
 
 # ISO-8601 specifies Monday=1, Sunday=7

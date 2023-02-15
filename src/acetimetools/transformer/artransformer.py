@@ -10,7 +10,6 @@ from typing import Tuple
 from collections import OrderedDict, Counter
 import itertools
 import logging
-from acetimetools.transformer.transformer import hash_name
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import LinksMap
@@ -42,13 +41,13 @@ class ArduinoTransformer:
         zones_map = tresult.zones_map
         policies_map = tresult.policies_map
         links_map = tresult.links_map
+        zone_ids = tresult.zone_ids
+        link_ids = tresult.link_ids
 
         letters_per_policy, letters_map = _collect_letter_strings(policies_map)
         formats_map = _collect_format_strings(zones_map)
         self._process_rules(policies_map, letters_map, letters_per_policy)
         self._process_eras(zones_map)
-        zone_ids = _generate_zone_ids(zones_map)
-        link_ids = _generate_link_ids(links_map)
         fragments_map = _generate_fragments(zones_map, links_map)
         compressed_names = _generate_compressed_names(
             zones_map, links_map, fragments_map
@@ -172,9 +171,6 @@ class ArduinoTransformer:
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
                     )
-
-                # FORMAT field for Arduino C++ replaces %s with just a %.
-                era['format_short'] = era['format'].replace('%s', '%')
 
 
 def _collect_letter_strings(
@@ -408,32 +404,6 @@ def _to_letter_index(
     if letter_index < 0:
         raise Exception(f'letter "{letter}" not found')
     return letter_index
-
-
-def _generate_zone_ids(
-    zones_map: ZonesMap,
-) -> Dict[str, int]:
-    """Generate {zoneName -> zoneId} map of zones. Must not be 0x00 because
-    0x00 is used as an error return code in certain methods of the C++ code.
-    """
-    ids: Dict[str, int] = {name: hash_name(name) for name in zones_map.keys()}
-    for k, v in ids.items():
-        if v == 0:
-            raise Exception(f"zoneId of {k} is 0x{v:x}")
-    return OrderedDict(sorted(ids.items()))
-
-
-def _generate_link_ids(
-    links_map: LinksMap,
-) -> Dict[str, int]:
-    """Generate {linkName -> linkId} map of links. Must not be 0x00 because
-    0x00 is used as an error return code in certain methods of the C++ code.
-    """
-    ids: Dict[str, int] = {name: hash_name(name) for name in links_map.keys()}
-    for k, v in ids.items():
-        if v == 0:
-            raise Exception(f"zoneId of {k} is {v}")
-    return OrderedDict(sorted(ids.items()))
 
 
 def _generate_fragments(zones_map: ZonesMap, links_map: LinksMap) -> IndexMap:

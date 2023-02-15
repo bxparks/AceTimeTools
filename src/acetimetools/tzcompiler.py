@@ -449,10 +449,13 @@ def main() -> None:
     transformer.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
-    logging.info('======== Transforming to Arduino Zones and Rules')
-    arduino_transformer = ArduinoTransformer(scope=args.scope)
-    arduino_transformer.transform(tresult)
-    arduino_transformer.print_summary(tresult)
+    if 'arduino' in languages:
+        logging.info('======== Transforming to Arduino Zones and Rules')
+        arduino_transformer = ArduinoTransformer(scope=args.scope)
+        arduino_transformer.transform(tresult)
+        arduino_transformer.print_summary(tresult)
+    else:
+        logging.info('======== Skipping Arduino transformations')
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')
@@ -490,10 +493,13 @@ def main() -> None:
     commenter.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
-    logging.info('======== Transforming to Go Zones and Rules')
-    go_transformer = GoTransformer()
-    go_transformer.transform(tresult)
-    go_transformer.print_summary(tresult)
+    if 'go' in languages:
+        logging.info('======== Transforming to Go Zones and Rules')
+        go_transformer = GoTransformer()
+        go_transformer.transform(tresult)
+        go_transformer.print_summary(tresult)
+    else:
+        logging.info('======== Skipping Go lang transformations')
 
     # Collect TZ DB data into a single JSON-serializable object.
     zidb = create_zone_info_database(

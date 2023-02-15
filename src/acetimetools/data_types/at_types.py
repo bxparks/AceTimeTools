@@ -134,6 +134,7 @@ class ZoneEraRaw(TypedDict, total=False):
     raw_line: str  # original ZONE line in TZ file
 
     # Derived from above by transfomer.py
+    format_short: str  # Arduino version of format with %s -> %
     offset_seconds: int  # STD offset from UTC/GMT in seconds
     offset_seconds_truncated: int  # offset_seconds truncated to granularity
     # If RULES is a DST offset string of the form # hh:mm[:ss], then 'rules' is
@@ -154,7 +155,6 @@ class ZoneEraRaw(TypedDict, total=False):
     until_time_code: int  # until_time in units of 15-min
     until_time_minute: int  # until_time remainder minutes
     until_time_modifier: int  # 's', 'w' or 'u' + until_time_minute
-    format_short: str  # Arduino version of format with %s -> %
 
     # Derived by gotransformer.py
     go_offset_seconds_code: int
@@ -322,7 +322,8 @@ class ZoneInfoDatabase(TypedDict):
     links_map: LinksMap
 
     # Data from Transformer
-    zones_to_policies: ZonesToPolicies
+    zone_ids: Dict[str, int]  # hash(zoneName)
+    link_ids: Dict[str, int]  # hash(linkName)
     removed_zones: CommentsMap
     removed_links: CommentsMap
     removed_policies: CommentsMap
@@ -339,9 +340,10 @@ class ZoneInfoDatabase(TypedDict):
     buf_sizes: BufSizeMap
     max_buf_size: int
 
+    # Data from Commenter
+    zones_to_policies: ZonesToPolicies
+
     # Data from ArduinoTransformer
-    zone_ids: Dict[str, int]  # hash(zoneName)
-    link_ids: Dict[str, int]  # hash(linkName)
     letters_per_policy: LettersPerPolicy  # multi-char letters by zonePolicy
     letters_map: IndexMap  # all multi-character letters
     formats_map: IndexMap  # all format strings
@@ -397,7 +399,8 @@ def create_zone_info_database(
         'links_map': tresult.links_map,
 
         # Data from Transformer.
-        'zones_to_policies': tresult.zones_to_policies,
+        'zone_ids': tresult.zone_ids,
+        'link_ids': tresult.link_ids,
         'removed_zones': _sort_comments(tresult.removed_zones),
         'removed_links': _sort_comments(tresult.removed_links),
         'removed_policies': _sort_comments(tresult.removed_policies),
@@ -411,13 +414,14 @@ def create_zone_info_database(
         'generated_min_year': tresult.generated_min_year,
         'generated_max_year': tresult.generated_max_year,
 
+        # Commenter
+        'zones_to_policies': tresult.zones_to_policies,
+
         # Data from BufSizeEstimator
         'buf_sizes': buf_size_map,
         'max_buf_size': max_buf_size,
 
         # Data from ArduinoTransformer
-        'zone_ids': tresult.zone_ids,
-        'link_ids': tresult.link_ids,
         'letters_per_policy': tresult.letters_per_policy,
         'letters_map': tresult.letters_map,
         'formats_map': tresult.formats_map,
