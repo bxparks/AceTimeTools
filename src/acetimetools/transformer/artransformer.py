@@ -84,16 +84,16 @@ class ArduinoTransformer:
                 rule['to_year_tiny'] = _to_tiny_year(rule['to_year'])
 
                 # Convert at_seconds to at_time_code and at_time_modifier
-                encoded = _to_encoded_at_or_until_time(
+                at_encoded = _to_encoded_at_or_until_time(
                     seconds=rule['at_seconds_truncated'],
                     suffix=rule['at_time_suffix'],
                 )
-                rule['at_time_code'] = encoded.time_code
-                rule['at_time_minute'] = encoded.time_remainder
-                rule['at_time_modifier'] = encoded.time_modifier
+                rule['at_time_code'] = at_encoded.time_code
+                rule['at_time_minute'] = at_encoded.time_remainder
+                rule['at_time_modifier'] = at_encoded.time_modifier
 
                 # Check if AT is not on 15-minute boundary
-                if encoded.time_remainder != 0:
+                if at_encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_policies, policy_name,
                         f"AT '{rule['at_time']}' not on 15-minute boundary"
@@ -101,9 +101,9 @@ class ArduinoTransformer:
 
                 # These will always be integers because transformer.py
                 # truncated them to 900 seconds appropriately.
-                encoded_delta = _to_rule_offset(rule['delta_seconds_truncated'])
-                rule['delta_code'] = encoded_delta.delta_code
-                rule['delta_code_encoded'] = encoded_delta.delta_code_encoded
+                rule_encoded = _to_rule_delta(rule['delta_seconds_truncated'])
+                rule['delta_code'] = rule_encoded.delta_code
+                rule['delta_code_encoded'] = rule_encoded.delta_code_encoded
 
                 # Get letter indexes, per policy and global
                 letter = rule['letter']
@@ -138,17 +138,17 @@ class ArduinoTransformer:
                     delta_seconds = 0
 
                 # Generate the STDOFF and DST delta offset codes.
-                encoded_offset = _to_offset_and_delta(
+                offset_encoded = _to_era_offset_and_delta(
                     offset_seconds=era['offset_seconds_truncated'],
                     delta_seconds=delta_seconds,
                 )
-                era['offset_code'] = encoded_offset.offset_code
-                era['offset_minute'] = encoded_offset.offset_remainder
-                era['delta_code'] = encoded_offset.delta_code
-                era['delta_code_encoded'] = encoded_offset.delta_code_encoded
+                era['offset_code'] = offset_encoded.offset_code
+                era['offset_minute'] = offset_encoded.offset_remainder
+                era['delta_code'] = offset_encoded.delta_code
+                era['delta_code_encoded'] = offset_encoded.delta_code_encoded
 
                 # Check if STDOFF is not on 15-minute boundary
-                if encoded_offset.offset_remainder != 0:
+                if offset_encoded.offset_remainder != 0:
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"STDOFF '{era['offset_string']}' "
@@ -157,16 +157,16 @@ class ArduinoTransformer:
 
                 # Generate the UNTIL fields needed by Arduino ZoneProcessors
                 era['until_year_tiny'] = _to_tiny_until_year(era['until_year'])
-                encoded = _to_encoded_at_or_until_time(
+                until_encoded = _to_encoded_at_or_until_time(
                     seconds=era['until_seconds_truncated'],
                     suffix=era['until_time_suffix'],
                 )
-                era['until_time_code'] = encoded.time_code
-                era['until_time_minute'] = encoded.time_remainder
-                era['until_time_modifier'] = encoded.time_modifier
+                era['until_time_code'] = until_encoded.time_code
+                era['until_time_minute'] = until_encoded.time_remainder
+                era['until_time_modifier'] = until_encoded.time_modifier
 
                 # Check if UNTIL is not on 15-minute boundary
-                if encoded.time_remainder != 0:
+                if until_encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
@@ -320,7 +320,7 @@ def _to_suffix_code(suffix: str) -> int:
         raise Exception(f'Unknown suffix {suffix}')
 
 
-class EncodedRuleOffset(NamedTuple):
+class EncodedRuleDelta(NamedTuple):
     """Encode the DST offset extracted from the SAVE column of the Rule entries.
 
     * delta_code: delta offset in units of 15-min
@@ -330,9 +330,9 @@ class EncodedRuleOffset(NamedTuple):
     delta_code_encoded: int
 
 
-def _to_rule_offset(delta_seconds: int) -> EncodedRuleOffset:
+def _to_rule_delta(delta_seconds: int) -> EncodedRuleDelta:
     """Convert the delta_seconds extracted from the SAVE column of a RULE entry
-    to an EncodedRuleOffset. The transformer.py ensures that all entries are in
+    to an EncodedRuleDelta. The transformer.py ensures that all entries are in
     multiples of 15-minutes, so we don't need to worry about remainder minutes.
     """
     delta_code = delta_seconds // 900
@@ -340,7 +340,7 @@ def _to_rule_offset(delta_seconds: int) -> EncodedRuleOffset:
     # Make sure this fits in 4-bits
     if delta_code_encoded < 0 or delta_code_encoded > 15:
         raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
-    return EncodedRuleOffset(
+    return EncodedRuleDelta(
         delta_code=delta_code,
         delta_code_encoded=delta_code_encoded,
     )
@@ -368,7 +368,7 @@ class EncodedOffset(NamedTuple):
     delta_code_encoded: int
 
 
-def _to_offset_and_delta(
+def _to_era_offset_and_delta(
     offset_seconds: int,
     delta_seconds: int,
 ) -> EncodedOffset:
