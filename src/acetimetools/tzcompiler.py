@@ -489,7 +489,7 @@ def main() -> None:
     transformer.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
-    if 'arduino' in languages:
+    if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
         arduino_transformer = ArduinoTransformer(scope=args.scope)
         arduino_transformer.transform(tresult)
