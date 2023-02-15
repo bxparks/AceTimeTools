@@ -84,16 +84,16 @@ class ArduinoTransformer:
                 rule['to_year_tiny'] = _to_tiny_year(rule['to_year'])
 
                 # Convert at_seconds to at_time_code and at_time_modifier
-                encoded_at_time = _to_encoded_time(
+                encoded = _to_encoded_at_or_until_time(
                     seconds=rule['at_seconds_truncated'],
                     suffix=rule['at_time_suffix'],
                 )
-                rule['at_time_code'] = encoded_at_time.time_code
-                rule['at_time_minute'] = encoded_at_time.time_minute
-                rule['at_time_modifier'] = encoded_at_time.modifier
+                rule['at_time_code'] = encoded.time_code
+                rule['at_time_minute'] = encoded.time_remainder
+                rule['at_time_modifier'] = encoded.time_modifier
 
                 # Check if AT is not on 15-minute boundary
-                if encoded_at_time.time_minute != 0:
+                if encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_policies, policy_name,
                         f"AT '{rule['at_time']}' not on 15-minute boundary"
@@ -157,16 +157,16 @@ class ArduinoTransformer:
 
                 # Generate the UNTIL fields needed by Arduino ZoneProcessors
                 era['until_year_tiny'] = _to_tiny_until_year(era['until_year'])
-                encoded_until_time = _to_encoded_time(
+                encoded = _to_encoded_at_or_until_time(
                     seconds=era['until_seconds_truncated'],
                     suffix=era['until_time_suffix'],
                 )
-                era['until_time_code'] = encoded_until_time.time_code
-                era['until_time_minute'] = encoded_until_time.time_minute
-                era['until_time_modifier'] = encoded_until_time.modifier
+                era['until_time_code'] = encoded.time_code
+                era['until_time_minute'] = encoded.time_remainder
+                era['until_time_modifier'] = encoded.time_modifier
 
                 # Check if UNTIL is not on 15-minute boundary
-                if encoded_until_time.time_minute != 0:
+                if encoded.time_remainder != 0:
                     add_comment(
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
@@ -255,52 +255,48 @@ def _to_tiny_until_year(year: int) -> int:
 
 
 class EncodedTime(NamedTuple):
-    """Break apart a time in seconds with a suffix (e.g. 02:00w) into the
-    following parts so that it can be encoded in 2 bytes with a resolution of
-    1-minute:
-
-        * time_code: Time of day, in units of 15 minutes. Since time_code will
-          be placed in an 8-bit field with a range of -127 to 127 (-128 is an
-          error flag), the range of time that this can represent is -31:45 to
-          +31:59. I believe all time of day in the TZ database files are
-          positive, but it will occasionally have time strings of "25:00" which
-          means 1am the next day.
-        * time_minute: Remainder minutes (if any) which will be placed in the
-          bottom 4-bits (0-14) of the modifier. This quantity is already
-          included in modifier, so the purpose of this field is to allow
-          the caller to check for a non-zero value for logging purposes.
-        * suffix_code: An integer code that can be placed in the top 4-bits
-          (e.g. 0x00, 0x10, 0x20).
-        * modifier: suffix_code + time_minute
-
-    (Note: In hindsight, I probably should have flipped the top and bottom 4-bit
-    locations of the suffix_code an time_minute, so that the
-    EncodedTime.time_minute field is in the same location as
-    EncodedOffset.time_minute field.)
+    """Break apart the AT or UNTIL time with its suffix (e.g. 02:00w) into the
+    components. See _to_encoded_at_or_until_time() for explanation of these
+    fields.
     """
     time_code: int
-    time_minute: int
+    time_remainder: int
+    time_modifier: int
     suffix_code: int
-    modifier: int
 
 
-def _to_encoded_time(
+def _to_encoded_at_or_until_time(
     seconds: int,
     suffix: str,
 ) -> EncodedTime:
     """Return the EncodedTime tuple that represents the AT or UNTIL time, with a
-    resolution of 1-minute, along with an encoding of its suffix (i.e. 's', 'w',
-    'u').
+    resolution of 1-minute or 1-second, along with an encoding of its suffix
+    (i.e. 's', 'w', 'u').
+
+    * time_code: Time of AT or UNTIL time, in units of 15 minutes. Since
+      time_code will be placed in an 8-bit field with a range of -127 to 127
+      (-128 is an error flag), the range of time that this can represent is
+      -31:45 to +31:59. I believe all time of day in the TZ database files are
+      positive, but it will occasionally have time strings of "25:00" which
+      means 1am the next day.
+    * time_remainder: Remainder minutes [0-14]. Fits in lower 4-bits.
+    * suffix_code: An integer code that can be placed in the top 4-bits
+      (e.g. 0x00, 0x10, 0x20).
+    * time_modifier: suffix_code + time_remainder
+
+    Note: Maybe I should have flipped the top and bottom 4-bit locations of the
+    suffix_code an time_remainder, so that the EncodedTime.time_remainder field
+    is in the same location as EncodedOffset.offset_minutes field.
     """
     time_code = seconds // 900
-    time_minute = seconds % 900 // 60
+    time_remainder = seconds % 900 // 60
     suffix_code = _to_suffix_code(suffix)
-    modifier = time_minute + suffix_code
+    time_modifier = time_remainder + suffix_code
     return EncodedTime(
         time_code=time_code,
-        time_minute=time_minute,
+        time_remainder=time_remainder,
         suffix_code=suffix_code,
-        modifier=modifier,
+        time_modifier=time_modifier,
     )
 
 
@@ -361,8 +357,8 @@ class EncodedOffset(NamedTuple):
         * delta offset in units of 15-minutes
     * delta_code_encoded:
         * The lower 4-bits is delta_code + 4 (i.e. 1h). Allows
-            encoding from -1:00 to +2:45. The upper 4-bits holds the
-            offset_minute.
+            encoding from -1:00 to +2:45.
+        * The upper 4-bits holds the offset_minute.
     """
     offset_code: int
     offset_minute: int
