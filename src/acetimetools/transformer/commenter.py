@@ -143,7 +143,7 @@ def _note_zones_with_odd_utc_offset(
                 offset_string = era['offset_string']
                 add_comment(
                     notable_zones, zone_name,
-                    f'STDOFF ({offset_string}) not at :00 or :30 mark')
+                    f"STDOFF '{offset_string}' not at :00 or :30 mark")
                 break
 
             # Check the RULES column, which has 3 options: a policy name,
@@ -154,7 +154,7 @@ def _note_zones_with_odd_utc_offset(
                 if era['era_delta_seconds'] % 1800 != 0:
                     add_comment(
                         notable_zones, zone_name,
-                        f'RULES ({rule_name}) not at :00 or :30 mark')
+                        f"RULES '{rule_name}' not at :00 or :30 mark")
             elif rule_name != '-':
                 # RULES contains a reference to a policy
                 rules = policies_map.get(rule_name)
@@ -165,7 +165,7 @@ def _note_zones_with_odd_utc_offset(
                     if rule['delta_seconds'] % 1800 != 0:
                         add_comment(
                             notable_zones, zone_name,
-                            f'SAVE ({save_string}) in Rule {rule_name}'
+                            f"SAVE '{save_string}' in Rule {rule_name}"
                             f' not at :00 or :30 mark')
                         found_odd_offset = True
                         break

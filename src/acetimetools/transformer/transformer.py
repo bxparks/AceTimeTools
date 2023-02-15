@@ -69,8 +69,8 @@ class Transformer:
             until_year: include only years valid before until_year
             until_at_granularity: truncate UNTIL, AT to this many seconds
             offset_granularity: truncate STDOFF (offset) to this many seconds
-            delta_granularity: truncate SAVE (offset), RULES (rulesOffset) to
-                this many seconds
+            delta_granularity: truncate SAVE (delta_seconds), RULES
+                (era_delta_seconds) to this many seconds
             strict: throw out Zones or Rules which are not exactly on the time
                 boundary defined by granularity
             generate_int16_years: generate 'year' fields for an int16_t type,
@@ -490,6 +490,11 @@ class Transformer:
                         add_comment(
                             notable_zones, name,
                             f"UNTIL time '{until_time}' truncated to '{hm}'")
+                else:
+                    if until_seconds % 60 != 0:
+                        add_comment(
+                            notable_zones, name,
+                            f"UNTIL time '{until_time}' not multiple of 1-min")
 
                 era['until_seconds'] = until_seconds
                 era['until_seconds_truncated'] = until_seconds_truncated
@@ -698,7 +703,7 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_zones, name,
-                            f"offset in RULES '{rules_string}'")
+                            f"unsupported fixed RULES offset '{rules_string}'")
                         break
 
                     era_delta_seconds = time_string_to_seconds(rules_string)
@@ -740,6 +745,12 @@ class Transformer:
                                 notable_zones, name,
                                 f"RULES delta offset '{rules_string}'"
                                 f"truncated to '{hm}'")
+                    else:
+                        if era_delta_seconds % 60 != 0:
+                            add_comment(
+                                notable_zones, name,
+                                f"RULES delta offset '{rules_string}' "
+                                "not multiple of 1-min")
 
                     # Check that rules_delta fits inside 4-bits, because that's
                     # how it is stored in the Arduino zonedb files.
@@ -1346,16 +1357,12 @@ class Transformer:
                         add_comment(
                             notable_policies, policy_name,
                             f"AT time '{at_time}' truncated to '{hm}'")
-                        # Add warning about the affected zones.
-                        zone_names = policies_to_zones.get(policy_name)
-                        if zone_names:
-                            for zone_name in zone_names:
-                                hm = seconds_to_hm_string(at_seconds_truncated)
-                                add_comment(
-                                    self.all_notable_zones, zone_name,
-                                    f"AT time '{at_time}' of "
-                                    f"RULE '{policy_name}' "
-                                    f"truncated to '{hm}'")
+                else:
+                    # Warning if AT has finer granularity than 1-minute
+                    if at_seconds % 60 != 0:
+                        add_comment(
+                            notable_policies, policy_name,
+                            f"AT time '{at_time}' not multiple of 1-min")
 
                 rule['at_seconds'] = at_seconds
                 rule['at_seconds_truncated'] = at_seconds_truncated
@@ -1393,13 +1400,12 @@ class Transformer:
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"invalid SAVE (delta_offset) '{delta_offset}'")
+                        f"invalid SAVE '{delta_offset}'")
                     break
                 if delta_seconds not in (0, 3600):
                     add_comment(
                         notable_policies, name,
-                        f"SAVE (delta_offset) '{delta_offset}' different "
-                        "from 1:00")
+                        f"SAVE '{delta_offset}' different from 1:00")
 
                 # Truncate to requested granularity.
                 delta_seconds_truncated = truncate_to_granularity(
@@ -1409,16 +1415,21 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_policies, name,
-                            f"SAVE (delta_offset) '{delta_offset}' must be "
+                            f"SAVE '{delta_offset}' must be "
                             f"a multiple of '{self.delta_granularity}' "
                             f"seconds")
                         break
                     else:
                         add_comment(
                             notable_policies, name,
-                            f"SAVE delta_offset '{delta_offset}' truncated to"
+                            f"SAVE '{delta_offset}' truncated to"
                             f"a multiple of '{self.delta_granularity}' "
                             f"seconds")
+                else:
+                    if delta_seconds % 60 != 0:
+                        add_comment(
+                            notable_policies, name,
+                            f"SAVE '{delta_offset}' not multiple of 1-min")
 
                 # Check that delta seconds can fit in a 4-bit timeCode field
                 # with 15-minute granularity, defined as (timeCode =
