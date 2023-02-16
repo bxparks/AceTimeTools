@@ -37,6 +37,7 @@ class CGenerator:
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
+        generate_hires: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -64,6 +65,7 @@ class CGenerator:
         self.compress = compress
         self.invocation = wrapped_invocation
         self.generate_int16_years = generate_int16_years
+        self.generate_hires = generate_hires
 
         self.tz_files = wrapped_tzfiles
         self.buf_sizes = zidb['buf_sizes']
@@ -248,17 +250,26 @@ extern "C" {{
         # Generate kAtcZoneRules*[]
         rule_items = ''
         for rule in rules:
-            at_time_code = rule['at_time_code']
-            at_time_modifier = rule['at_time_modifier']
-            at_time_modifier_comment = _get_time_modifier_comment(
-                time_seconds=rule['at_seconds_truncated'],
-                suffix=rule['at_time_suffix'],
-            )
-            delta_code = rule['delta_code_encoded']
-            delta_code_comment = _get_rule_delta_code_comment(
-                delta_seconds=rule['delta_seconds_truncated'],
-                scope=self.scope,
-            )
+            at_seconds = rule['at_seconds_truncated']
+            if self.generate_hires:
+                at_time_code = rule['at_time_seconds_code']
+                at_time_modifier = rule['at_time_seconds_modifier']
+                label = _to_suffix_label(rule['at_time_suffix'])
+                remaining_seconds = at_seconds % 15
+                at_time_modifier_comment = \
+                    f'{label} + seconds={remaining_seconds}'
+                delta_minutes = rule['delta_minutes']
+            else:
+                at_time_code = rule['at_time_code']
+                at_time_modifier = rule['at_time_modifier']
+                label = _to_suffix_label(rule['at_time_suffix'])
+                remaining_minutes = at_seconds % 900 // 60
+                at_time_modifier_comment = \
+                    f'{label} + minute={remaining_minutes}'
+                delta_code = rule['delta_code_encoded']
+                delta_minutes = rule['delta_minutes']
+                delta_code_comment = f"(delta_minutes={delta_minutes})/15 + 4"
+
             if self.generate_int16_years:
                 from_year = rule['from_year']
                 from_year_label = 'from_year'
@@ -276,7 +287,24 @@ extern "C" {{
             on_day_of_month = rule['on_day_of_month']
             letter = rule['letter']
             letter_index = rule['letter_index']
-            rule_items += f"""\
+
+            if self.generate_hires:
+                item = f"""\
+  // {raw_line}
+  {{
+    {from_year} /*{from_year_label}*/,
+    {to_year} /*{to_year_label}*/,
+    {in_month} /*in_month*/,
+    {on_day_of_week} /*on_day_of_week*/,
+    {on_day_of_month} /*on_day_of_month*/,
+    {at_time_modifier} /*at_time_modifier ({at_time_modifier_comment})*/,
+    {at_time_code} /*at_time_code ({at_seconds}/15)*/,
+    {delta_minutes} /*delta_minutes*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
+  }},
+"""
+            else:
+                item = f"""\
   // {raw_line}
   {{
     {from_year} /*{from_year_label}*/,
@@ -290,6 +318,7 @@ extern "C" {{
     {letter_index} /*letterIndex ("{letter}")*/,
   }},
 """
+            rule_items += item
 
         # Calculate the memory consumed by structs and arrays
         num_rules = len(rules)
@@ -608,13 +637,21 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
         else:
             zone_policy = f'&kAtcZonePolicy{normalize_name(rules_policy_name)}'
 
-        offset_code = era['offset_code']
-        delta_code = era['delta_code_encoded']
-        delta_code_comment = _get_era_delta_code_comment(
-            offset_seconds=era['offset_seconds_truncated'],
-            delta_seconds=era['era_delta_seconds_truncated'],
-            scope=self.scope,
-        )
+        offset_seconds = era['offset_seconds_truncated']
+        if self.generate_hires:
+            offset_code = era['offset_seconds_code']
+            offset_remainder = era['offset_seconds_remainder']
+            delta_minutes = era['delta_minutes']
+        else:
+            offset_code = era['offset_code']
+            delta_code = era['delta_code_encoded']
+            offset_minute = era['offset_minute']
+            delta_minutes = era['delta_minutes']
+            delta_code_comment = (
+                f"((offset_minute={offset_minute}) << 4) + "
+                f"((delta_minutes={delta_minutes})/15 + 4)"
+            )
+
         if self.generate_int16_years:
             until_year = era['until_year']
             until_year_label = 'until_year'
@@ -623,15 +660,45 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
             until_year_label = 'until_year_tiny'
         until_month = era['until_month']
         until_day = era['until_day']
-        until_time_code = era['until_time_code']
-        until_time_modifier = era['until_time_modifier']
-        until_time_modifier_comment = _get_time_modifier_comment(
-            time_seconds=era['until_seconds_truncated'],
-            suffix=era['until_time_suffix'],
-        )
+
+        until_seconds = era['until_seconds_truncated']
+        if self.generate_hires:
+            until_time_code = era['until_time_seconds_code']
+            until_time_modifier = era['until_time_seconds_modifier']
+            label = _to_suffix_label(era['until_time_suffix'])
+            remaining_seconds = until_seconds % 15
+            until_time_modifier_comment = \
+                f'{label} + seconds={remaining_seconds}'
+        else:
+            until_time_code = era['until_time_code']
+            until_time_modifier = era['until_time_modifier']
+            label = _to_suffix_label(era['until_time_suffix'])
+            remaining_minutes = until_seconds % 900 // 60
+            until_time_modifier_comment = \
+                f'{label} + minute={remaining_minutes}'
+
         format = era['format_short']
         raw_line = normalize_raw(era['raw_line'])
-        era_item = f"""\
+
+        if self.generate_hires:
+            era_item = f"""\
+  // {raw_line}
+  {{
+    {zone_policy} /*zone_policy*/,
+    "{format}" /*format*/,
+    {offset_code} /*offset_code ({offset_seconds}/15)*/,
+    {offset_remainder} /*offset_remainder ({offset_seconds}%15)*/,
+    {delta_minutes} /*delta_minutes*/,
+    {until_year} /*{until_year_label}*/,
+    {until_month} /*until_month*/,
+    {until_day} /*until_day*/,
+    {until_time_code} /*until_time_code ({until_seconds}/15)*/,
+    {until_time_modifier} /*until_time_modifier \
+({until_time_modifier_comment})*/,
+  }},
+"""
+        else:
+            era_item = f"""\
   // {raw_line}
   {{
     {zone_policy} /*zone_policy*/,
@@ -781,52 +848,11 @@ const kAtcZoneAndLinkRegistry[{num_zones_and_links}];
 """
 
 
-def _get_time_modifier_comment(
-    time_seconds: int,
-    suffix: str,
-) -> str:
-    """Create the comment that explains how the until_time_code or at_time_code
-    was calculated.
-    """
+def _to_suffix_label(suffix: str) -> str:
     if suffix == 'w':
-        comment = 'kAtcSuffixW'
+        return 'kAtcSuffixW'
     elif suffix == 's':
-        comment = 'kAtcSuffixS'
+        return 'kAtcSuffixS'
     else:
-        comment = 'kAtcSuffixU'
-    remaining_time_minutes = time_seconds % 900 // 60
-    comment += f' + minute={remaining_time_minutes}'
-    return comment
-
-
-def _get_era_delta_code_comment(
-    offset_seconds: int,
-    delta_seconds: int,
-    scope: str,
-) -> str:
-    """Create the comment that explains how the ZoneEra delta_code[_encoded] was
-    calculated.
-    """
-    offset_minute = offset_seconds % 900 // 60
-    delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return (
-            f"((offset_minute={offset_minute}) << 4) + "
-            f"((delta_minutes={delta_minutes})/15 + 4)"
-        )
-    else:
-        return f"(delta_minutes={delta_minutes})/15"
-
-
-def _get_rule_delta_code_comment(
-    delta_seconds: int,
-    scope: str,
-) -> str:
-    """Create the comment that explains how the ZoneRule delta_code[_encoded]
-    was calculated.
-    """
-    delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return f"(delta_minutes={delta_minutes})/15 + 4"
-    else:
-        return f"(delta_minutes={delta_minutes})/15"
+        return 'kAtcSuffixU'
+    return 'UNKNOWN'
