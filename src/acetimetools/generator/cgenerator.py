@@ -53,7 +53,7 @@ class CGenerator:
         # it can be "AtcTesting".
         scope = zidb['scope']
         if not db_namespace:
-            raise Exception(f"db_namespace must be defined")
+            raise Exception("db_namespace must be defined")
 
         self.scope = scope
         self.db_namespace = db_namespace
@@ -160,7 +160,8 @@ class CGenerator:
         for policy_name, rules in sorted(self.policies_map.items()):
             policy_normalized_name = normalize_name(policy_name)
             policy_items += f"""\
-extern const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name};
+extern const AtcZonePolicy \
+k{self.db_namespace}ZonePolicy{policy_normalized_name};
 """
 
         removed_policy_items = render_comments_map(self.removed_policies)
@@ -360,12 +361,14 @@ const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name} \
         for zone_name, eras in sorted(self.zones_map.items()):
             zone_normalized_name = normalize_name(zone_name)
             zone_items += f"""\
-extern const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name}; // {zone_name}
+extern const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name}; \
+// {zone_name}
 """
 
             zone_id = self.zone_ids[zone_name]
             zone_ids += f"""\
-#define k{self.db_namespace}ZoneId{zone_normalized_name} 0x{zone_id:08x} /* {zone_name} */
+#define k{self.db_namespace}ZoneId{zone_normalized_name} 0x{zone_id:08x} \
+/* {zone_name} */
 """
 
             buf_size = self.buf_sizes[zone_name].number
@@ -385,7 +388,8 @@ extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
 """
             link_id = self.link_ids[link_name]
             link_ids += f"""\
-#define k{self.db_namespace}ZoneId{link_normalized_name} 0x{link_id:08x} /* {link_name} */
+#define k{self.db_namespace}ZoneId{link_normalized_name} 0x{link_id:08x} \
+/* {link_name} */
 """
 
         removed_info_items = render_comments_map(self.removed_zones)
@@ -628,7 +632,8 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         if rules_policy_name == '-' or rules_policy_name == ':':
             zone_policy = 'NULL'
         else:
-            zone_policy = f'&k{self.db_namespace}ZonePolicy{normalize_name(rules_policy_name)}'
+            zone_policy = f"""\
+&k{self.db_namespace}ZonePolicy{normalize_name(rules_policy_name)}"""
 
         offset_seconds = era['offset_seconds_truncated']
         if self.generate_hires:
@@ -796,14 +801,16 @@ const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name} {progmem} = {{
 //---------------------------------------------------------------------------
 // Zone Info registry. Sorted by zoneId.
 //---------------------------------------------------------------------------
-const AtcZoneInfo * const k{self.db_namespace}ZoneRegistry[{num_zones}] {progmem} = {{
+const AtcZoneInfo * const k{self.db_namespace}ZoneRegistry[{num_zones}] \
+{progmem} = {{
 {zone_registry_items}
 }};
 
 //---------------------------------------------------------------------------
 // Zone and Link Info registry. Sorted by zoneId. Links act like Zones.
 //---------------------------------------------------------------------------
-const AtcZoneInfo * const k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}] \
+const AtcZoneInfo * const \
+k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}] \
 {progmem} = {{
 {zone_and_link_registry_items}
 }};
