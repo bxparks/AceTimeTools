@@ -79,6 +79,8 @@ Generator Flags:
 * CGenerator
     * `--generate_int16_years`
         * Generate 16-bit year fields instead of 8-bit.
+    * `--generate_hires`
+        * Generate one-second resolution UNTIL, AT, OFFSET (one-minute DELTA).
 * GoGenerator
     * --db_namespace {db_namespace}
         * Specifies the Go `package` name.
@@ -132,6 +134,7 @@ def generate_zonedb(
     db_namespace: str,
     compress: bool,
     generate_int16_years: bool,
+    generate_hires: bool,
     language: str,
     output_dir: str,
     json_file: str,
@@ -169,6 +172,7 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_int16_years=generate_int16_years,
+            generate_hires=generate_hires,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -356,6 +360,13 @@ def main() -> None:
     parser.add_argument(
         '--generate_int16_years',
         help='Generate int16_t years instead of int8_t years',
+        action='store_true',
+    )
+
+    # Generate high resolution AT, UNTIL, OFFSET and DSTOFF fields.
+    parser.add_argument(
+        '--generate_hires',
+        help='Generate high resolution AT, UNTIL, OFFSET, and DSTOFF',
         action='store_true',
     )
 
@@ -565,6 +576,7 @@ def main() -> None:
                 db_namespace=args.db_namespace,
                 compress=args.compress,
                 generate_int16_years=args.generate_int16_years,
+                generate_hires=args.generate_hires,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,

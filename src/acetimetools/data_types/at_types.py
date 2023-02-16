@@ -97,11 +97,16 @@ class ZoneRuleRaw(TypedDict, total=False):
     to_year_tiny: int  # (to_year - 2000), w/ special cases for MIN and MAX
     at_time_code: int  # at_time in units of 15-min
     at_time_minute: int  # at_time remainder minutes
-    at_time_modifier: int  # 's', 'w' or 'u' + at_time_minute
+    at_time_modifier: int  # suffix + at_time_minute
     delta_code: int  # DST delta offset in units of 15-min
     delta_code_encoded: int  # encoded version of delta_code
     letter_index_per_policy: int  # index into letters_per_policy, or -1
     letter_index: int  # index into letters_map[], or -1
+    # high resolution fields
+    at_time_seconds_code: int  # at_time in units of 15-seconds
+    at_time_seconds_remainder: int  # at_time remainder seconds
+    at_time_seconds_modifier: int  # suffix + at_time_seconds_remainder
+    delta_minutes: int
 
     # gotransformer.py
     go_at_seconds_code: int
@@ -154,7 +159,14 @@ class ZoneEraRaw(TypedDict, total=False):
     until_year_tiny: int  # until_year - 2000, w/ special cases for MIN and MAX
     until_time_code: int  # until_time in units of 15-min
     until_time_minute: int  # until_time remainder minutes
-    until_time_modifier: int  # 's', 'w' or 'u' + until_time_minute
+    until_time_modifier: int  # suffix + until_time_minute
+    # high resolution fields
+    offset_seconds_code: int  # STD offset in units of 15 seconds
+    offset_seconds_remainder: int  # STD offset remainder seconds
+    until_time_seconds_code: int  # until_time in units of 15-seconds
+    until_time_seconds_remainder: int  # until_time remainder seconds
+    until_time_seconds_modifier: int  # suffix + until_time_seconds_remainder
+    delta_minutes: int  # DST offset in units of 1 minute
 
     # Derived by gotransformer.py
     go_offset_seconds_code: int

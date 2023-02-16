@@ -37,6 +37,7 @@ class CGenerator:
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
+        generate_hires: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -47,23 +48,19 @@ class CGenerator:
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
 
-        # Determine zonedb C++ namespace
+        # C does not namespaces, so use db_namespace as a prefix for all
+        # external identifiers. Normally, this will be "Atc", but for testing,
+        # it can be "AtcTesting".
         scope = zidb['scope']
         if not db_namespace:
-            if scope == 'basic':
-                db_namespace = 'zonedb'
-            elif scope == 'extended':
-                db_namespace = 'zonedbx'
-            else:
-                raise Exception(
-                    f"db_namespace cannot be determined for scope '{scope}'"
-                )
+            raise Exception(f"db_namespace must be defined")
 
         self.scope = scope
         self.db_namespace = db_namespace
         self.compress = compress
         self.invocation = wrapped_invocation
         self.generate_int16_years = generate_int16_years
+        self.generate_hires = generate_hires
 
         self.tz_files = wrapped_tzfiles
         self.buf_sizes = zidb['buf_sizes']
@@ -163,7 +160,7 @@ class CGenerator:
         for policy_name, rules in sorted(self.policies_map.items()):
             policy_normalized_name = normalize_name(policy_name)
             policy_items += f"""\
-extern const AtcZonePolicy kAtcZonePolicy{policy_normalized_name};
+extern const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name};
 """
 
         removed_policy_items = render_comments_map(self.removed_policies)
@@ -175,8 +172,8 @@ extern const AtcZonePolicy kAtcZonePolicy{policy_normalized_name};
         num_notable_policies = len(self.notable_policies)
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
-#define ACE_TIME_C_{db_header_namespace}_ZONE_POLICIES_H
+#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_POLICIES_H
+#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_POLICIES_H
 
 #include "../zoneinfo/zone_info.h"
 
@@ -248,17 +245,26 @@ extern "C" {{
         # Generate kAtcZoneRules*[]
         rule_items = ''
         for rule in rules:
-            at_time_code = rule['at_time_code']
-            at_time_modifier = rule['at_time_modifier']
-            at_time_modifier_comment = _get_time_modifier_comment(
-                time_seconds=rule['at_seconds_truncated'],
-                suffix=rule['at_time_suffix'],
-            )
-            delta_code = rule['delta_code_encoded']
-            delta_code_comment = _get_rule_delta_code_comment(
-                delta_seconds=rule['delta_seconds_truncated'],
-                scope=self.scope,
-            )
+            at_seconds = rule['at_seconds_truncated']
+            if self.generate_hires:
+                at_time_code = rule['at_time_seconds_code']
+                at_time_modifier = rule['at_time_seconds_modifier']
+                label = _to_suffix_label(rule['at_time_suffix'])
+                remaining_seconds = at_seconds % 15
+                at_time_modifier_comment = \
+                    f'{label} + seconds={remaining_seconds}'
+                delta_minutes = rule['delta_minutes']
+            else:
+                at_time_code = rule['at_time_code']
+                at_time_modifier = rule['at_time_modifier']
+                label = _to_suffix_label(rule['at_time_suffix'])
+                remaining_minutes = at_seconds % 900 // 60
+                at_time_modifier_comment = \
+                    f'{label} + minute={remaining_minutes}'
+                delta_code = rule['delta_code_encoded']
+                delta_minutes = rule['delta_minutes']
+                delta_code_comment = f"(delta_minutes={delta_minutes})/15 + 4"
+
             if self.generate_int16_years:
                 from_year = rule['from_year']
                 from_year_label = 'from_year'
@@ -276,7 +282,24 @@ extern "C" {{
             on_day_of_month = rule['on_day_of_month']
             letter = rule['letter']
             letter_index = rule['letter_index']
-            rule_items += f"""\
+
+            if self.generate_hires:
+                item = f"""\
+  // {raw_line}
+  {{
+    {from_year} /*{from_year_label}*/,
+    {to_year} /*{to_year_label}*/,
+    {in_month} /*in_month*/,
+    {on_day_of_week} /*on_day_of_week*/,
+    {on_day_of_month} /*on_day_of_month*/,
+    {at_time_modifier} /*at_time_modifier ({at_time_modifier_comment})*/,
+    {at_time_code} /*at_time_code ({at_seconds}/15)*/,
+    {delta_minutes} /*delta_minutes*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
+  }},
+"""
+            else:
+                item = f"""\
   // {raw_line}
   {{
     {from_year} /*{from_year_label}*/,
@@ -290,6 +313,7 @@ extern "C" {{
     {letter_index} /*letterIndex ("{letter}")*/,
   }},
 """
+            rule_items += item
 
         # Calculate the memory consumed by structs and arrays
         num_rules = len(rules)
@@ -314,7 +338,8 @@ static const AtcZoneRule kAtcZoneRules{policy_normalized_name}[] {progmem} = {{
 {rule_items}
 }};
 
-const AtcZonePolicy kAtcZonePolicy{policy_normalized_name} {progmem} = {{
+const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name} \
+{progmem} = {{
   kAtcZoneRules{policy_normalized_name} /*rules*/,
   {num_rules} /*num_rules*/,
 }};
@@ -335,18 +360,18 @@ const AtcZonePolicy kAtcZonePolicy{policy_normalized_name} {progmem} = {{
         for zone_name, eras in sorted(self.zones_map.items()):
             zone_normalized_name = normalize_name(zone_name)
             zone_items += f"""\
-extern const AtcZoneInfo kAtcZone{zone_normalized_name}; // {zone_name}
+extern const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name}; // {zone_name}
 """
 
             zone_id = self.zone_ids[zone_name]
             zone_ids += f"""\
-#define kAtcZoneId{zone_normalized_name} 0x{zone_id:08x} /* {zone_name} */
+#define k{self.db_namespace}ZoneId{zone_normalized_name} 0x{zone_id:08x} /* {zone_name} */
 """
 
             buf_size = self.buf_sizes[zone_name].number
             buf_year = self.buf_sizes[zone_name].year
             zone_buf_sizes += f"""\
-#define kAtcZoneBufSize{zone_normalized_name} {buf_size}  \
+#define k{self.db_namespace}ZoneBufSize{zone_normalized_name} {buf_size}  \
 /* {zone_name} in {buf_year} */
 """
 
@@ -355,12 +380,12 @@ extern const AtcZoneInfo kAtcZone{zone_normalized_name}; // {zone_name}
         for link_name, zone_name in sorted(self.links_map.items()):
             link_normalized_name = normalize_name(link_name)
             link_items += f"""\
-extern const AtcZoneInfo kAtcZone{link_normalized_name}; \
+extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
 // {link_name} -> {zone_name}
 """
             link_id = self.link_ids[link_name]
             link_ids += f"""\
-#define kAtcZoneId{link_normalized_name} 0x{link_id:08x} /* {link_name} */
+#define k{self.db_namespace}ZoneId{link_normalized_name} 0x{link_id:08x} /* {link_name} */
 """
 
         removed_info_items = render_comments_map(self.removed_zones)
@@ -379,8 +404,8 @@ extern const AtcZoneInfo kAtcZone{link_normalized_name}; \
         num_notable_links = len(self.notable_links)
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
-#define ACE_TIME_C_{db_header_namespace}_ZONE_INFOS_H
+#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_INFOS_H
+#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_INFOS_H
 
 #include "../zoneinfo/zone_info.h"
 
@@ -392,11 +417,8 @@ extern "C" {{
 // ZoneContext (should not be in PROGMEM)
 //---------------------------------------------------------------------------
 
-// Version of the TZ Database which generated these files.
-extern const char kAtcTzDatabaseVersion[];
-
 // Metadata about the zonedb files.
-extern const AtcZoneContext kAtcZoneContext;
+extern const AtcZoneContext k{self.db_namespace}ZoneContext;
 
 //---------------------------------------------------------------------------
 // Supported zones: {num_infos}
@@ -499,17 +521,17 @@ extern const AtcZoneContext kAtcZoneContext;
 // ZoneContext (should not be in PROGMEM)
 //---------------------------------------------------------------------------
 
-const char kAtcTzDatabaseVersion[] = "{self.tz_version}";
+static const char kAtcTzDatabaseVersion[] = "{self.tz_version}";
 
-const char * const kAtcFragments[] = {{
+static const char * const kAtcFragments[] = {{
 {fragments}
 }};
 
-const char* const kAtcLetters[] = {{
+static const char* const kAtcLetters[] = {{
 {letters}
 }};
 
-const AtcZoneContext kAtcZoneContext = {{
+const AtcZoneContext k{self.db_namespace}ZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
   kAtcTzDatabaseVersion /*tzVersion*/,
@@ -586,10 +608,10 @@ static const AtcZoneEra kAtcZoneEra{zone_normalized_name}[] {progmem} = {{
 static const char kAtcZoneName{zone_normalized_name}[] {progmem} = \
 {rendered_name};
 
-const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
+const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
   kAtcZoneName{zone_normalized_name} /*name*/,
   0x{zone_id:08x} /*zone_id*/,
-  &kAtcZoneContext /*zone_context*/,
+  &k{self.db_namespace}ZoneContext /*zone_context*/,
   {num_eras} /*num_eras*/,
   kAtcZoneEra{zone_normalized_name} /*eras*/,
   NULL /*targetInfo*/,
@@ -606,15 +628,23 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
         if rules_policy_name == '-' or rules_policy_name == ':':
             zone_policy = 'NULL'
         else:
-            zone_policy = f'&kAtcZonePolicy{normalize_name(rules_policy_name)}'
+            zone_policy = f'&k{self.db_namespace}ZonePolicy{normalize_name(rules_policy_name)}'
 
-        offset_code = era['offset_code']
-        delta_code = era['delta_code_encoded']
-        delta_code_comment = _get_era_delta_code_comment(
-            offset_seconds=era['offset_seconds_truncated'],
-            delta_seconds=era['era_delta_seconds_truncated'],
-            scope=self.scope,
-        )
+        offset_seconds = era['offset_seconds_truncated']
+        if self.generate_hires:
+            offset_code = era['offset_seconds_code']
+            offset_remainder = era['offset_seconds_remainder']
+            delta_minutes = era['delta_minutes']
+        else:
+            offset_code = era['offset_code']
+            delta_code = era['delta_code_encoded']
+            offset_minute = era['offset_minute']
+            delta_minutes = era['delta_minutes']
+            delta_code_comment = (
+                f"((offset_minute={offset_minute}) << 4) + "
+                f"((delta_minutes={delta_minutes})/15 + 4)"
+            )
+
         if self.generate_int16_years:
             until_year = era['until_year']
             until_year_label = 'until_year'
@@ -623,15 +653,45 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
             until_year_label = 'until_year_tiny'
         until_month = era['until_month']
         until_day = era['until_day']
-        until_time_code = era['until_time_code']
-        until_time_modifier = era['until_time_modifier']
-        until_time_modifier_comment = _get_time_modifier_comment(
-            time_seconds=era['until_seconds_truncated'],
-            suffix=era['until_time_suffix'],
-        )
+
+        until_seconds = era['until_seconds_truncated']
+        if self.generate_hires:
+            until_time_code = era['until_time_seconds_code']
+            until_time_modifier = era['until_time_seconds_modifier']
+            label = _to_suffix_label(era['until_time_suffix'])
+            remaining_seconds = until_seconds % 15
+            until_time_modifier_comment = \
+                f'{label} + seconds={remaining_seconds}'
+        else:
+            until_time_code = era['until_time_code']
+            until_time_modifier = era['until_time_modifier']
+            label = _to_suffix_label(era['until_time_suffix'])
+            remaining_minutes = until_seconds % 900 // 60
+            until_time_modifier_comment = \
+                f'{label} + minute={remaining_minutes}'
+
         format = era['format_short']
         raw_line = normalize_raw(era['raw_line'])
-        era_item = f"""\
+
+        if self.generate_hires:
+            era_item = f"""\
+  // {raw_line}
+  {{
+    {zone_policy} /*zone_policy*/,
+    "{format}" /*format*/,
+    {offset_code} /*offset_code ({offset_seconds}/15)*/,
+    {offset_remainder} /*offset_remainder ({offset_seconds}%15)*/,
+    {delta_minutes} /*delta_minutes*/,
+    {until_year} /*{until_year_label}*/,
+    {until_month} /*until_month*/,
+    {until_day} /*until_day*/,
+    {until_time_code} /*until_time_code ({until_seconds}/15)*/,
+    {until_time_modifier} /*until_time_modifier \
+({until_time_modifier_comment})*/,
+  }},
+"""
+        else:
+            era_item = f"""\
   // {raw_line}
   {{
     {zone_policy} /*zone_policy*/,
@@ -681,13 +741,13 @@ const AtcZoneInfo kAtcZone{zone_normalized_name} {progmem} = {{
 static const char kAtcZoneName{link_normalized_name}[] {progmem} = \
 {rendered_name};
 
-const AtcZoneInfo kAtcZone{link_normalized_name} {progmem} = {{
+const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name} {progmem} = {{
   kAtcZoneName{link_normalized_name} /*name*/,
   0x{link_id:08x} /*zoneId*/,
-  &kAtcZoneContext /*zoneContext*/,
+  &k{self.db_namespace}ZoneContext /*zoneContext*/,
   {num_eras} /*numEras*/,
   kAtcZoneEra{zone_normalized_name} /*eras*/,
-  &kAtcZone{zone_normalized_name} /*targetInfo*/,
+  &k{self.db_namespace}Zone{zone_normalized_name} /*targetInfo*/,
 }};
 
 """
@@ -704,7 +764,7 @@ const AtcZoneInfo kAtcZone{link_normalized_name} {progmem} = {{
             normalized_name = normalize_name(zone_name)
             zone_id = self.zone_ids[zone_name]
             zone_registry_items += f"""\
-  &kAtcZone{normalized_name}, // 0x{zone_id:08x}, {zone_name}
+  &k{self.db_namespace}Zone{normalized_name}, // 0x{zone_id:08x}, {zone_name}
 """
 
         # Generate Zones and Links, sorted by zoneId.
@@ -722,7 +782,7 @@ const AtcZoneInfo kAtcZone{link_normalized_name} {progmem} = {{
                 desc_name = zone_name
 
             zone_and_link_registry_items += f"""\
-  &kAtcZone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
+  &k{self.db_namespace}Zone{normalized_name}, // 0x{zone_id:08x}, {desc_name}
 """
 
         num_zones = len(self.zones_map)
@@ -736,14 +796,14 @@ const AtcZoneInfo kAtcZone{link_normalized_name} {progmem} = {{
 //---------------------------------------------------------------------------
 // Zone Info registry. Sorted by zoneId.
 //---------------------------------------------------------------------------
-const AtcZoneInfo * const kAtcZoneRegistry[{num_zones}] {progmem} = {{
+const AtcZoneInfo * const k{self.db_namespace}ZoneRegistry[{num_zones}] {progmem} = {{
 {zone_registry_items}
 }};
 
 //---------------------------------------------------------------------------
 // Zone and Link Info registry. Sorted by zoneId. Links act like Zones.
 //---------------------------------------------------------------------------
-const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{num_zones_and_links}] \
+const AtcZoneInfo * const k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}] \
 {progmem} = {{
 {zone_and_link_registry_items}
 }};
@@ -755,8 +815,8 @@ const AtcZoneInfo * const kAtcZoneAndLinkRegistry[{num_zones_and_links}] \
         db_header_namespace = self.db_namespace.upper()
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
-#define ACE_TIME_C_{db_header_namespace}_ZONE_REGISTRY_H
+#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_REGISTRY_H
+#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_REGISTRY_H
 
 #include "../zoneinfo/zone_info.h"
 
@@ -765,13 +825,13 @@ extern "C" {{
 #endif
 
 // Zones
-#define kAtcZoneRegistrySize {num_zones}
-extern const AtcZoneInfo * const kAtcZoneRegistry[{num_zones}];
+#define k{self.db_namespace}ZoneRegistrySize {num_zones}
+extern const AtcZoneInfo * const k{self.db_namespace}ZoneRegistry[{num_zones}];
 
 // Zones and Links
-#define kAtcZoneAndLinkRegistrySize {num_zones_and_links}
+#define k{self.db_namespace}ZoneAndLinkRegistrySize {num_zones_and_links}
 extern const AtcZoneInfo * \
-const kAtcZoneAndLinkRegistry[{num_zones_and_links}];
+const k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}];
 
 #ifdef __cplusplus
 }}
@@ -781,52 +841,11 @@ const kAtcZoneAndLinkRegistry[{num_zones_and_links}];
 """
 
 
-def _get_time_modifier_comment(
-    time_seconds: int,
-    suffix: str,
-) -> str:
-    """Create the comment that explains how the until_time_code or at_time_code
-    was calculated.
-    """
+def _to_suffix_label(suffix: str) -> str:
     if suffix == 'w':
-        comment = 'kAtcSuffixW'
+        return 'kAtcSuffixW'
     elif suffix == 's':
-        comment = 'kAtcSuffixS'
+        return 'kAtcSuffixS'
     else:
-        comment = 'kAtcSuffixU'
-    remaining_time_minutes = time_seconds % 900 // 60
-    comment += f' + minute={remaining_time_minutes}'
-    return comment
-
-
-def _get_era_delta_code_comment(
-    offset_seconds: int,
-    delta_seconds: int,
-    scope: str,
-) -> str:
-    """Create the comment that explains how the ZoneEra delta_code[_encoded] was
-    calculated.
-    """
-    offset_minute = offset_seconds % 900 // 60
-    delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return (
-            f"((offset_minute={offset_minute}) << 4) + "
-            f"((delta_minutes={delta_minutes})/15 + 4)"
-        )
-    else:
-        return f"(delta_minutes={delta_minutes})/15"
-
-
-def _get_rule_delta_code_comment(
-    delta_seconds: int,
-    scope: str,
-) -> str:
-    """Create the comment that explains how the ZoneRule delta_code[_encoded]
-    was calculated.
-    """
-    delta_minutes = delta_seconds // 60
-    if scope == 'extended':
-        return f"(delta_minutes={delta_minutes})/15 + 4"
-    else:
-        return f"(delta_minutes={delta_minutes})/15"
+        return 'kAtcSuffixU'
+    return 'UNKNOWN'
