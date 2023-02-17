@@ -242,9 +242,11 @@ class SizeofMap(TypedDict):
 
 # Memory size of each type of objects in zonedb
 class MemoryMap(TypedDict, total=False):
+    rules: int
+    policies: int
+    eras: int
     infos: int
     links: int
-    policies: int
     registry: int
     names: int
     names_original: int

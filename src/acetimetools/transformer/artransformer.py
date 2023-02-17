@@ -247,16 +247,18 @@ class ArduinoTransformer:
         num_policies = len(self.policies_map)
         num_zones_and_links = num_infos + num_links
 
+        # Policies
+        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
+        rule_size = sizes['rule'] * num_rules
+        policy_size = sizes['policy'] * num_policies
+
         # Zones
         num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
-        info_size = sizes['info'] * num_infos + sizes['era'] * num_eras
+        era_size = sizes['era'] * num_eras
+        info_size = sizes['info'] * num_infos
 
         # Links reuse the ZoneEras from the target Zone.
         link_size = sizes['info'] * num_links
-
-        # Policies
-        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
-        policy_size = sizes['rule'] * num_rules + sizes['policy'] * num_policies
 
         # Registry
         registry_size = num_zones_and_links * sizes['pointer']
@@ -289,9 +291,11 @@ class ArduinoTransformer:
 
         # Total
         total_size = (
-            info_size
-            + link_size
+            rule_size
             + policy_size
+            + era_size
+            + info_size
+            + link_size
             + registry_size
             + name_size
             + fragment_size
@@ -300,9 +304,11 @@ class ArduinoTransformer:
         )
 
         return {
+            'rules': rule_size,
+            'policies': policy_size,
+            'eras': era_size,
             'infos': info_size,
             'links': link_size,
-            'policies': policy_size,
             'registry': registry_size,
             'names': name_size,
             'names_original': name_orig_size,

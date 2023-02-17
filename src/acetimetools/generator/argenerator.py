@@ -128,9 +128,11 @@ class ArduinoGenerator:
         num_removed_links = len(self.removed_links)
         num_removed_zones_and_links = num_removed_zones + num_removed_links
 
+        rules8 = self.memory_map8['rules']
+        policies8 = self.memory_map8['policies']
+        eras8 = self.memory_map8['eras']
         infos8 = self.memory_map8['infos']
         links8 = self.memory_map8['links']
-        policies8 = self.memory_map8['policies']
         registry8 = self.memory_map8['registry']
         names8 = self.memory_map8['names']
         names_original8 = self.memory_map8['names_original']
@@ -139,9 +141,11 @@ class ArduinoGenerator:
         letters8 = self.memory_map8['letters']
         total8 = self.memory_map8['total']
 
+        policies32 = self.memory_map32['policies']
+        rules32 = self.memory_map32['rules']
+        eras32 = self.memory_map32['eras']
         infos32 = self.memory_map32['infos']
         links32 = self.memory_map32['links']
-        policies32 = self.memory_map32['policies']
         registry32 = self.memory_map32['registry']
         names32 = self.memory_map32['names']
         names_original32 = self.memory_map32['names_original']
@@ -168,7 +172,9 @@ class ArduinoGenerator:
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
 //
 // Memory (8-bits):
+//   Rules: {rules8}
 //   Policies: {policies8}
+//   Eras: {eras8}
 //   Infos: {infos8}
 //   Links: {links8}
 //   Registry: {registry8}
@@ -179,7 +185,9 @@ class ArduinoGenerator:
 //   TOTAL: {total8}
 //
 // Memory (32-bits):
+//   Rules: {rules32}
 //   Policies: {policies32}
+//   Eras: {eras32}
 //   Infos: {infos32}
 //   Links: {links32}
 //   Registry: {registry32}
