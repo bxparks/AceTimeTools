@@ -273,55 +273,22 @@ def _to_tiny_until_year(year: int) -> int:
 
 class EncodedTime(NamedTuple):
     """Break apart the AT or UNTIL time with its suffix (e.g. 02:00w) into the
-    components. See _to_encoded_at_or_until_time() for explanation of these
-    fields.
-
-    * suffix_code
-        * An integer version of 'w', 's', and 'u' (i.e. 0x00, 0x10, 0x20).
-        * Fits in the top 4-bits.
-    * time_code
-        * Time of AT or UNTIL time, in units of 15 minutes. Since time_code will
-          be placed in an 8-bit field with a range of -127 to 127 (-128 is an
-          error flag), the range of time that this can represent is -31:45 to
-          +31:59. I believe all time of day in the TZ database files are
-          positive, but it will occasionally have time strings of "25:00" which
-          means 1am the next day.
-    * time_remainder
-        * Remainder minutes [0-14]. Fits in lower 4-bits.
-    * time_modifier
-        * suffix_code + time_remainder
-    * time_seconds_code:
-        * Same as time_code but in unit of 15-seconds.
-    * time_seconds_remainder:
-        * Same as time_remainder but in units of one-second.
-    * time_seconds_modifier:
-        * suffix_code + time_seconds_remainder
-
-    Note: Maybe I should have flipped the top and bottom 4-bit locations of the
-    suffix_code an time_remainder, so that the EncodedTime.time_remainder field
-    is in the same location as EncodedOffset.offset_minutes field.
+    components.
     """
-    suffix_code: int
+    suffix_code: int  # integer version of 'w', 's', 'u' (0x00, 0x10, 0x20)
 
     # one-minute resolution
-    time_code: int
-    time_remainder: int
-    time_modifier: int
+    time_code: int  # AT or UNTIL time, in 15 minute units
+    time_remainder: int  # remainder minutes [0-14]
+    time_modifier: int  # suffix_code | time_remainder
 
     # one-second resolution
-    time_seconds_code: int
-    time_seconds_remainder: int
-    time_seconds_modifier: int
+    time_seconds_code: int  # AT or UNTIL time in 15-second units
+    time_seconds_remainder: int  # remainder seconds [0-14]
+    time_seconds_modifier: int  # suffix_code | time_seconds_remainder
 
 
-def _to_encoded_at_or_until_time(
-    seconds: int,
-    suffix: str,
-) -> EncodedTime:
-    """Return the EncodedTime tuple that represents the AT or UNTIL time, with a
-    resolution of 1-minute or 1-second, along with an encoding of its suffix
-    (i.e. 's', 'w', 'u').
-    """
+def _to_encoded_at_or_until_time(seconds: int, suffix: str) -> EncodedTime:
     suffix_code = _to_suffix_code(suffix)
 
     time_code = seconds // 900
@@ -344,11 +311,7 @@ def _to_encoded_at_or_until_time(
 
 
 def _to_suffix_code(suffix: str) -> int:
-    """Return the integer code corresponding to 'w', 's', and 'u' suffix
-    character in the TZ database files that can be placed in the top 4-bits of
-    the 'modifier' field. Corresponds to the kSuffixW, kSuffixS, kSuffixU
-    constants in ZoneContext.h.
-    """
+    """These fit in the upper 4-bits of an 8-bit integer."""
     if suffix == 'w':
         return 0x00
     elif suffix == 's':
@@ -360,15 +323,9 @@ def _to_suffix_code(suffix: str) -> int:
 
 
 class EncodedRuleDelta(NamedTuple):
-    """Encode the DST offset extracted from the SAVE column of the Rule entries.
-
-    * delta_code: delta offset in units of 15-min
-    * delta_code_encoded: delta_code + 4 (1h)
-    * delta_minutes: in minutes
-    """
-    delta_code: int
-    delta_code_encoded: int
-    delta_minutes: int
+    delta_code: int  # delta offset in units of 15-min
+    delta_code_encoded: int  # delta_code + 4 (1h)
+    delta_minutes: int  # in minutes
 
 
 def _to_rule_delta(delta_seconds: int) -> EncodedRuleDelta:
@@ -389,46 +346,25 @@ def _to_rule_delta(delta_seconds: int) -> EncodedRuleDelta:
     )
 
 
-class EncodedOffset(NamedTuple):
-    """Encode the STD offset and DST offset into 2 8-bit integer fields.
-
-    * offset_code:
-        * STD offset in units of 15-minutes
-    * offset_remainder:
-        * Remainder minutes (must be always 0 for scope=basic).
-        * Included in delta_code_encoded, so this allows the caller to
-          check for a non-zero and log a warning or error message.
-    * delta_code:
-        * delta offset in units of 15-minutes
-    * delta_code_encoded:
-        * lower 4-bits: delta_code + 4 (i.e. 1h)
-        * Allows encoding from -1:00 to +2:45.
-        * upper 4-bits: offset_remainder
-    * offset_seconds_code:
-        * STD offset in units of 15-seconds
-    * offset_seconds_remainder:
-        * STD offset remainder
-    * delta_minutes:
-        * delta offset in minutes
-    """
+class EncodedOffsetAndDelta(NamedTuple):
     # 1-minute resolution
-    offset_code: int
-    offset_remainder: int
-    delta_code: int
-    delta_code_encoded: int
+    offset_code: int  # STDOFF in 15-minute units
+    offset_remainder: int  # STDOFF remainder minutes [0-14]
+    delta_code: int  # delta (DSTOFF) in 15-minute units
+    delta_code_encoded: int  # offset_remainder<<4 | (delta_code + 4)
 
     # 1-second resolution
-    offset_seconds_code: int
-    offset_seconds_remainder: int
-    delta_minutes: int
+    offset_seconds_code: int  # STDOFF in 15-second units
+    offset_seconds_remainder: int  # STDOFF remainder seconds [0-14]
+    delta_minutes: int  # DSTOFF in minutes
 
 
 def _to_era_offset_and_delta(
     offset_seconds: int,
     delta_seconds: int,
-) -> EncodedOffset:
-    """Convert offset_seconds and delta_seconds to an EncodedOffset suitable for
-    a BasicZoneProcessor or ExtendedZoneProcessor.
+) -> EncodedOffsetAndDelta:
+    """Convert offset_seconds and delta_seconds to an EncodedOffsetAndDelta
+    suitable for the AceTime or AceTimeC library.
     """
     offset_code = offset_seconds // 900  # truncate to -infinty
     offset_remainder = (offset_seconds % 900) // 60  # always positive
@@ -442,7 +378,7 @@ def _to_era_offset_and_delta(
     offset_seconds_remainder = offset_seconds % 15
     delta_minutes = delta_seconds // 60
 
-    return EncodedOffset(
+    return EncodedOffsetAndDelta(
         offset_code=offset_code,
         offset_remainder=offset_remainder,
         delta_code=delta_code,
@@ -457,9 +393,7 @@ def _to_letter_index(
     letter: str,
     indexed_letters: IndexMap
 ) -> int:
-    """
-    Return an index into the indexed_letters.
-    """
+    """Return an index into the indexed_letters."""
     letter_index = indexed_letters[letter]
     if letter_index < 0:
         raise Exception(f'letter "{letter}" not found')
