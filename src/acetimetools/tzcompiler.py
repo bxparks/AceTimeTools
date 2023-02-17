@@ -473,6 +473,8 @@ def main() -> None:
         formats_map={},
         fragments_map={},
         compressed_names={},
+        memory_map8={},
+        memory_map32={},
         go_letters_map={},
         go_formats_map={},
         go_names_map={},
@@ -502,7 +504,7 @@ def main() -> None:
     # Generate the fields for the Arduino zoneinfo data.
     if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
-        arduino_transformer = ArduinoTransformer(scope=args.scope)
+        arduino_transformer = ArduinoTransformer(args.compress)
         arduino_transformer.transform(tresult)
         arduino_transformer.print_summary(tresult)
     else:
@@ -563,6 +565,7 @@ def main() -> None:
         offset_granularity=offset_granularity,
         delta_granularity=delta_granularity,
         strict=args.strict,
+        compress=args.compress,
         tresult=tresult,
         buf_size_map=buf_size_map,
         max_buf_size=max_buf_size,

@@ -16,6 +16,8 @@ from acetimetools.data_types.at_types import LinksMap
 from acetimetools.data_types.at_types import LettersPerPolicy
 from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import MemoryMap
+from acetimetools.data_types.at_types import SizeofMap
 from acetimetools.data_types.at_types import EPOCH_YEAR
 from acetimetools.data_types.at_types import MAX_YEAR
 from acetimetools.data_types.at_types import MAX_YEAR_TINY
@@ -32,34 +34,62 @@ class ArduinoTransformer:
     libraries. Produces a new TransformerResult from get_data().
     """
 
-    def __init__(self, scope: str) -> None:
-        self.scope = scope
+    SIZEOF8: SizeofMap = {
+        'rule': 11,
+        'policy': 6,
+        'era': 12,
+        'info': 13,
+        'pointer': 2,  # sizeof(void*)
+    }
+
+    SIZEOF32: SizeofMap = {
+        'rule': 12,  # 11 rounded to 4-byte alignment
+        'policy': 12,  # 10 rounded to 4-byte alignment
+        'era': 16,  # 16 rounded to 4-byte alignment
+        'info': 24,  # 21 rounded to 4-byte alignment
+        'pointer': 4,  # sizeof(void*)
+    }
+
+    def __init__(self, compress: bool) -> None:
+        self.compress = compress
 
     def transform(self, tresult: TransformerResult) -> None:
         self.tresult = tresult
 
-        zones_map = tresult.zones_map
-        policies_map = tresult.policies_map
-        links_map = tresult.links_map
+        self.zones_map = tresult.zones_map
+        self.policies_map = tresult.policies_map
+        self.links_map = tresult.links_map
         zone_ids = tresult.zone_ids
         link_ids = tresult.link_ids
 
-        letters_per_policy, letters_map = _collect_letter_strings(policies_map)
-        formats_map = _collect_format_strings(zones_map)
-        self._process_rules(policies_map, letters_map, letters_per_policy)
-        self._process_eras(zones_map)
-        fragments_map = _generate_fragments(zones_map, links_map)
-        compressed_names = _generate_compressed_names(
-            zones_map, links_map, fragments_map
-        )
+        self.letters_per_policy, self.letters_map = _collect_letter_strings(
+            self.policies_map)
+        self.formats_map = _collect_format_strings(self.zones_map)
+        self._process_rules(
+            self.policies_map, self.letters_map, self.letters_per_policy)
+        self._process_eras(self.zones_map)
+        if self.compress:
+            self.fragments_map = _generate_fragments(
+                self.zones_map, self.links_map)
+            self.compressed_names = _generate_compressed_names(
+                self.zones_map, self.links_map, self.fragments_map
+            )
+        else:
+            self.fragments_map = {}
+            self.compressed_names = {}
+
+        memory_map8 = self._generate_memory_map(self.SIZEOF8)
+        memory_map32 = self._generate_memory_map(self.SIZEOF32)
 
         tresult.zone_ids = zone_ids
         tresult.link_ids = link_ids
-        tresult.letters_per_policy = letters_per_policy
-        tresult.letters_map = letters_map
-        tresult.formats_map = formats_map
-        tresult.fragments_map = fragments_map
-        tresult.compressed_names = compressed_names
+        tresult.letters_per_policy = self.letters_per_policy
+        tresult.letters_map = self.letters_map
+        tresult.formats_map = self.formats_map
+        tresult.fragments_map = self.fragments_map
+        tresult.compressed_names = self.compressed_names
+        tresult.memory_map8 = memory_map8
+        tresult.memory_map32 = memory_map32
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -115,7 +145,7 @@ class ArduinoTransformer:
                 letter = rule['letter']
                 rule['letter_index'] = _to_letter_index(
                     letter=letter,
-                    indexed_letters=letters_map,
+                    indexed_letters=self.letters_map,
                 )
                 indexed_letters = letters_per_policy.get(policy_name)
                 assert indexed_letters is not None
@@ -188,6 +218,77 @@ class ArduinoTransformer:
                         self.tresult.notable_zones, zone_name,
                         f"UNTIL '{era['until_time']}' not on 15-minute boundary"
                     )
+
+    def _generate_memory_map(self, sizes: SizeofMap) -> MemoryMap:
+        num_infos = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_policies = len(self.policies_map)
+        num_zones_and_links = num_infos + num_links
+
+        # Zones
+        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
+        info_size = sizes['info'] * num_infos + sizes['era'] * num_eras
+
+        # Links reuse the ZoneEras from the target Zone.
+        link_size = sizes['info'] * num_links
+
+        # Policies
+        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
+        policy_size = sizes['rule'] * num_rules + sizes['policy'] * num_policies
+
+        # Registry
+        registry_size = num_zones_and_links * sizes['pointer']
+
+        # Zone and Link names
+        name_orig_size = sum([len(name) + 1 for name in self.zones_map.keys()])
+        name_orig_size += sum([len(name) + 1 for name in self.links_map.keys()])
+
+        if self.compress:
+            name_size = sum([
+                len(self.compressed_names[name]) + 1
+                for name in self.zones_map.keys()
+            ])
+            name_size += sum([
+                len(self.compressed_names[name]) + 1
+                for name in self.links_map.keys()
+            ])
+        else:
+            name_size = name_orig_size
+
+        # Fragment and Letter strings are stored in separate arrays as
+        # kFragments and kLetters. So we include the pointers to these.
+        fragment_size = sum([len(s) + 1 for s in self.fragments_map.keys()])
+        fragment_size += len(self.fragments_map) * sizes['pointer']
+        letter_size = sum([len(s) + 1 for s in self.letters_map.keys()])
+        letter_size += len(self.letters_map) * sizes['pointer']
+
+        # Formats are stored directly in ZoneEra, so no need to add pointers.
+        format_size = sum([len(s) + 1 for s in self.formats_map.keys()])
+
+        # Total
+        total_size = (
+            info_size
+            + link_size
+            + policy_size
+            + registry_size
+            + name_size
+            + fragment_size
+            + letter_size
+            + format_size
+        )
+
+        return {
+            'infos': info_size,
+            'links': link_size,
+            'policies': policy_size,
+            'registry': registry_size,
+            'names': name_size,
+            'names_original': name_orig_size,
+            'fragments': fragment_size,
+            'formats': format_size,
+            'letters': letter_size,
+            'total': total_size,
+        }
 
 
 def _collect_letter_strings(
