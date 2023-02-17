@@ -211,8 +211,8 @@ k{self.db_namespace}ZonePolicy{policy_normalized_name};
 
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
-
         num_policies = len(self.policies_map)
+        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
 
@@ -227,7 +227,8 @@ extern "C" {{
 #endif
 
 //---------------------------------------------------------------------------
-// Supported zone policies: {num_policies}
+// Supported policies: {num_policies}
+// Supported rules: {num_rules}
 //---------------------------------------------------------------------------
 
 {policy_items}
@@ -428,6 +429,7 @@ extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
 
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
+        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
         num_removed_infos = len(self.removed_zones)
         num_notable_infos = len(self.notable_zones)
         num_removed_links = len(self.removed_links)
@@ -452,6 +454,7 @@ extern const AtcZoneContext k{self.db_namespace}ZoneContext;
 
 //---------------------------------------------------------------------------
 // Supported zones: {num_infos}
+// Supported eras: {num_eras}
 //---------------------------------------------------------------------------
 
 {zone_items}
@@ -573,6 +576,7 @@ const AtcZoneContext k{self.db_namespace}ZoneContext = {{
 
 //---------------------------------------------------------------------------
 // Zones: {num_infos}
+// Eras: {num_eras}
 //---------------------------------------------------------------------------
 
 {info_items}

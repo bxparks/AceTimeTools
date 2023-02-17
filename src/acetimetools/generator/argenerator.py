@@ -120,7 +120,7 @@ class ArduinoGenerator:
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
 
-    def _generate_header(self, extra: str = "") -> str:
+    def _generate_header(self) -> str:
         num_zones = len(self.zones_map)
         num_links = len(self.links_map)
         num_zones_and_links = len(self.zones_and_links)
@@ -197,7 +197,7 @@ class ArduinoGenerator:
 //   Name: {names32} (original: {names_original32})
 //   TOTAL: {total32}
 //
-{extra}// DO NOT EDIT
+// DO NOT EDIT
 
 """
 
@@ -212,6 +212,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
         num_policies = len(self.policies_map)
+        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
 
@@ -225,13 +226,14 @@ namespace ace_time {{
 namespace {self.db_namespace} {{
 
 //---------------------------------------------------------------------------
-// Supported zone policies: {num_policies}
+// Supported policies: {num_policies}
+// Supported rules: {num_rules}
 //---------------------------------------------------------------------------
 
 {policy_items}
 
 //---------------------------------------------------------------------------
-// Unsupported zone policies: {num_removed_policies}
+// Unsupported policies: {num_removed_policies}
 //---------------------------------------------------------------------------
 
 {removed_policy_items}
@@ -257,17 +259,17 @@ namespace {self.db_namespace} {{
             policy_items += policy_item
         num_policies = len(self.policies_map)
 
-        extra = f"""\
-// Policies: {num_policies}
-// Rules: {num_rules}
-//
-"""
-        return self._generate_header(extra) + f"""\
+        return self._generate_header() + f"""\
 #include <zoneinfo/compat.h>
 #include "zone_policies.h"
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
+
+//---------------------------------------------------------------------------
+// Policies: {num_policies}
+// Rules: {num_rules}
+//---------------------------------------------------------------------------
 
 {policy_items}
 
@@ -395,6 +397,7 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
 
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
+        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
         num_removed_infos = len(self.removed_zones)
         num_notable_infos = len(self.merged_notable_zones)
         num_removed_links = len(self.removed_links)
@@ -421,6 +424,7 @@ extern const internal::ZoneContext kZoneContext;
 
 //---------------------------------------------------------------------------
 // Supported zones: {num_infos}
+// Supported eras: {num_eras}
 //---------------------------------------------------------------------------
 
 {zone_items}
@@ -511,13 +515,7 @@ extern const internal::ZoneContext kZoneContext;
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
 
-        extra = f"""\
-// Zones: {num_infos}
-// Links: {num_links}
-//
-"""
-
-        return self._generate_header(extra) + f"""\
+        return self._generate_header() + f"""\
 #include <zoneinfo/compat.h>
 #include "zone_policies.h"
 #include "zone_infos.h"
@@ -551,6 +549,7 @@ const internal::ZoneContext kZoneContext = {{
 
 //---------------------------------------------------------------------------
 // Zones: {num_infos}
+// Eras: {num_eras}
 //---------------------------------------------------------------------------
 
 {info_items}
@@ -587,7 +586,7 @@ const internal::ZoneContext kZoneContext = {{
         info_item = f"""\
 //---------------------------------------------------------------------------
 // Zone name: {zone_name}
-// Zone Eras: {num_eras}
+// Eras: {num_eras}
 //---------------------------------------------------------------------------
 
 static const {self.scope}::ZoneEra kZoneEra{zone_normalized_name}[] \
