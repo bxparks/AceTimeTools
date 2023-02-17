@@ -9,7 +9,6 @@ Borrowed heavily from argenerator.py.
 import os
 import logging
 from typing import List
-from typing import Tuple
 
 from acetimetools.data_types.at_types import ZoneRuleRaw
 from acetimetools.data_types.at_types import ZoneEraRaw
@@ -45,50 +44,49 @@ class CGenerator:
         # warnings about "multi-line comment [-Wcomment]".
         wrapped_invocation = '\n//     --'.join(invocation.split(' --'))
         wrapped_tzfiles = '\n//   '.join(zidb['tz_files'])
-        self.invocation = wrapped_invocation
-        self.tz_files = wrapped_tzfiles
 
         # C does not namespaces, so use db_namespace as a prefix for all
         # external identifiers. Normally, this will be "Atc", but for testing,
         # it can be "AtcTesting".
-        scope = zidb['scope']
         if not db_namespace:
             raise Exception("db_namespace must be defined")
 
-        self.scope = scope
-        self.db_namespace = db_namespace
-        self.compress = compress
         self.invocation = wrapped_invocation
+        self.tz_files = wrapped_tzfiles
+        self.db_namespace = db_namespace
+        self.db_header_namespace = db_namespace.upper()
+        self.compress = compress
         self.generate_int16_years = generate_int16_years
         self.generate_hires = generate_hires
 
-        self.tz_files = wrapped_tzfiles
-        self.buf_sizes = zidb['buf_sizes']
-        self.compressed_names = zidb['compressed_names']
-        self.formats_map = zidb['formats_map']
-        self.fragments_map = zidb['fragments_map']
-        self.letters_map = zidb['letters_map']
-        self.link_ids = zidb['link_ids']
-        self.links_map = zidb['links_map']
-        self.max_buf_size = zidb['max_buf_size']
-        self.merged_notable_zones = zidb['merged_notable_zones']
-        self.notable_links = zidb['notable_links']
-        self.notable_policies = zidb['notable_policies']
-        self.notable_zones = zidb['notable_zones']
-        self.policies_map = zidb['policies_map']
-        self.removed_links = zidb['removed_links']
-        self.removed_policies = zidb['removed_policies']
-        self.removed_zones = zidb['removed_zones']
+        self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
         self.start_year = zidb['start_year']
-        self.tz_version = zidb['tz_version']
         self.until_year = zidb['until_year']
-        self.zone_ids = zidb['zone_ids']
         self.zones_map = zidb['zones_map']
+        self.links_map = zidb['links_map']
+        self.policies_map = zidb['policies_map']
+        self.removed_zones = zidb['removed_zones']
+        self.removed_links = zidb['removed_links']
+        self.removed_policies = zidb['removed_policies']
+        self.merged_notable_zones = zidb['merged_notable_zones']
+        self.notable_zones = zidb['notable_zones']
+        self.notable_links = zidb['notable_links']
+        self.notable_policies = zidb['notable_policies']
         self.original_min_year = zidb['original_min_year']
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.buf_sizes = zidb['buf_sizes']
+        self.max_buf_size = zidb['max_buf_size']
+        self.zone_ids = zidb['zone_ids']
+        self.link_ids = zidb['link_ids']
+        self.formats_map = zidb['formats_map']
+        self.fragments_map = zidb['fragments_map']
+        self.letters_map = zidb['letters_map']
+        self.compressed_names = zidb['compressed_names']
+        self.memory_map8 = zidb['memory_map8']
+        self.memory_map32 = zidb['memory_map32']
 
         self.zones_and_links = (
             list(self.zones_map.keys()) + list(self.links_map.keys())
@@ -121,11 +119,6 @@ class CGenerator:
             print(content, end='', file=output_file)
         logging.info("Created %s", full_filename)
 
-    SIZEOF_ZONE_RULE_8 = 11
-    SIZEOF_ZONE_RULE_32 = 12  # 11 rounded to 4-byte alignment
-    SIZEOF_ZONE_POLICY_8 = 6
-    SIZEOF_ZONE_POLICY_32 = 12  # 10 rounded to 4-byte alignment
-
     def generate_header(self) -> str:
         num_zones = len(self.zones_map)
         num_links = len(self.links_map)
@@ -133,6 +126,32 @@ class CGenerator:
         num_removed_zones = len(self.removed_zones)
         num_removed_links = len(self.removed_links)
         num_removed_zones_and_links = num_removed_zones + num_removed_links
+
+        rules8 = self.memory_map8['rules']
+        policies8 = self.memory_map8['policies']
+        eras8 = self.memory_map8['eras']
+        infos8 = self.memory_map8['infos']
+        links8 = self.memory_map8['links']
+        registry8 = self.memory_map8['registry']
+        names8 = self.memory_map8['names']
+        names_original8 = self.memory_map8['names_original']
+        fragments8 = self.memory_map8['fragments']
+        formats8 = self.memory_map8['formats']
+        letters8 = self.memory_map8['letters']
+        total8 = self.memory_map8['total']
+
+        rules32 = self.memory_map32['rules']
+        policies32 = self.memory_map32['policies']
+        eras32 = self.memory_map32['eras']
+        infos32 = self.memory_map32['infos']
+        links32 = self.memory_map32['links']
+        registry32 = self.memory_map32['registry']
+        names32 = self.memory_map32['names']
+        names_original32 = self.memory_map32['names_original']
+        fragments32 = self.memory_map32['fragments']
+        formats32 = self.memory_map32['formats']
+        letters32 = self.memory_map32['letters']
+        total32 = self.memory_map32['total']
 
         return f"""\
 // This file was generated by the following script:
@@ -151,6 +170,32 @@ class CGenerator:
 // Original Years: [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
 //
+// Memory (8-bits):
+//   Rules: {rules8}
+//   Policies: {policies8}
+//   Eras: {eras8}
+//   Infos: {infos8}
+//   Links: {links8}
+//   Registry: {registry8}
+//   Formats: {formats8}
+//   Letters: {letters8}
+//   Fragments: {fragments8}
+//   Name: {names8} (original: {names_original8})
+//   TOTAL: {total8}
+//
+// Memory (32-bits):
+//   Rules: {rules32}
+//   Policies: {policies32}
+//   Eras: {eras32}
+//   Infos: {infos32}
+//   Links: {links32}
+//   Registry: {registry32}
+//   Formats: {formats32}
+//   Letters: {letters32}
+//   Fragments: {fragments32}
+//   Name: {names32} (original: {names_original32})
+//   TOTAL: {total32}
+//
 // DO NOT EDIT
 
 """
@@ -167,14 +212,13 @@ k{self.db_namespace}ZonePolicy{policy_normalized_name};
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
 
-        db_header_namespace = self.db_namespace.upper()
         num_policies = len(self.policies_map)
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_POLICIES_H
-#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_POLICIES_H
+#ifndef ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_POLICIES_H
+#define ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_POLICIES_H
 
 #include "../zoneinfo/zone_info.h"
 
@@ -211,21 +255,13 @@ extern "C" {{
 
     def generate_policies_c(self) -> str:
         policy_items = ''
-        memory8 = 0
-        memory32 = 0
         num_rules = 0
         for name, rules in sorted(self.policies_map.items()):
             num_rules += len(rules)
-            policy_item, policy_memory8, policy_memory32 = \
-                self._generate_policy_item(name, rules)
+            policy_item = self._generate_policy_item(name, rules)
             policy_items += policy_item
-            memory8 += policy_memory8
-            memory32 += policy_memory32
 
         num_policies = len(self.policies_map)
-        # letter_size = sum([
-        #     len(letter) + 1 for letter in self.letters_map.keys()
-        # ])
 
         return self.generate_header() + f"""\
 #include "zone_policies.h"
@@ -242,7 +278,7 @@ extern "C" {{
         self,
         policy_name: str,
         rules: List[ZoneRuleRaw],
-    ) -> Tuple[str, int, int]:
+    ) -> str:
         # Generate kAtcZoneRules*[]
         rule_items = ''
         for rule in rules:
@@ -316,23 +352,14 @@ extern "C" {{
 """
             rule_items += item
 
-        # Calculate the memory consumed by structs and arrays
+        # Section header for a ZonePolicy
         num_rules = len(rules)
-        memory8 = (
-            1 * self.SIZEOF_ZONE_POLICY_8
-            + num_rules * self.SIZEOF_ZONE_RULE_8)
-        memory32 = (
-            1 * self.SIZEOF_ZONE_POLICY_32
-            + num_rules * self.SIZEOF_ZONE_RULE_32)
-
         policy_normalized_name = normalize_name(policy_name)
         progmem = ''
         policy_item = f"""\
 //---------------------------------------------------------------------------
 // Policy name: {policy_name}
 // Rules: {num_rules}
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
 //---------------------------------------------------------------------------
 
 static const AtcZoneRule kAtcZoneRules{policy_normalized_name}[] {progmem} = {{
@@ -347,7 +374,7 @@ const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name} \
 
 """
 
-        return (policy_item, memory8, memory32)
+        return policy_item
 
     SIZEOF_ZONE_ERA_8 = 12
     SIZEOF_ZONE_ERA_32 = 16  # 16 rounded to 4-byte alignment
@@ -399,7 +426,6 @@ extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
         removed_link_items = render_comments_map(self.removed_links)
         notable_link_items = render_comments_map(self.notable_links)
 
-        db_header_namespace = self.db_namespace.upper()
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
         num_removed_infos = len(self.removed_zones)
@@ -408,8 +434,8 @@ extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
         num_notable_links = len(self.notable_links)
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_INFOS_H
-#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_INFOS_H
+#ifndef ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_INFOS_H
+#define ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_INFOS_H
 
 #include "../zoneinfo/zone_info.h"
 
@@ -574,35 +600,14 @@ const AtcZoneContext k{self.db_namespace}ZoneContext = {{
             compressed_name = zone_name
         rendered_name = compressed_name_to_c_string(compressed_name)
 
-        # Calculate memory sizes
-        zone_name_size = len(compressed_name) + 1
-        format_size = 0
-        for era in eras:
-            format_size += len(era['format_short']) + 1
         num_eras = len(eras)
-        data_size8 = (
-            num_eras * self.SIZEOF_ZONE_ERA_8
-            + self.SIZEOF_ZONE_INFO_8
-        )
-        data_size32 = (
-            num_eras * self.SIZEOF_ZONE_ERA_32
-            + self.SIZEOF_ZONE_INFO_32
-        )
-
-        string_size = zone_name_size + format_size
-        original_size = len(zone_name) + 1 + format_size
         zone_normalized_name = normalize_name(zone_name)
         zone_id = self.zone_ids[zone_name]
-        memory8 = data_size8 + string_size
-        memory32 = data_size32 + string_size
         progmem = ''
         info_item = f"""\
 //---------------------------------------------------------------------------
 // Zone name: {zone_name}
 // Zone Eras: {num_eras}
-// Strings (bytes): {string_size} (originally {original_size})
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
 //---------------------------------------------------------------------------
 
 static const AtcZoneEra kAtcZoneEra{zone_normalized_name}[] {progmem} = {{
@@ -725,10 +730,6 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
             compressed_name = link_name
         rendered_name = compressed_name_to_c_string(compressed_name)
 
-        link_name_size = len(compressed_name) + 1
-        original_link_name_size = len(link_name) + 1
-        memory8 = link_name_size + self.SIZEOF_ZONE_INFO_8
-        memory32 = link_name_size + self.SIZEOF_ZONE_INFO_32
         link_normalized_name = normalize_name(link_name)
         link_id = self.link_ids[link_name]
         zone_normalized_name = normalize_name(zone_name)
@@ -738,9 +739,6 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         return f"""\
 //---------------------------------------------------------------------------
 // Link name: {link_name} -> {zone_name}
-// Strings (bytes): {link_name_size} (originally {original_link_name_size})
-// Memory (8-bit): {memory8}
-// Memory (32-bit): {memory32}
 //---------------------------------------------------------------------------
 
 static const char kAtcZoneName{link_normalized_name}[] {progmem} = \
@@ -819,11 +817,10 @@ k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}] \
     def generate_registry_h(self) -> str:
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
-        db_header_namespace = self.db_namespace.upper()
 
         return self.generate_header() + f"""\
-#ifndef ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_REGISTRY_H
-#define ACE_TIME_C_ZONEDB_{db_header_namespace}_ZONE_REGISTRY_H
+#ifndef ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_REGISTRY_H
+#define ACE_TIME_C_ZONEDB_{self.db_header_namespace}_ZONE_REGISTRY_H
 
 #include "../zoneinfo/zone_info.h"
 
