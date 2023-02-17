@@ -57,9 +57,10 @@ class ArduinoGenerator:
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
         self.db_namespace = db_namespace
+        self.db_header_namespace = db_namespace.upper()
         self.compress = compress
         self.generate_int16_years = generate_int16_years
-        self.db_header_namespace = db_namespace.upper()
+
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
         self.start_year = zidb['start_year']
@@ -666,7 +667,8 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         zone_normalized_name = normalize_name(zone_name)
         num_eras = len(self.zones_map[zone_name])
         progmem = 'ACE_TIME_PROGMEM'
-        link_item = f"""\
+
+        return f"""\
 //---------------------------------------------------------------------------
 // Link name: {link_name} -> {zone_name}
 //---------------------------------------------------------------------------
@@ -684,8 +686,6 @@ const {self.scope}::ZoneInfo kZone{link_normalized_name} {progmem} = {{
 }};
 
 """
-
-        return link_item
 
     def generate_registry_cpp(self) -> str:
 

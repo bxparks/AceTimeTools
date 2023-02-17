@@ -36,22 +36,40 @@ class ArduinoTransformer:
 
     SIZEOF8: SizeofMap = {
         'rule': 11,
-        'policy': 6,
+        'policy': 3,
         'era': 12,
+        'info': 13,
+        'pointer': 2,  # sizeof(void*)
+    }
+
+    # High resolution version
+    SIZEOF_HIRES8: SizeofMap = {
+        'rule': 12,
+        'policy': 3,
+        'era': 15,
         'info': 13,
         'pointer': 2,  # sizeof(void*)
     }
 
     SIZEOF32: SizeofMap = {
         'rule': 12,  # 11 rounded to 4-byte alignment
-        'policy': 12,  # 10 rounded to 4-byte alignment
+        'policy': 8,  # 5 rounded to 4-byte alignment
         'era': 16,  # 16 rounded to 4-byte alignment
         'info': 24,  # 21 rounded to 4-byte alignment
         'pointer': 4,  # sizeof(void*)
     }
 
-    def __init__(self, compress: bool) -> None:
+    SIZEOF_HIRES32: SizeofMap = {
+        'rule': 12,  # 12 rounded to 4-byte alignment
+        'policy': 8,  # 5 rounded to 4-byte alignment
+        'era': 20,  # 19 rounded to 4-byte alignment
+        'info': 24,  # 21 rounded to 4-byte alignment
+        'pointer': 4,  # sizeof(void*)
+    }
+
+    def __init__(self, compress: bool, generate_hires: bool) -> None:
         self.compress = compress
+        self.generate_hires = generate_hires
 
     def transform(self, tresult: TransformerResult) -> None:
         self.tresult = tresult
@@ -78,8 +96,12 @@ class ArduinoTransformer:
             self.fragments_map = {}
             self.compressed_names = {}
 
-        memory_map8 = self._generate_memory_map(self.SIZEOF8)
-        memory_map32 = self._generate_memory_map(self.SIZEOF32)
+        if self.generate_hires:
+            memory_map8 = self._generate_memory_map(self.SIZEOF_HIRES8)
+            memory_map32 = self._generate_memory_map(self.SIZEOF_HIRES32)
+        else:
+            memory_map8 = self._generate_memory_map(self.SIZEOF8)
+            memory_map32 = self._generate_memory_map(self.SIZEOF32)
 
         tresult.zone_ids = zone_ids
         tresult.link_ids = link_ids
