@@ -102,12 +102,12 @@ from typing_extensions import Protocol
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import create_zone_info_database
-from acetimetools.zone_processor.bufestimator import BufSizeEstimator
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
 from acetimetools.transformer.commenter import Commenter
 from acetimetools.transformer.gotransformer import GoTransformer
+from acetimetools.bufestimator.bufestimator import BufSizeEstimator
 from acetimetools.generator.argenerator import ArduinoGenerator
 from acetimetools.generator.cgenerator import CGenerator
 from acetimetools.generator.gogenerator import GoGenerator
