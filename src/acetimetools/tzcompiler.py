@@ -103,7 +103,6 @@ from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZoneInfoDatabase
 from acetimetools.data_types.at_types import create_zone_info_database
 from acetimetools.zone_processor.bufestimator import BufSizeEstimator
-from acetimetools.zone_processor.bufestimator import calculate_max_buf_size
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
@@ -115,12 +114,6 @@ from acetimetools.generator.gogenerator import GoGenerator
 from acetimetools.generator.pygenerator import PythonGenerator
 from acetimetools.generator.zonelistgenerator import ZoneListGenerator
 from acetimetools.generator.jsongenerator import JsonGenerator
-
-
-# The value of `ExtendedZoneProcessor.kMaxTransitions` which determines the
-# buffer size in the TransitionStorage class. The value returned by
-# calculate_max_buf_size() must be equal or smaller than this constant.
-EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS = 8
 
 
 class Generator(Protocol):
@@ -466,6 +459,8 @@ def main() -> None:
         original_max_year=0,
         generated_min_year=0,
         generated_max_year=0,
+        buf_sizes={},
+        max_buf_size=0,
         zone_ids={},
         link_ids={},
         letters_per_policy={},
@@ -513,32 +508,14 @@ def main() -> None:
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')
-    start_year = max(tresult.generated_min_year, args.start_year)
-    until_year = min(tresult.generated_max_year + 1, args.until_year)
-    logging.info('Checking years in [%d, %d)', start_year, until_year)
 
     estimator = BufSizeEstimator(
-        zones_map=tresult.zones_map,
-        policies_map=tresult.policies_map,
-        start_year=start_year,
-        until_year=until_year,
+        start_year=args.start_year,
+        until_year=args.until_year,
+        ignore_buf_size_too_large=args.ignore_buf_size_too_large,
     )
-    logging.info('Calculating buf_size_map')
-    buf_size_map = estimator.calculate_buf_size_map()
-    logging.info('Calculating max_buf_size')
-    max_buf_size = calculate_max_buf_size(buf_size_map)
-
-    # Check if the estimated buffer size is too big
-    if max_buf_size > EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS:
-        msg = (
-            f"Max buffer size={max_buf_size} "
-            f"is larger than ExtendedZoneProcessor.kMaxTransitions="
-            f"{EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS}"
-        )
-        if args.ignore_buf_size_too_large:
-            logging.warning(msg)
-        else:
-            raise Exception(msg)
+    estimator.transform(tresult)
+    estimator.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Updating comments')
@@ -568,8 +545,6 @@ def main() -> None:
         strict=args.strict,
         compress=args.compress,
         tresult=tresult,
-        buf_size_map=buf_size_map,
-        max_buf_size=max_buf_size,
     )
 
     if args.action == 'zonedb':

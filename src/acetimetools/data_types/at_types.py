@@ -255,6 +255,25 @@ class MemoryMap(TypedDict, total=False):
     letters: int
     total: int
 
+# -----------------------------------------------------------------------------
+# Data types used by bufestimator.py
+# -----------------------------------------------------------------------------
+
+
+class CountAndYear(NamedTuple):
+    """A tuple that holds a count and the year which it is related to."""
+    number: int
+    year: int
+
+
+# zoneName -> CountAndYear
+BufSizeMap = Dict[str, CountAndYear]
+
+
+# -----------------------------------------------------------------------------
+# TransformerResult. Holds the various intermediate quantities consumed and
+# produced by various transformer objects.
+# -----------------------------------------------------------------------------
 
 @dataclass
 class TransformerResult:
@@ -280,6 +299,9 @@ class TransformerResult:
     original_max_year: int  # max year in original TZDB
     generated_min_year: int  # min year in generated zonedb
     generated_max_year: int  # max year in generated zonedb
+    # Data from BufSizeEstimator
+    buf_sizes: BufSizeMap
+    max_buf_size: int
     # Data from ArduinoTransformer
     letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
     letters_map: IndexMap  # {letter -> index}
@@ -318,20 +340,6 @@ def merge_comments(target: CommentsMap, new: CommentsMap) -> None:
             old_reasons = set()
             target[name] = old_reasons
         old_reasons.update(new_reasons)
-
-
-# -----------------------------------------------------------------------------
-# Data types used by bufestimator.py
-# -----------------------------------------------------------------------------
-
-class CountAndYear(NamedTuple):
-    """A tuple that holds a count and the year which it is related to."""
-    number: int
-    year: int
-
-
-# zoneName -> CountAndYear
-BufSizeMap = Dict[str, CountAndYear]
 
 
 # -----------------------------------------------------------------------------
@@ -419,8 +427,6 @@ def create_zone_info_database(
     strict: bool,
     compress: bool,
     tresult: TransformerResult,
-    buf_size_map: BufSizeMap,
-    max_buf_size: int,
 ) -> ZoneInfoDatabase:
     """Return an instance of ZoneInfoDatabase from the various ingredients."""
 
@@ -466,8 +472,8 @@ def create_zone_info_database(
         'zones_to_policies': tresult.zones_to_policies,
 
         # Data from BufSizeEstimator
-        'buf_sizes': buf_size_map,
-        'max_buf_size': max_buf_size,
+        'buf_sizes': tresult.buf_sizes,
+        'max_buf_size': tresult.max_buf_size,
 
         # Data from ArduinoTransformer
         'letters_per_policy': tresult.letters_per_policy,

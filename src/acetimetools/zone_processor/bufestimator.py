@@ -7,11 +7,18 @@ from typing import NamedTuple
 import logging
 from collections import OrderedDict
 
+from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeMap, CountAndYear
 from acetime.zone_processor import ZoneProcessor
 from acetime.zonedb_types import ZoneInfoMap
 from .zone_info_inliner import ZoneInfoInliner
+
+
+# The value of `ExtendedZoneProcessor.kMaxTransitions` which determines the
+# buffer size in the TransitionStorage class. The value returned by
+# calculate_max_buf_size() must be equal or smaller than this constant.
+EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS = 8
 
 
 class MaxBufferSizeInfo(NamedTuple):
@@ -31,53 +38,82 @@ class BufSizeEstimator:
 
     def __init__(
         self,
-        zones_map: ZonesMap,
-        policies_map: PoliciesMap,
         start_year: int,
         until_year: int,
-    ):
-        """
-        Args:
-            zone_infos: dict of ZoneInfos
-            zone_policies dict of ZonePolicies
-            start_year: start year
-            until_year: until year
-        """
-        self.zones_map = zones_map
-        self.policies_map = policies_map
+        ignore_buf_size_too_large: bool,
+    ) -> None:
         self.start_year = start_year
         self.until_year = until_year
+        self.ignore_buf_size_too_large = ignore_buf_size_too_large
 
-    def calculate_buf_size_map(self) -> BufSizeMap:
-        """Calculate the (dict) of {full_name -> (max_buffer_size, year)} where
-        max_buffer_size is the maximum TransitionStorage buffer size required by
-        ZoneProcessor across [start_year, until_year), and year is the year in
-        which the maximum occurred.
-        """
-        # Generate internal zone_infos and zone_policies to be used by
-        # ZoneProcessor.
-        zone_info_inliner = ZoneInfoInliner(self.zones_map, self.policies_map)
-        zone_infos, zone_policies = zone_info_inliner.generate_zonedb()
-        logging.info(
-            'ZoneInfoInliner: Zones %d; Policies %d',
-            len(zone_infos), len(zone_policies))
+    def transform(self, tresult: TransformerResult) -> None:
+        self.zones_map = tresult.zones_map
+        self.policies_map = tresult.policies_map
+        start_year = max(tresult.generated_min_year, self.start_year)
+        until_year = min(tresult.generated_max_year + 1, self.until_year)
+        logging.info('Checking years in [%d, %d)', start_year, until_year)
 
-        # Calculate expected buffer sizes for each zone using a ZoneProcessor.
-        # Include (start_year - 1) and (until_year + 1) to support conversions
-        # from epochSeconds where the local year may shift to the previous or
-        # next year depending on the UTC offset of the given timezone.
-        logging.info(
-            'Calculating buf sizes per zone [%s, %s)',
-            self.start_year - 1,
-            self.until_year + 1,
+        logging.info('Calculating buf_size_map')
+        tresult.buf_sizes = calculate_buf_size_map(
+            start_year,
+            until_year,
+            self.zones_map,
+            self.policies_map,
         )
-        buf_size_map = _calculate_buf_sizes_per_zone(
-            zone_infos,
-            self.start_year - 1,
-            self.until_year + 1,
-        )
+        logging.info('Calculating max_buf_size')
+        tresult.max_buf_size = calculate_max_buf_size(tresult.buf_sizes)
 
-        return OrderedDict(sorted(buf_size_map.items()))
+        # Check if the estimated buffer size is too big
+        if tresult.max_buf_size > EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS:
+            msg = (
+                f"Max buffer size={tresult.max_buf_size} "
+                f"is larger than ExtendedZoneProcessor.kMaxTransitions="
+                f"{EXTENDED_ZONE_PROCESSOR_MAX_TRANSITIONS}"
+            )
+            if self.ignore_buf_size_too_large:
+                logging.warning(msg)
+            else:
+                raise Exception(msg)
+
+    def print_summary(self, tresult: TransformerResult) -> None:
+        pass
+
+
+def calculate_buf_size_map(
+    start_year: int,
+    until_year: int,
+    zones_map: ZonesMap,
+    policies_map: PoliciesMap,
+) -> BufSizeMap:
+    """Calculate the (dict) of {full_name -> (max_buffer_size, year)} where
+    max_buffer_size is the maximum TransitionStorage buffer size required by
+    ZoneProcessor across [start_year, until_year), and year is the year in
+    which the maximum occurred.
+    """
+    # Generate internal zone_infos and zone_policies to be used by
+    # ZoneProcessor.
+    zone_info_inliner = ZoneInfoInliner(zones_map, policies_map)
+    zone_infos, zone_policies = zone_info_inliner.generate_zonedb()
+    logging.info(
+        'ZoneInfoInliner: Zones %d; Policies %d',
+        len(zone_infos), len(zone_policies))
+
+    # Calculate expected buffer sizes for each zone using a ZoneProcessor.
+    # Include (start_year - 1) and (until_year + 1) to support conversions
+    # from epochSeconds where the local year may shift to the previous or
+    # next year depending on the UTC offset of the given timezone.
+    logging.info(
+        'Calculating buf sizes per zone [%s, %s)',
+        start_year - 1,
+        until_year + 1,
+    )
+    buf_size_map = _calculate_buf_sizes_per_zone(
+        zone_infos,
+        start_year - 1,
+        until_year + 1,
+    )
+
+    return OrderedDict(sorted(buf_size_map.items()))
 
 
 def calculate_max_buf_size(buf_sizes: BufSizeMap) -> int:
