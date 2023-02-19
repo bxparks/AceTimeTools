@@ -261,9 +261,13 @@ class TransformerResult:
     """Result type of Transformer.get_data().
     """
 
+    # Data from Extractor filtered through Transformer.
     zones_map: ZonesMap  # {zoneName -> ZoneEraRaw[]}
     policies_map: PoliciesMap  # {policyName -> ZoneRuleRaw[]}
     links_map: LinksMap  # {linkName -> zoneName}
+    # Data from Transformer.
+    zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
+    link_ids: Dict[str, int]  # {linkName -> zoneHash}
     removed_zones: CommentsMap  # {zoneName -> reasons[]}
     removed_policies: CommentsMap  # {policyName -> reasons[]}
     removed_links: CommentsMap  # {linkName -> reasons[]}
@@ -276,8 +280,7 @@ class TransformerResult:
     original_max_year: int  # max year in original TZDB
     generated_min_year: int  # min year in generated zonedb
     generated_max_year: int  # max year in generated zonedb
-    zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
-    link_ids: Dict[str, int]  # {linkName -> zoneHash}
+    # Data from ArduinoTransformer
     letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
     letters_map: IndexMap  # {letter -> index}
     formats_map: IndexMap  # {format -> index}
@@ -285,6 +288,7 @@ class TransformerResult:
     compressed_names: Dict[str, str]  # {zoneName -> compressedName}
     memory_map8: MemoryMap  # flash usage for AceTime, AceTimeC, 8 bits
     memory_map32: MemoryMap  # flash usage for AceTime, AceTimeC, 32 bits
+    # Data from GoTransformer
     go_letters_map: OffsetMap  # {letter -> byte_offset}
     go_formats_map: OffsetMap  # {format -> byte_offset}
     go_names_map: OffsetMap  # {name -> byte_offset}
