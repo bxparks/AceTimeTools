@@ -255,15 +255,38 @@ class MemoryMap(TypedDict, total=False):
     letters: int
     total: int
 
+# -----------------------------------------------------------------------------
+# Data types used by bufestimator.py
+# -----------------------------------------------------------------------------
+
+
+class CountAndYear(NamedTuple):
+    """A tuple that holds a count and the year which it is related to."""
+    number: int
+    year: int
+
+
+# zoneName -> CountAndYear
+BufSizeMap = Dict[str, CountAndYear]
+
+
+# -----------------------------------------------------------------------------
+# TransformerResult. Holds the various intermediate quantities consumed and
+# produced by various transformer objects.
+# -----------------------------------------------------------------------------
 
 @dataclass
 class TransformerResult:
     """Result type of Transformer.get_data().
     """
 
+    # Data from Extractor filtered through Transformer.
     zones_map: ZonesMap  # {zoneName -> ZoneEraRaw[]}
     policies_map: PoliciesMap  # {policyName -> ZoneRuleRaw[]}
     links_map: LinksMap  # {linkName -> zoneName}
+    # Data from Transformer.
+    zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
+    link_ids: Dict[str, int]  # {linkName -> zoneHash}
     removed_zones: CommentsMap  # {zoneName -> reasons[]}
     removed_policies: CommentsMap  # {policyName -> reasons[]}
     removed_links: CommentsMap  # {linkName -> reasons[]}
@@ -276,8 +299,11 @@ class TransformerResult:
     original_max_year: int  # max year in original TZDB
     generated_min_year: int  # min year in generated zonedb
     generated_max_year: int  # max year in generated zonedb
-    zone_ids: Dict[str, int]  # {zoneName -> zoneHash}
-    link_ids: Dict[str, int]  # {linkName -> zoneHash}
+    # Data from BufSizeEstimator
+    buf_sizes: BufSizeMap  # {zoneName -> CountAndYear}
+    max_buf_size: int  # max buf size over all zones and years
+    max_terminal_year: int  # max year for buf size variations
+    # Data from ArduinoTransformer
     letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
     letters_map: IndexMap  # {letter -> index}
     formats_map: IndexMap  # {format -> index}
@@ -285,6 +311,7 @@ class TransformerResult:
     compressed_names: Dict[str, str]  # {zoneName -> compressedName}
     memory_map8: MemoryMap  # flash usage for AceTime, AceTimeC, 8 bits
     memory_map32: MemoryMap  # flash usage for AceTime, AceTimeC, 32 bits
+    # Data from GoTransformer
     go_letters_map: OffsetMap  # {letter -> byte_offset}
     go_formats_map: OffsetMap  # {format -> byte_offset}
     go_names_map: OffsetMap  # {name -> byte_offset}
@@ -314,20 +341,6 @@ def merge_comments(target: CommentsMap, new: CommentsMap) -> None:
             old_reasons = set()
             target[name] = old_reasons
         old_reasons.update(new_reasons)
-
-
-# -----------------------------------------------------------------------------
-# Data types used by bufestimator.py
-# -----------------------------------------------------------------------------
-
-class CountAndYear(NamedTuple):
-    """A tuple that holds a count and the year which it is related to."""
-    number: int
-    year: int
-
-
-# zoneName -> CountAndYear
-BufSizeMap = Dict[str, CountAndYear]
 
 
 # -----------------------------------------------------------------------------
@@ -379,6 +392,7 @@ class ZoneInfoDatabase(TypedDict):
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap
     max_buf_size: int
+    max_terminal_year: int
 
     # Data from Commenter
     zones_to_policies: ZonesToPolicies
@@ -415,8 +429,6 @@ def create_zone_info_database(
     strict: bool,
     compress: bool,
     tresult: TransformerResult,
-    buf_size_map: BufSizeMap,
-    max_buf_size: int,
 ) -> ZoneInfoDatabase:
     """Return an instance of ZoneInfoDatabase from the various ingredients."""
 
@@ -462,8 +474,9 @@ def create_zone_info_database(
         'zones_to_policies': tresult.zones_to_policies,
 
         # Data from BufSizeEstimator
-        'buf_sizes': buf_size_map,
-        'max_buf_size': max_buf_size,
+        'buf_sizes': tresult.buf_sizes,
+        'max_buf_size': tresult.max_buf_size,
+        'max_terminal_year': tresult.max_terminal_year,
 
         # Data from ArduinoTransformer
         'letters_per_policy': tresult.letters_per_policy,

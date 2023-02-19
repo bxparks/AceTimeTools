@@ -230,6 +230,7 @@ var RecordContext = zoneinfo.ZoneRecordContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
 \tStartYear: {startYear},
 \tUntilYear: {untilYear},
+\tMaxTransitions: {maxTransitions},
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
 \tFormatData: FormatData,
@@ -253,6 +254,7 @@ var DataContext = zoneinfo.ZoneDataContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
 \tStartYear: {startYear},
 \tUntilYear: {untilYear},
+\tMaxTransitions: {maxTransitions},
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
 \tFormatData: FormatData,
@@ -316,6 +318,7 @@ const (
         self.tz_version = zidb['tz_version']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
+        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -870,6 +873,7 @@ const (
             dbNamespace=self.db_namespace,
             startYear=self.start_year,
             untilYear=self.until_year,
+            maxTransitions=self.max_transitions,
             numZones=num_zones,
             numLinks=num_links,
             numZonesAndLinks=num_zones_and_links,
