@@ -63,6 +63,7 @@ class CGenerator:
         self.scope = zidb['scope']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
+        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -567,6 +568,7 @@ static const char* const kAtcLetters[] = {{
 const AtcZoneContext k{self.db_namespace}ZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
+  {self.max_transitions} /*max_transitions*/,
   kAtcTzDatabaseVersion /*tzVersion*/,
   {num_fragments} /*numFragments*/,
   {num_letters} /*numLetters*/,

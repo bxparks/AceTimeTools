@@ -65,6 +65,7 @@ class ArduinoGenerator:
         self.scope = zidb['scope']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
+        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -540,6 +541,7 @@ const char* const kLetters[] = {{
 const internal::ZoneContext kZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
+  {self.max_transitions} /*maxTransitions*/,
   kTzDatabaseVersion /*tzVersion*/,
   {num_fragments} /*numFragments*/,
   {num_letters} /*numLetters*/,
