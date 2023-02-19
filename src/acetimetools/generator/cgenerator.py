@@ -566,12 +566,12 @@ static const char* const kAtcLetters[] = {{
 }};
 
 const AtcZoneContext k{self.db_namespace}ZoneContext = {{
-  {self.start_year} /*startYear*/,
-  {self.until_year} /*untilYear*/,
+  {self.start_year} /*start_year*/,
+  {self.until_year} /*until_year*/,
   {self.max_transitions} /*max_transitions*/,
-  kAtcTzDatabaseVersion /*tzVersion*/,
-  {num_fragments} /*numFragments*/,
-  {num_letters} /*numLetters*/,
+  kAtcTzDatabaseVersion /*tz_version*/,
+  {num_fragments} /*num_fragments*/,
+  {num_letters} /*num_letters*/,
   kAtcFragments /*fragments*/,
   kAtcLetters /*letters*/,
 }};
@@ -629,7 +629,7 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
   &k{self.db_namespace}ZoneContext /*zone_context*/,
   {num_eras} /*num_eras*/,
   kAtcZoneEra{zone_normalized_name} /*eras*/,
-  NULL /*targetInfo*/,
+  NULL /*target_info*/,
 }};
 
 """
@@ -752,11 +752,11 @@ static const char kAtcZoneName{link_normalized_name}[] {progmem} = \
 
 const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name} {progmem} = {{
   kAtcZoneName{link_normalized_name} /*name*/,
-  0x{link_id:08x} /*zoneId*/,
-  &k{self.db_namespace}ZoneContext /*zoneContext*/,
-  {num_eras} /*numEras*/,
+  0x{link_id:08x} /*zone_id*/,
+  &k{self.db_namespace}ZoneContext /*zone_context*/,
+  {num_eras} /*num_eras*/,
   kAtcZoneEra{zone_normalized_name} /*eras*/,
-  &k{self.db_namespace}Zone{zone_normalized_name} /*targetInfo*/,
+  &k{self.db_namespace}Zone{zone_normalized_name} /*target_info*/,
 }};
 
 """
