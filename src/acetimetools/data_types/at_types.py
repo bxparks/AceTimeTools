@@ -300,8 +300,9 @@ class TransformerResult:
     generated_min_year: int  # min year in generated zonedb
     generated_max_year: int  # max year in generated zonedb
     # Data from BufSizeEstimator
-    buf_sizes: BufSizeMap
-    max_buf_size: int
+    buf_sizes: BufSizeMap  # {zoneName -> CountAndYear}
+    max_buf_size: int  # max buf size over all zones and years
+    max_terminal_year: int  # max year for buf size variations
     # Data from ArduinoTransformer
     letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
     letters_map: IndexMap  # {letter -> index}
@@ -391,6 +392,7 @@ class ZoneInfoDatabase(TypedDict):
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap
     max_buf_size: int
+    max_terminal_year: int
 
     # Data from Commenter
     zones_to_policies: ZonesToPolicies
@@ -474,6 +476,7 @@ def create_zone_info_database(
         # Data from BufSizeEstimator
         'buf_sizes': tresult.buf_sizes,
         'max_buf_size': tresult.max_buf_size,
+        'max_terminal_year': tresult.max_terminal_year,
 
         # Data from ArduinoTransformer
         'letters_per_policy': tresult.letters_per_policy,

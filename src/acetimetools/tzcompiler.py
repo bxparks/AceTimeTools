@@ -461,6 +461,7 @@ def main() -> None:
         generated_max_year=0,
         buf_sizes={},
         max_buf_size=0,
+        max_terminal_year=0,
         zone_ids={},
         link_ids={},
         letters_per_policy={},
@@ -508,7 +509,6 @@ def main() -> None:
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     logging.info('======== Estimating transition buffer sizes')
-
     estimator = BufSizeEstimator(
         start_year=args.start_year,
         until_year=args.until_year,
