@@ -1,6 +1,15 @@
 # Changelog
 
 * Unreleased
+    * `artransformer.py`
+        * Consolidate memory stat collection for AceTime and AceTimeC.
+        * Support `generate_hires` flag for 1-minute resolutions.
+    * `cgenerator.py`
+        * Use `--db_namespace` flag to define the prefix of various `zonedb`
+          data structures.
+    * `bufestimator.py`
+        * Convert into a Transformer class.
+        * Add `max_transitions` field to the `ZoneContext` of various zonedb.
 * v1.5.0 (2023-02-13)
     * Rename `rules_delta_seconds` to `era_delta_seconds` for better
       self-documentation.
