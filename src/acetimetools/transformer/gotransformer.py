@@ -14,12 +14,14 @@ from typing import Tuple
 import logging
 from collections import OrderedDict
 
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import OffsetMap
 from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import IndexSizeMap
+from acetimetools.data_types.at_types import LinksMap
+from acetimetools.data_types.at_types import MemoryMap
+from acetimetools.data_types.at_types import OffsetMap
+from acetimetools.data_types.at_types import PoliciesMap
+from acetimetools.data_types.at_types import TransformerResult
+from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.transformer.artransformer import _to_suffix_code
 
 
@@ -69,14 +71,24 @@ class GoTransformer:
         _generate_zone_era_time_codes(tresult.zones_map)
         _generate_zone_rule_time_codes(tresult.policies_map)
 
-        tresult.go_letters_map = letters_map
-        tresult.go_formats_map = formats_map
-        tresult.go_names_map = names_map
+        memory_map = _generate_memory_map(
+            tresult.zones_map,
+            tresult.links_map,
+            tresult.policies_map,
+            names_map,
+            formats_map,
+            letters_map,
+        )
+
         tresult.go_zone_and_link_index_map = zone_and_link_index_map
         tresult.go_policy_index_size_map = policy_index_size_map
         tresult.go_rule_count = rule_count
         tresult.go_info_index_size_map = info_index_size_map
         tresult.go_era_count = era_count
+        tresult.go_names_map = names_map
+        tresult.go_formats_map = formats_map
+        tresult.go_letters_map = letters_map
+        tresult.go_memory_map = memory_map
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -265,3 +277,71 @@ def _generate_zone_rule_time_codes(policies_map: PoliciesMap) -> None:
                 rule['go_at_seconds_suffix_value']
                 + rule['go_at_seconds_remainder']
             )
+
+
+def _generate_memory_map(
+    zones_map: ZonesMap,
+    links_map: LinksMap,
+    policies_map: PoliciesMap,
+    names_map: OffsetMap,
+    formats_map: OffsetMap,
+    letters_map: OffsetMap,
+) -> MemoryMap:
+
+    num_rules = sum([len(rules) for _, rules in policies_map.items()])
+    num_policies = len(policies_map)
+    num_eras = sum([len(eras) for _, eras in zones_map.items()])
+    num_zones = len(zones_map)
+    num_links = len(links_map)
+
+    rule_chunk_size = 12
+    rule_size = num_rules * rule_chunk_size
+
+    policy_chunk_size = 4
+    policy_size = num_policies * policy_chunk_size
+
+    era_chunk_size = 14
+    era_size = num_eras * era_chunk_size
+
+    info_chunk_size = 12
+    zone_size = num_zones * info_chunk_size
+    link_size = num_links * info_chunk_size
+
+    registry_size = 0
+    fragment_size = 0
+
+    name_size = sum([len(name) for name, _ in names_map.items()])
+    name_size += 2 * len(names_map)  # NameOffsets[] array
+
+    format_size = sum([len(format) for format, _ in formats_map.items()])
+    format_size += 2 * len(formats_map)  # FormatOffsets[] array
+
+    letter_size = sum([len(letter) for letter, _ in letters_map.items()])
+    letter_size += 1 * len(letters_map)  # LetterOffsets[] array
+
+    total_size = (
+        rule_size
+        + policy_size
+        + era_size
+        + zone_size
+        + link_size
+        + registry_size
+        + name_size
+        + format_size
+        + letter_size
+    )
+
+    return {
+        'rules': rule_size,
+        'policies': policy_size,
+        'eras': era_size,
+        'infos': zone_size,
+        'links': link_size,
+        'registry': registry_size,
+        'names': name_size,
+        'names_original': name_size,
+        'fragments': fragment_size,
+        'formats': format_size,
+        'letters': letter_size,
+        'total': total_size,
+    }

@@ -320,6 +320,7 @@ class TransformerResult:
     go_rule_count: int  # total num rules across all policies
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
     go_era_count: int  # total num eras across all zone infos
+    go_memory_map: MemoryMap  # memory usage for AceTimeGo
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:
@@ -415,6 +416,7 @@ class ZoneInfoDatabase(TypedDict):
     go_rule_count: int  # total num rules across all policies
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
     go_era_count: int  # total num eras across all zone infos
+    go_memory_map: MemoryMap
 
 
 def create_zone_info_database(
@@ -496,6 +498,7 @@ def create_zone_info_database(
         'go_rule_count': tresult.go_rule_count,
         'go_info_index_size_map': tresult.go_info_index_size_map,
         'go_era_count': tresult.go_era_count,
+        'go_memory_map': tresult.go_memory_map,
     }
 
 

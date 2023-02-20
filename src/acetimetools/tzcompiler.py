@@ -479,6 +479,7 @@ def main() -> None:
         go_rule_count=0,
         go_info_index_size_map={},
         go_era_count=0,
+        go_memory_map={},
     )
 
     # Transform the TZ zones and rules

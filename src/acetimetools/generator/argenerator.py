@@ -182,7 +182,7 @@ class ArduinoGenerator:
 //   Formats: {formats8}
 //   Letters: {letters8}
 //   Fragments: {fragments8}
-//   Name: {names8} (original: {names_original8})
+//   Names: {names8} (original: {names_original8})
 //   TOTAL: {total8}
 //
 // Memory (32-bits):
@@ -195,7 +195,7 @@ class ArduinoGenerator:
 //   Formats: {formats32}
 //   Letters: {letters32}
 //   Fragments: {fragments32}
-//   Name: {names32} (original: {names_original32})
+//   Names: {names32} (original: {names_original32})
 //   TOTAL: {total32}
 //
 // DO NOT EDIT
