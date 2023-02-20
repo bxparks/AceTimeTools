@@ -335,7 +335,7 @@ def _generate_memory_map(
         'rules': rule_size,
         'policies': policy_size,
         'eras': era_size,
-        'infos': zone_size,
+        'zones': zone_size,
         'links': link_size,
         'registry': registry_size,
         'names': name_size,

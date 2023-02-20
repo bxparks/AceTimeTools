@@ -131,7 +131,7 @@ class CGenerator:
         rules8 = self.memory_map8['rules']
         policies8 = self.memory_map8['policies']
         eras8 = self.memory_map8['eras']
-        infos8 = self.memory_map8['infos']
+        zones8 = self.memory_map8['zones']
         links8 = self.memory_map8['links']
         registry8 = self.memory_map8['registry']
         names8 = self.memory_map8['names']
@@ -144,7 +144,7 @@ class CGenerator:
         rules32 = self.memory_map32['rules']
         policies32 = self.memory_map32['policies']
         eras32 = self.memory_map32['eras']
-        infos32 = self.memory_map32['infos']
+        zones32 = self.memory_map32['zones']
         links32 = self.memory_map32['links']
         registry32 = self.memory_map32['registry']
         names32 = self.memory_map32['names']
@@ -175,7 +175,7 @@ class CGenerator:
 //   Rules: {rules8}
 //   Policies: {policies8}
 //   Eras: {eras8}
-//   Infos: {infos8}
+//   Zones: {zones8}
 //   Links: {links8}
 //   Registry: {registry8}
 //   Formats: {formats8}
@@ -188,7 +188,7 @@ class CGenerator:
 //   Rules: {rules32}
 //   Policies: {policies32}
 //   Eras: {eras32}
-//   Infos: {infos32}
+//   Zones: {zones32}
 //   Links: {links32}
 //   Registry: {registry32}
 //   Formats: {formats32}

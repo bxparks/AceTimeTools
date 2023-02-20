@@ -1,9 +1,10 @@
 # Changelog
 
 * Unreleased
-    * `artransformer.py`
+    * Memory stats
         * Consolidate memory stat collection for AceTime and AceTimeC.
         * Support `generate_hires` flag for 1-minute resolutions.
+        * Add Memory stats for AceTimeGo.
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`
           data structures.

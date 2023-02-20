@@ -245,7 +245,7 @@ class MemoryMap(TypedDict, total=False):
     rules: int
     policies: int
     eras: int
-    infos: int
+    zones: int
     links: int
     registry: int
     names: int

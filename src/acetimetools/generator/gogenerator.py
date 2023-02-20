@@ -385,7 +385,7 @@ const (
         rules = self.memory_map['rules']
         policies = self.memory_map['policies']
         eras = self.memory_map['eras']
-        infos = self.memory_map['infos']
+        zones = self.memory_map['zones']
         links = self.memory_map['links']
         registry = self.memory_map['registry']
         names = self.memory_map['names']
@@ -415,7 +415,7 @@ const (
 //   Rules: {rules}
 //   Policies: {policies}
 //   Eras: {eras}
-//   Zones: {infos}
+//   Zones: {zones}
 //   Links: {links}
 //   Registry: {registry}
 //   Formats: {formats}

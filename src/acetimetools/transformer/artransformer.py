@@ -242,10 +242,10 @@ class ArduinoTransformer:
                     )
 
     def _generate_memory_map(self, sizes: SizeofMap) -> MemoryMap:
-        num_infos = len(self.zones_map)
+        num_zones = len(self.zones_map)
         num_links = len(self.links_map)
         num_policies = len(self.policies_map)
-        num_zones_and_links = num_infos + num_links
+        num_zones_and_links = num_zones + num_links
 
         # Policies
         num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
@@ -255,7 +255,7 @@ class ArduinoTransformer:
         # Zones
         num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
         era_size = sizes['era'] * num_eras
-        info_size = sizes['info'] * num_infos
+        zone_size = sizes['info'] * num_zones
 
         # Links reuse the ZoneEras from the target Zone.
         link_size = sizes['info'] * num_links
@@ -294,7 +294,7 @@ class ArduinoTransformer:
             rule_size
             + policy_size
             + era_size
-            + info_size
+            + zone_size
             + link_size
             + registry_size
             + name_size
@@ -307,7 +307,7 @@ class ArduinoTransformer:
             'rules': rule_size,
             'policies': policy_size,
             'eras': era_size,
-            'infos': info_size,
+            'zones': zone_size,
             'links': link_size,
             'registry': registry_size,
             'names': name_size,
