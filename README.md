@@ -54,34 +54,26 @@ Python packages     Python files/classes/data
 extractor            Extractor.parse()
   |                       |     (PoliciesMap, ZonesMap, LinksMap)
   |                       |
-  +------>                v     (TransformerResult)
-  |                 Transformer.transform()
+  +------>                v
+  |                 Transformer
   |                       |
-  |                       |     (TransformerResult)
-transformer               v
-  |                 ArduinoTransformer.transform()
-  |                       | \   (TransformerResult)
-  +------>                |  \
-  |                       |   v     (ZonesMap, PoliciesMap)
-  |                       |  BufSizeEstimator.calculate_buf_size_map()
-  |                       |                 |
-  |                       |                 v    (ZonesMap, PoliciesMap)
-  |                       |         ZoneInfoInliner.generate_zonedb()
-  |                       |                 |    (ZoneInfoMap, ZonePolicyMap)
-AceTimePython/            |                 v
-zone_processor            |     BufSizeEstimator._calculate_buf_sizes_per_zone()
-  |                       |           /     \
-  |                       |          /       v
-  |                       |         /       ZoneProcessor.get_buffer_sizes()
-  |                       |        /        /
-  |                       |       /        v  (BufSizeMap)
-  |                       |      /  BufSizeEstimator.calculate_max_buf_size()
-  |                       |     /      / (int)
-  |                       |    /      /
-  +------>                |   /      /
-  |                       v  v      v
+  |                       |
+  |                       v
+  |               ArduinoTransformer
+  |                       |
+  |                       v
+  |                BufSizeEstimator <---> AceTimePython/
+transformers              |               zone_processor
+  |                       v
+  |                   Commenter
+  |                       |
+  |                       v
+  |                 GoTransformer
+  |                       |
+  +------>                |
+  |                       v
   |             create_zone_info_database()
-data_types                |     (ZoneInfoDatabase)
+data_types                |
   |                       v
   |                ZoneInfoDatabase
   |                 /     |     \
