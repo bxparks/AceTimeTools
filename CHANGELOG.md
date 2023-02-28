@@ -1,16 +1,26 @@
 # Changelog
 
 * Unreleased
-    * Memory stats
-        * Consolidate memory stat collection for AceTime and AceTimeC.
-        * Support `generate_hires` flag for 1-minute resolutions.
-        * Add Memory stats for AceTimeGo.
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`
           data structures.
+        * Consolidate memory stat collection for AceTime and AceTimeC.
+        * Support `generate_hires` flag for 1-minute resolutions.
     * `bufestimator.py`
         * Convert into a Transformer class.
         * Add `max_transitions` field to the `ZoneContext` of various zonedb.
+    * `gogenerator.py`
+        * Print memory stats in the header of generated files.
+    * Change various internal sentinel values.
+        * Change `INVALID_YEAR` to -32768 from -1
+        * Change `MAX_UNTIL_YEAR` to 32767 from 10000
+        * Rename `MAX_YEAR` to `MAX_TO_YEAR`.
+        * Change `MAX_TO_YEAR` from 9999 to 32766.
+    * Add `--skip_bufestimator`
+        * Allows generation of zonedb files without dependence on the
+          AceTimePython project.
+        * Useful when `AceTimePython/zone_processor.py` code becomes temporarily
+          broken during development.
 * v1.5.0 (2023-02-13)
     * Rename `rules_delta_seconds` to `era_delta_seconds` for better
       self-documentation.

@@ -370,6 +370,13 @@ def main() -> None:
         default='',
     )
 
+    # Skip buffer size estimation, avoid circular dependency to AceTimePython.
+    parser.add_argument(
+        '--skip_bufestimator',
+        help='Skip buffer size estimator',
+        action='store_true',
+    )
+
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -509,14 +516,17 @@ def main() -> None:
         logging.info('======== Skipping Arduino transformations')
 
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
-    logging.info('======== Estimating transition buffer sizes')
-    estimator = BufSizeEstimator(
-        start_year=args.start_year,
-        until_year=args.until_year,
-        ignore_buf_size_too_large=args.ignore_buf_size_too_large,
-    )
-    estimator.transform(tresult)
-    estimator.print_summary(tresult)
+    if args.skip_bufestimator:
+        logging.info('======== Skipping buffer size estimation')
+    else:
+        logging.info('======== Estimating transition buffer sizes')
+        estimator = BufSizeEstimator(
+            start_year=args.start_year,
+            until_year=args.until_year,
+            ignore_buf_size_too_large=args.ignore_buf_size_too_large,
+        )
+        estimator.transform(tresult)
+        estimator.print_summary(tresult)
 
     # Generate the fields for the Arduino zoneinfo data.
     logging.info('======== Updating comments')

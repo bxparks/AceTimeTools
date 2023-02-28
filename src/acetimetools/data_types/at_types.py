@@ -30,26 +30,26 @@ used by multiple packages.
 EPOCH_YEAR: int = 2000
 
 # Indicate +Infinity UNTIL year (represented by empty field).
-MAX_UNTIL_YEAR: int = 10000
+MAX_UNTIL_YEAR: int = 32767
 
 # Tiny (int8_t) version of MAX_UNTIL_YEAR_TINY.
 MAX_UNTIL_YEAR_TINY: int = 127
 
-# Indicate max TO or FROM year.
-MAX_YEAR: int = MAX_UNTIL_YEAR - 1
+# Indicate max TO year.
+MAX_TO_YEAR: int = MAX_UNTIL_YEAR - 1
 
 # Tiny (int8_t) version of MAX_YEAR.
-MAX_YEAR_TINY: int = MAX_UNTIL_YEAR_TINY - 1
+MAX_TO_YEAR_TINY: int = MAX_UNTIL_YEAR_TINY - 1
 
-# Marker year to indicate -Infinity year.
-MIN_YEAR: int = 0
+# Marker year to indicate -Infinity year for 16-bit zonedb.
+MIN_YEAR: int = -32767
 
 # Tiny (int8_t) version of MIN_YEAR. Can't be -128 because that's
 # used for INVALID_YEAR_TINY.
 MIN_YEAR_TINY: int = -127
 
-# Indicate an invalid year.
-INVALID_YEAR: int = -1
+# Indicate an invalid year, guaranteed to not appear in a zonedb file.
+INVALID_YEAR: int = -32768
 
 # Tiny (int8_t) version of INVALID_YEAR.
 INVALID_YEAR_TINY: int = -128
@@ -73,7 +73,7 @@ class ZoneRuleRaw(TypedDict, total=False):
     Rule    US      2007    max   -    Nov  Sun>=1  2:00    0       S
     """
     from_year: int  # from year
-    to_year: int  # to year, 1 to MAX_YEAR (9999) means 'max'
+    to_year: int  # to year, 1 to MAX_TO_YEAR (9999) means 'max'
     in_month: int  # month index (1-12)
     on_day: str  # 'lastSun' or 'Sun>=2', or 'dayOfMonth'
     at_time: str  # hour at which to transition to and from DST

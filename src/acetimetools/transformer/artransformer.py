@@ -19,8 +19,8 @@ from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import MemoryMap
 from acetimetools.data_types.at_types import SizeofMap
 from acetimetools.data_types.at_types import EPOCH_YEAR
-from acetimetools.data_types.at_types import MAX_YEAR
-from acetimetools.data_types.at_types import MAX_YEAR_TINY
+from acetimetools.data_types.at_types import MAX_TO_YEAR
+from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
 from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR_TINY
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
@@ -380,8 +380,8 @@ def _to_tiny_year(year: int) -> int:
     """Convert 16-bit year into 8-bit year, taking into account special
     values for MIN and MAX years.
     """
-    if year == MAX_YEAR:
-        return MAX_YEAR_TINY
+    if year == MAX_TO_YEAR:
+        return MAX_TO_YEAR_TINY
     elif year == MIN_YEAR:
         return MIN_YEAR_TINY
     else:

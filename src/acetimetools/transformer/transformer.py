@@ -25,7 +25,7 @@ from acetimetools.data_types.at_types import add_comment
 from acetimetools.data_types.at_types import merge_comments
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR
-from acetimetools.data_types.at_types import MAX_YEAR
+from acetimetools.data_types.at_types import MAX_TO_YEAR
 
 INVALID_SECONDS = 999999  # 277h46m69s
 
@@ -1741,8 +1741,8 @@ def find_earliest_subsequent_rules(
     new year, which does not get picked up without this scan.
 
     It's likely that any such Rule would get picked up by the normal
-    find_matching_rules() of a Zone Era that stretched to MAX_YEAR, but I'm not
-    100% sure that that's true, and there might be a weird edge case. This
+    find_matching_rules() of a Zone Era that stretched to MAX_TO_YEAR, but I'm
+    not 100% sure that that's true, and there might be a weird edge case. This
     method helps prevent that edge case.
 
     Similar to find_latest_prior_rules(), we match all Rules in a given month,
@@ -1750,7 +1750,7 @@ def find_earliest_subsequent_rules(
     """
     candidates = []
     # sentinel date later than all real Rules
-    candidate_date = (MAX_YEAR, 13)
+    candidate_date = (MAX_TO_YEAR, 13)
     for rule in rules:
         rule_year = rule['to_year']
         rule_month = rule['in_month']
@@ -1765,10 +1765,10 @@ def find_earliest_subsequent_rules(
 
 
 def is_year_tiny(year: int) -> bool:
-    """Determine if year fits in an int8_t field. MAX_YEAR(9999) is a marker for
-    'max'.
+    """Determine if year fits in an int8_t field. MAX_TO_YEAR(9999) is a marker
+    for 'max'.
     """
-    return year >= 1872 and (year == MAX_YEAR or year <= 2127)
+    return year >= 1872 and (year == MAX_TO_YEAR or year <= 2127)
 
 
 def calc_day_of_month(
@@ -2003,7 +2003,7 @@ def _detect_tzdb_years(
     """Scan the Zone.UNTIL and RULE.FROM fields and determine the min and max
     years.
     """
-    min_year = MAX_YEAR
+    min_year = MAX_TO_YEAR
     max_year = MIN_YEAR
     for zone_name, eras in zones_map.items():
         for era in eras:
@@ -2020,7 +2020,7 @@ def _detect_tzdb_years(
             from_year = rule['from_year']
             if from_year < min_year:
                 min_year = from_year
-            if from_year != MAX_YEAR and from_year > max_year:
+            if from_year != MAX_TO_YEAR and from_year > max_year:
                 max_year = from_year
 
     return min_year, max_year

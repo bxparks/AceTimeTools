@@ -77,7 +77,7 @@ from acetimetools.data_types.at_types import (
     ZonesMap,
     LinksMap,
     MAX_UNTIL_YEAR,
-    MAX_YEAR,
+    MAX_TO_YEAR,
 )
 
 
@@ -337,7 +337,7 @@ def _process_rule_line(line: str) -> ZoneRuleRaw:
     if to_year_string == 'only':
         to_year: int = from_year
     elif to_year_string == 'max':
-        to_year = MAX_YEAR
+        to_year = MAX_TO_YEAR
     else:
         to_year = int(to_year_string)
 
