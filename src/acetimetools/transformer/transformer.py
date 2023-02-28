@@ -1212,7 +1212,7 @@ class Transformer:
                 rules.insert(0, anchor_rule)
                 add_comment(
                     notable_policies, name,
-                    "Added anchor rule at year 0")
+                    f"Added anchor rule at year {MIN_YEAR}")
 
         merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
@@ -1238,10 +1238,6 @@ class Transformer:
         # Find the rule that generates the earliest transition. The `rules`
         # array will never be empty, so this will always produce a non-empty
         # anchor_info['rule'].
-        #
-        # NOTE: Why do I do this? It looks like this earliest Rule is copied,
-        # but most (all?) of its fields are clobbered, so I can't see why this
-        # needs to be done... The only thing preserved seems to be 'letter'.
         anchor_info: AnchorInfo = {
             'earliestDate': (MAX_UNTIL_YEAR, 12, 31),
             'rule': None,
@@ -1260,6 +1256,14 @@ class Transformer:
                 anchor_info['earliestDate'] = rule_date
                 anchor_info['rule'] = rule
 
+        # Create a copy of that Rule, preserving the SAVE, LETTER, and original
+        # `raw_line`, but clobbering the FROM field to MIN_YEAR so that it is
+        # guaranteed to be the first matching Rule.
+        #
+        # The alternative was to avoid creating a copy, but simply set the
+        # original's `from_year` to MIN_YEAR. But that produced an error in the
+        # _check_transitions_sorted() method in zone_processor.py. I'm not
+        # sure why.
         assert anchor_info['rule'] is not None
         anchor_rule = anchor_info['rule'].copy()
         anchor_rule['from_year'] = MIN_YEAR
