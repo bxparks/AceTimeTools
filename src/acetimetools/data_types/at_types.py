@@ -89,8 +89,8 @@ class ZoneRuleRaw(TypedDict, total=False):
     at_seconds_truncated: int  # at_seconds truncated to granularity
     delta_seconds: int  # offset from Standard time in seconds
     delta_seconds_truncated: int  # delta_seconds truncated to granularity
-    used: Optional[bool]  # whether or not the rule is used by a zone
-    anchor: Optional[bool]  # True if this is an Anchor rule
+    used: bool  # whether or not the rule is used by a zone
+    anchor: bool  # True if this is an Anchor rule
 
     # Derived from above by artransformer.py
     from_year_tiny: int  # (from_year - 2000), w/ special cases for MIN and MAX
