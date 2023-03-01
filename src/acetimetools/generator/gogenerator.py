@@ -318,7 +318,6 @@ const (
         self.tz_version = zidb['tz_version']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
-        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -333,6 +332,9 @@ const (
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.estimator_min_year = zidb['estimator_min_year']
+        self.estimator_max_year = zidb['estimator_max_year']
+        self.max_buf_size = zidb['max_buf_size']
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
         self.letters_map = zidb['go_letters_map']
@@ -408,8 +410,10 @@ const (
 // Supported Zones: {num_zones_and_links} ({num_zones} zones, {num_links} links)
 // Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
-// Original Years: [{self.original_min_year},{self.original_max_year}]
+// Original Years:  [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
+// Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
+// Max Buffer Size: {self.max_buf_size}
 //
 // Memory:
 //   Rules: {rules}
@@ -899,7 +903,7 @@ const (
             dbNamespace=self.db_namespace,
             startYear=self.start_year,
             untilYear=self.until_year,
-            maxTransitions=self.max_transitions,
+            maxTransitions=self.max_buf_size,
             numZones=num_zones,
             numLinks=num_links,
             numZonesAndLinks=num_zones_and_links,

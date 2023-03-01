@@ -65,7 +65,6 @@ class ArduinoGenerator:
         self.scope = zidb['scope']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
-        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -80,6 +79,8 @@ class ArduinoGenerator:
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.estimator_min_year = zidb['estimator_min_year']
+        self.estimator_max_year = zidb['estimator_max_year']
         self.buf_sizes = zidb['buf_sizes']
         self.max_buf_size = zidb['max_buf_size']
         self.zone_ids = zidb['zone_ids']
@@ -169,8 +170,10 @@ class ArduinoGenerator:
 // Supported Zones: {num_zones_and_links} ({num_zones} zones, {num_links} links)
 // Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
-// Original Years: [{self.original_min_year},{self.original_max_year}]
+// Original Years:  [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
+// Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
+// Max Buffer Size: {self.max_buf_size}
 //
 // Memory (8-bits):
 //   Rules: {rules8}
@@ -541,7 +544,7 @@ const char* const kLetters[] = {{
 const internal::ZoneContext kZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
-  {self.max_transitions} /*maxTransitions*/,
+  {self.max_buf_size} /*maxTransitions*/,
   kTzDatabaseVersion /*tzVersion*/,
   {num_fragments} /*numFragments*/,
   {num_letters} /*numLetters*/,

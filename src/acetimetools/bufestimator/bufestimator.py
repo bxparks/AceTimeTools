@@ -88,7 +88,8 @@ class BufSizeEstimator:
         # Populate the TransformerResult
         tresult.buf_sizes = buf_sizes
         tresult.max_buf_size = max_buf_size
-        tresult.max_terminal_year = max_terminal_year
+        tresult.estimator_min_year = start_year
+        tresult.estimator_max_year = max_terminal_year
 
     def print_summary(self, tresult: TransformerResult) -> None:
         pass
