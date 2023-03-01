@@ -34,272 +34,6 @@ class GoGenerator:
     used by the ZoneProcessor class.
     """
 
-    ZONE_POLICIES_FILE = """\
-package {dbNamespace}
-
-import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
-)
-
-// ---------------------------------------------------------------------------
-// String constants.
-// ---------------------------------------------------------------------------
-
-const (
-\t// All ZoneRule.Letter entries concatenated together.
-\tLetterData = "{letterData}"
-)
-
-var (
-\t// Byte offset into LetterData for each index. The actual Letter string
-\t// at index `i` given by the `ZoneRule.Letter` field is
-\t// `LetterData[LetterOffsets[i]:LetterOffsets[i+1]]`.
-\tLetterOffsets = []uint8{{
-{letterOffsets}
-\t}}
-)
-
-// ---------------------------------------------------------------------------
-// ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
-// from all ZonePolicyRecords.
-//
-// Supported zone policies: {numPolicies}
-// numRules: {numRules}
-// ---------------------------------------------------------------------------
-
-var ZoneRuleRecords = []zoneinfo.ZoneRuleRecord{{
-{zoneRules}
-}}
-
-const ZoneRuleCount = {zoneRuleCount}
-
-const ZoneRuleChunkSize = {zoneRuleChunkSize}
-
-// ZoneRulesData contains the ZoneRuleRecords data as a hex encoded string.
-const ZoneRulesData = {zoneRulesData}
-
-// ---------------------------------------------------------------------------
-// ZonePolicyRecords contain indexes into the ZoneRuleRecords.
-// Supported zone policies: {numPolicies}
-// ---------------------------------------------------------------------------
-
-var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
-{zonePolicies}
-}}
-
-const ZonePolicyCount = {zonePolicyCount}
-
-const ZonePolicyChunkSize = {zonePolicyChunkSize}
-
-// ZonePoliciesData contains the ZonePolicyRecords data as a hex encoded string.
-const ZonePoliciesData = {zonePoliciesData}
-
-// ---------------------------------------------------------------------------
-// Unsupported zone policies: {numRemovedPolicies}
-// ---------------------------------------------------------------------------
-
-{removedPolicyItems}
-
-// ---------------------------------------------------------------------------
-// Notable zone policies: {numNotablePolicies}
-// ---------------------------------------------------------------------------
-
-{notablePolicyItems}
-
-"""
-
-    ZONE_INFOS_FILE = """\
-package {dbNamespace}
-
-import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
-)
-
-// ---------------------------------------------------------------------------
-// String constants.
-// ---------------------------------------------------------------------------
-
-const (
-\t// All ZoneEra.Format entries concatenated together.
-\tFormatData = "{formatData}"
-
-\t// All ZoneInfo.Name entries concatenated togther.
-\tNameData = "{nameData}"
-)
-
-var (
-\t// Byte offset into FormatData for each index. The actual Format string
-\t// at index `i` given by the `ZoneEra.Format` field is
-\t// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
-\tFormatOffsets = []uint16{{
-{formatOffsets}
-}}
-
-\t// Byte offset into NameData for each index. The actual Letter string
-\t// at index `i` given by the `ZoneRule.Name` field is
-\t// `NameData[NameOffsets[i]:NameOffsets[i+1]]`.
-\tNameOffsets = []uint16{{
-{nameOffsets}
-\t}}
-)
-
-// ---------------------------------------------------------------------------
-// ZoneEraRecords is an array of zoneinfo.ZoneEraRecord items concatenated
-// together.
-//
-// Supported zones: {numZones}
-// numEras: {numEras}
-// ---------------------------------------------------------------------------
-
-var ZoneEraRecords = []zoneinfo.ZoneEraRecord{{
-{zoneEras}
-}}
-
-const ZoneEraCount = {zoneEraCount}
-
-const ZoneEraChunkSize = {zoneEraChunkSize}
-
-// ZoneErasData contains the ZoneEraRecords data as a hex encoded string.
-const ZoneErasData = {zoneErasData}
-
-// ---------------------------------------------------------------------------
-// ZoneInfoRecords is an array of zoneinfo.ZoneInfoRecord items concatenated
-// together.
-//
-// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
-// ---------------------------------------------------------------------------
-
-var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
-{zoneInfos}
-}}
-
-const ZoneInfoCount = {zoneInfoCount}
-
-const ZoneInfoChunkSize = {zoneInfoChunkSize}
-
-// ZoneInfosData contains the ZoneInfoRecords data as a hex encoded string.
-const ZoneInfosData = {zoneInfosData}
-
-// ---------------------------------------------------------------------------
-// Unsupported zones: {numRemovedZones}
-// ---------------------------------------------------------------------------
-
-{removedInfoItems}
-
-// ---------------------------------------------------------------------------
-// Notable zones: {numNotableInfos}
-// ---------------------------------------------------------------------------
-
-{notableInfoItems}
-
-// ---------------------------------------------------------------------------
-// Unsuported links: {numRemovedLinks}
-// ---------------------------------------------------------------------------
-
-{removedLinkItems}
-
-// ---------------------------------------------------------------------------
-// Notable links: {numNotableLinks}
-// ---------------------------------------------------------------------------
-
-{notableLinkItems}
-"""
-
-    ZONE_REGISTRY_FILE = """\
-package {dbNamespace}
-
-import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
-)
-
-// ---------------------------------------------------------------------------
-// Zone Context
-// ---------------------------------------------------------------------------
-
-const TzDatabaseVersion string = "{tz_version}"
-
-// RecordContext contains references to the various arrays of ZoneRuleRecord,
-// ZonePolicyRecord, ZoneEraRecord, and ZoneInfoRecord objects, as well as the
-// strings used by those objects.
-//
-// The `acetime` package uses the encoded XxxData objects, not the XxxRecord
-// objects referenced here. These XxxRecord objects are used only for testing
-// purposes, to verify that the XxxData objects were properly generated, and can
-// be read back and reconstructed to be identical to the XxxRecord objects.
-var RecordContext = zoneinfo.ZoneRecordContext{{
-\tTzDatabaseVersion: TzDatabaseVersion,
-\tStartYear: {startYear},
-\tUntilYear: {untilYear},
-\tMaxTransitions: {maxTransitions},
-\tLetterData: LetterData,
-\tLetterOffsets: LetterOffsets,
-\tFormatData: FormatData,
-\tFormatOffsets: FormatOffsets,
-\tNameData: NameData,
-\tNameOffsets: NameOffsets,
-\tZoneRuleRecords: ZoneRuleRecords,
-\tZonePolicyRecords: ZonePolicyRecords,
-\tZoneEraRecords: ZoneEraRecords,
-\tZoneInfoRecords: ZoneInfoRecords,
-}}
-
-// DataContext contains references to various XxxData objects and strings. These
-// are the binary encoded versions of the various XxxRecord objects. This object
-// is passed to the ZoneManager.
-//
-// The encoding to a binary string is performed because the Go language is able
-// to treat strings as constants, and the TinyGo compiler can place them in
-// flash memory, saving tremendous amounts of random memory.
-var DataContext = zoneinfo.ZoneDataContext{{
-\tTzDatabaseVersion: TzDatabaseVersion,
-\tStartYear: {startYear},
-\tUntilYear: {untilYear},
-\tMaxTransitions: {maxTransitions},
-\tLetterData: LetterData,
-\tLetterOffsets: LetterOffsets,
-\tFormatData: FormatData,
-\tFormatOffsets: FormatOffsets,
-\tNameData: NameData,
-\tNameOffsets: NameOffsets,
-\tZoneRuleChunkSize: ZoneRuleChunkSize,
-\tZonePolicyChunkSize: ZonePolicyChunkSize,
-\tZoneEraChunkSize: ZoneEraChunkSize,
-\tZoneInfoChunkSize: ZoneInfoChunkSize,
-\tZoneRuleCount: ZoneRuleCount,
-\tZonePolicyCount: ZonePolicyCount,
-\tZoneEraCount: ZoneEraCount,
-\tZoneInfoCount: ZoneInfoCount,
-\tZoneRulesData: ZoneRulesData,
-\tZonePoliciesData: ZonePoliciesData,
-\tZoneErasData: ZoneErasData,
-\tZoneInfosData: ZoneInfosData,
-}}
-
-// ---------------------------------------------------------------------------
-// Zone IDs. Unique stable uint32 identifier for each zone which can be given to
-// ZoneManager.NewTimeZoneFromID(). Useful for microcontroller environments
-// where saving variable length strings is more difficult than a fixed width
-// integer.
-//
-// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
-// ---------------------------------------------------------------------------
-
-const (
-{zoneAndLinkIds}
-)
-
-// ---------------------------------------------------------------------------
-// Zone Indexes. Index into the ZoneInfoRecords array. Intended for unit tests
-// which need direct access to the zoneinfo.ZoneInfo struct.
-//
-// Total: {numZonesAndLinks} ({numZones} zones, {numLinks} links)
-// ---------------------------------------------------------------------------
-
-const (
-{zoneAndLinkIndexes}
-)
-"""
-
     ZONE_INFOS_FILE_NAME = 'zone_infos.go'
     ZONE_POLICIES_FILE_NAME = 'zone_policies.go'
     ZONE_REGISTRY_FILE_NAME = 'zone_registry.go'
@@ -318,7 +52,6 @@ const (
         self.tz_version = zidb['tz_version']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']
-        self.max_transitions = zidb['max_buf_size']
         self.zones_map = zidb['zones_map']
         self.links_map = zidb['links_map']
         self.policies_map = zidb['policies_map']
@@ -333,6 +66,9 @@ const (
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.estimator_min_year = zidb['estimator_min_year']
+        self.estimator_max_year = zidb['estimator_max_year']
+        self.max_buf_size = zidb['max_buf_size']
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
         self.letters_map = zidb['go_letters_map']
@@ -408,8 +144,10 @@ const (
 // Supported Zones: {num_zones_and_links} ({num_zones} zones, {num_links} links)
 // Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
-// Original Years: [{self.original_min_year},{self.original_max_year}]
+// Original Years:  [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
+// Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
+// Max Buffer Size: {self.max_buf_size}
 //
 // Memory:
 //   Rules: {rules}
@@ -458,35 +196,79 @@ const (
             [x[1] for x in self.letters_map.values()]
         )
 
-        num_zones = len(self.zones_map)
-        num_links = len(self.links_map)
-        num_zones_and_links = len(self.zones_and_links)
-        num_removed_zones = len(self.removed_zones)
-        num_removed_links = len(self.removed_links)
-        return self._generate_header() + self.ZONE_POLICIES_FILE.format(
-            dbNamespace=self.db_namespace,
-            numZones=num_zones,
-            numLinks=num_links,
-            numZonesAndLinks=num_zones_and_links,
-            numRemovedZones=num_removed_zones,
-            numRemovedLinks=num_removed_links,
-            numPolicies=len(self.policies_map),
-            numRules=self.num_rules,
-            zoneRules=zone_rules_string,
-            zoneRulesData=zone_rules_data_string,
-            zoneRuleChunkSize=zone_rule_chunk_size,
-            zoneRuleCount=zone_rule_count,
-            zonePolicies=zone_policies_string,
-            zonePoliciesData=zone_policies_data_string,
-            zonePolicyChunkSize=zone_policy_chunk_size,
-            zonePolicyCount=zone_policy_count,
-            numRemovedPolicies=len(self.removed_policies),
-            removedPolicyItems=removed_policy_items,
-            numNotablePolicies=len(self.notable_policies),
-            notablePolicyItems=notable_policy_items,
-            letterData=letter_data,
-            letterOffsets=letter_offsets,
-        )
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// String constants.
+// ---------------------------------------------------------------------------
+
+const (
+\t// All ZoneRule.Letter entries concatenated together.
+\tLetterData = "{letter_data}"
+)
+
+var (
+\t// Byte offset into LetterData for each index. The actual Letter string
+\t// at index `i` given by the `ZoneRule.Letter` field is
+\t// `LetterData[LetterOffsets[i]:LetterOffsets[i+1]]`.
+\tLetterOffsets = []uint8{{
+{letter_offsets}
+\t}}
+)
+
+// ---------------------------------------------------------------------------
+// ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
+// from all ZonePolicyRecords.
+//
+// Supported zone policies: {len(self.policies_map)}
+// numRules: {self.num_rules}
+// ---------------------------------------------------------------------------
+
+var ZoneRuleRecords = []zoneinfo.ZoneRuleRecord{{
+{zone_rules_string}
+}}
+
+const ZoneRuleCount = {zone_rule_count}
+
+const ZoneRuleChunkSize = {zone_rule_chunk_size}
+
+// ZoneRulesData contains the ZoneRuleRecords data as a hex encoded string.
+const ZoneRulesData = {zone_rules_data_string}
+
+// ---------------------------------------------------------------------------
+// ZonePolicyRecords contain indexes into the ZoneRuleRecords.
+// Supported zone policies: {len(self.policies_map)}
+// ---------------------------------------------------------------------------
+
+var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
+{zone_policies_string}
+}}
+
+const ZonePolicyCount = {zone_policy_count}
+
+const ZonePolicyChunkSize = {zone_policy_chunk_size}
+
+// ZonePoliciesData contains the ZonePolicyRecords data as a hex encoded string.
+const ZonePoliciesData = {zone_policies_data_string}
+
+// ---------------------------------------------------------------------------
+// Unsupported zone policies: {len(self.removed_policies)}
+// ---------------------------------------------------------------------------
+
+{removed_policy_items}
+
+// ---------------------------------------------------------------------------
+// Notable zone policies: {len(self.notable_policies)}
+// ---------------------------------------------------------------------------
+
+{notable_policy_items}
+
+"""
 
     def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
         zone_rules_string = ''
@@ -663,35 +445,103 @@ const (
         num_zones_and_links = len(self.zones_and_links)
         num_removed_zones = len(self.removed_zones)
         num_removed_links = len(self.removed_links)
-        return self._generate_header() + self.ZONE_INFOS_FILE.format(
-            dbNamespace=self.db_namespace,
-            start_year=self.start_year,
-            until_year=self.until_year,
-            numEras=self.num_eras,
-            numZones=num_zones,
-            numLinks=num_links,
-            numZonesAndLinks=num_zones_and_links,
-            zoneEras=zone_eras_string,
-            zoneErasData=zone_eras_data_string,
-            zoneEraChunkSize=zone_era_chunk_size,
-            zoneEraCount=zone_era_count,
-            zoneInfos=zone_infos_string,
-            zoneInfosData=zone_infos_data_string,
-            zoneInfoChunkSize=zone_info_chunk_size,
-            zoneInfoCount=zone_info_count,
-            numRemovedZones=num_removed_zones,
-            removedInfoItems=removed_info_items,
-            numNotableInfos=len(self.notable_zones),
-            notableInfoItems=notable_info_items,
-            numRemovedLinks=num_removed_links,
-            removedLinkItems=removed_link_items,
-            numNotableLinks=len(self.notable_links),
-            notableLinkItems=notable_link_items,
-            formatData=format_data,
-            formatOffsets=format_offsets,
-            nameData=name_data,
-            nameOffsets=name_offsets,
-        )
+
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// String constants.
+// ---------------------------------------------------------------------------
+
+const (
+\t// All ZoneEra.Format entries concatenated together.
+\tFormatData = "{format_data}"
+
+\t// All ZoneInfo.Name entries concatenated togther.
+\tNameData = "{name_data}"
+)
+
+var (
+\t// Byte offset into FormatData for each index. The actual Format string
+\t// at index `i` given by the `ZoneEra.Format` field is
+\t// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
+\tFormatOffsets = []uint16{{
+{format_offsets}
+}}
+
+\t// Byte offset into NameData for each index. The actual Letter string
+\t// at index `i` given by the `ZoneRule.Name` field is
+\t// `NameData[NameOffsets[i]:NameOffsets[i+1]]`.
+\tNameOffsets = []uint16{{
+{name_offsets}
+\t}}
+)
+
+// ---------------------------------------------------------------------------
+// ZoneEraRecords is an array of zoneinfo.ZoneEraRecord items concatenated
+// together.
+//
+// Supported zones: {num_zones}
+// numEras: {self.num_eras}
+// ---------------------------------------------------------------------------
+
+var ZoneEraRecords = []zoneinfo.ZoneEraRecord{{
+{zone_eras_string}
+}}
+
+const ZoneEraCount = {zone_era_count}
+
+const ZoneEraChunkSize = {zone_era_chunk_size}
+
+// ZoneErasData contains the ZoneEraRecords data as a hex encoded string.
+const ZoneErasData = {zone_eras_data_string}
+
+// ---------------------------------------------------------------------------
+// ZoneInfoRecords is an array of zoneinfo.ZoneInfoRecord items concatenated
+// together.
+//
+// Total: {num_zones_and_links} ({num_zones} zones, {num_links} links)
+// ---------------------------------------------------------------------------
+
+var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
+{zone_infos_string}
+}}
+
+const ZoneInfoCount = {zone_info_count}
+
+const ZoneInfoChunkSize = {zone_info_chunk_size}
+
+// ZoneInfosData contains the ZoneInfoRecords data as a hex encoded string.
+const ZoneInfosData = {zone_infos_data_string}
+
+// ---------------------------------------------------------------------------
+// Unsupported zones: {num_removed_zones}
+// ---------------------------------------------------------------------------
+
+{removed_info_items}
+
+// ---------------------------------------------------------------------------
+// Notable zones: {len(self.notable_zones)}
+// ---------------------------------------------------------------------------
+
+{notable_info_items}
+
+// ---------------------------------------------------------------------------
+// Unsuported links: {num_removed_links}
+// ---------------------------------------------------------------------------
+
+{removed_link_items}
+
+// ---------------------------------------------------------------------------
+// Notable links: {len(self.notable_links)}
+// ---------------------------------------------------------------------------
+
+{notable_link_items}
+"""
 
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
         zone_eras_string = ''
@@ -892,22 +742,101 @@ const (
         num_zones = len(self.zones_map)
         num_links = len(self.links_map)
         num_zones_and_links = len(self.zones_and_links)
-        num_removed_zones = len(self.removed_zones)
-        num_removed_links = len(self.removed_links)
-        return self._generate_header() + self.ZONE_REGISTRY_FILE.format(
-            tz_version=self.tz_version,
-            dbNamespace=self.db_namespace,
-            startYear=self.start_year,
-            untilYear=self.until_year,
-            maxTransitions=self.max_transitions,
-            numZones=num_zones,
-            numLinks=num_links,
-            numZonesAndLinks=num_zones_and_links,
-            numRemovedZones=num_removed_zones,
-            numRemovedLinks=num_removed_links,
-            zoneAndLinkIds=zone_and_link_ids_string,
-            zoneAndLinkIndexes=zone_and_link_indexes_string,
-        )
+
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// Zone Context
+// ---------------------------------------------------------------------------
+
+const TzDatabaseVersion string = "{self.tz_version}"
+
+// RecordContext contains references to the various arrays of ZoneRuleRecord,
+// ZonePolicyRecord, ZoneEraRecord, and ZoneInfoRecord objects, as well as the
+// strings used by those objects.
+//
+// The `acetime` package uses the encoded XxxData objects, not the XxxRecord
+// objects referenced here. These XxxRecord objects are used only for testing
+// purposes, to verify that the XxxData objects were properly generated, and can
+// be read back and reconstructed to be identical to the XxxRecord objects.
+var RecordContext = zoneinfo.ZoneRecordContext{{
+\tTzDatabaseVersion: TzDatabaseVersion,
+\tStartYear: {self.start_year},
+\tUntilYear: {self.until_year},
+\tMaxTransitions: {self.max_buf_size},
+\tLetterData: LetterData,
+\tLetterOffsets: LetterOffsets,
+\tFormatData: FormatData,
+\tFormatOffsets: FormatOffsets,
+\tNameData: NameData,
+\tNameOffsets: NameOffsets,
+\tZoneRuleRecords: ZoneRuleRecords,
+\tZonePolicyRecords: ZonePolicyRecords,
+\tZoneEraRecords: ZoneEraRecords,
+\tZoneInfoRecords: ZoneInfoRecords,
+}}
+
+// DataContext contains references to various XxxData objects and strings. These
+// are the binary encoded versions of the various XxxRecord objects. This object
+// is passed to the ZoneManager.
+//
+// The encoding to a binary string is performed because the Go language is able
+// to treat strings as constants, and the TinyGo compiler can place them in
+// flash memory, saving tremendous amounts of random memory.
+var DataContext = zoneinfo.ZoneDataContext{{
+\tTzDatabaseVersion: TzDatabaseVersion,
+\tStartYear: {self.start_year},
+\tUntilYear: {self.until_year},
+\tMaxTransitions: {self.max_buf_size},
+\tLetterData: LetterData,
+\tLetterOffsets: LetterOffsets,
+\tFormatData: FormatData,
+\tFormatOffsets: FormatOffsets,
+\tNameData: NameData,
+\tNameOffsets: NameOffsets,
+\tZoneRuleChunkSize: ZoneRuleChunkSize,
+\tZonePolicyChunkSize: ZonePolicyChunkSize,
+\tZoneEraChunkSize: ZoneEraChunkSize,
+\tZoneInfoChunkSize: ZoneInfoChunkSize,
+\tZoneRuleCount: ZoneRuleCount,
+\tZonePolicyCount: ZonePolicyCount,
+\tZoneEraCount: ZoneEraCount,
+\tZoneInfoCount: ZoneInfoCount,
+\tZoneRulesData: ZoneRulesData,
+\tZonePoliciesData: ZonePoliciesData,
+\tZoneErasData: ZoneErasData,
+\tZoneInfosData: ZoneInfosData,
+}}
+
+// ---------------------------------------------------------------------------
+// Zone IDs. Unique stable uint32 identifier for each zone which can be given to
+// ZoneManager.NewTimeZoneFromID(). Useful for microcontroller environments
+// where saving variable length strings is more difficult than a fixed width
+// integer.
+//
+// Total: {num_zones_and_links} ({num_zones} zones, {num_links} links)
+// ---------------------------------------------------------------------------
+
+const (
+{zone_and_link_ids_string}
+)
+
+// ---------------------------------------------------------------------------
+// Zone Indexes. Index into the ZoneInfoRecords array. Intended for unit tests
+// which need direct access to the zoneinfo.ZoneInfo struct.
+//
+// Total: {num_zones_and_links} ({num_zones} zones, {num_links} links)
+// ---------------------------------------------------------------------------
+
+const (
+{zone_and_link_indexes_string}
+)
+"""
 
     def _generate_zone_and_link_ids(self) -> str:
         """Generate a list of constants of the form ZoneID{zoneName},

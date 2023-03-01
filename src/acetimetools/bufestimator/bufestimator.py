@@ -49,9 +49,18 @@ class BufSizeEstimator:
     def transform(self, tresult: TransformerResult) -> None:
         self.zones_map = tresult.zones_map
         self.policies_map = tresult.policies_map
-        start_year = max(tresult.generated_min_year, self.start_year)
-        until_year = min(tresult.generated_max_year + 1, self.until_year)
-        logging.info('Checking years in [%d, %d)', start_year, until_year)
+
+        logging.info(
+            'Requested years: [%d, %d)',
+            self.start_year, self.until_year)
+        logging.info(
+            'Generated years: [%d, %d]',
+            tresult.generated_min_year, tresult.generated_max_year)
+
+        start_year = min(tresult.generated_min_year, self.start_year)
+        until_year = max(tresult.generated_max_year + 1, self.until_year)
+        logging.info(
+            'Checking years:  [%d, %d)', start_year, until_year)
 
         logging.info('Calculating buf_size_map')
         buf_sizes, max_terminal_year = calculate_buf_size_map(
@@ -79,7 +88,8 @@ class BufSizeEstimator:
         # Populate the TransformerResult
         tresult.buf_sizes = buf_sizes
         tresult.max_buf_size = max_buf_size
-        tresult.max_terminal_year = max_terminal_year
+        tresult.estimator_min_year = start_year
+        tresult.estimator_max_year = max_terminal_year
 
     def print_summary(self, tresult: TransformerResult) -> None:
         pass
