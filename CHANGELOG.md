@@ -11,6 +11,10 @@
         * Add `max_transitions` field to the `ZoneContext` of various zonedb.
     * `gogenerator.py`
         * Print memory stats in the header of generated files.
+    * `pygenerator.py`
+        * Change `ZoneEra.zone_policy` to `Optional[ZonePolicy].
+        * Set this field to `None` (intead of a str ':' or '-') when the
+          corresponding `Zone.RULES` field is `hh:mm` or '-'.
     * Change various internal sentinel values.
         * Change `INVALID_YEAR` to -32768 from -1
         * Change `MAX_UNTIL_YEAR` to 32767 from 10000

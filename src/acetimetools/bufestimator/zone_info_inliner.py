@@ -10,7 +10,7 @@ instead of creating files. These maps can be used for further processing.
 import logging
 from typing import List
 from typing import Tuple
-from typing import Union
+from typing import Optional
 
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
@@ -76,9 +76,9 @@ class ZoneInfoInliner:
             zone_eras: List[ZoneEra] = []
             for era in eras:
                 policy_name = era['rules']
-                zone_policy: Union[ZonePolicy, str]
+                zone_policy: Optional[ZonePolicy]
                 if policy_name in ['-', ':']:
-                    zone_policy = policy_name
+                    zone_policy = None
                 else:
                     policy_name = normalize_name(policy_name)
                     zone_policy = self.zone_policies[policy_name]
