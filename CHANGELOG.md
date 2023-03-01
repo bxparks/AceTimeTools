@@ -25,6 +25,11 @@
           AceTimePython project.
         * Useful when `AceTimePython/zone_processor.py` code becomes temporarily
           broken during development.
+    * Always generate anchor rules
+        * After truncating the zonedb to `[start,until)`, always generate anchor
+          rules at year -32767.
+        * Allows zone processor algorithms (AceTime, AceTimeC, AceTimeGo) to
+          work over all years `[0,10000)`, even after truncation.
 * v1.5.0 (2023-02-13)
     * Rename `rules_delta_seconds` to `era_delta_seconds` for better
       self-documentation.
