@@ -1194,37 +1194,19 @@ class Transformer:
     def _create_rules_with_anchor_transition(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
-        """Create a synthetic transition with SAVE == 0 which is earlier than
-        the self.start_year of interest. Some zone policies have zone rules
-        whose earliest entry starts after the self.start_year. According to
+        """Create a synthetic "anchor" transition with SAVE == 0 with a FROM
+        year of MIN_YEAR (i.e. -Infinity) to guarantee that at least one Rule
+        matches for any input `year`. According to
         https://data.iana.org/time-zones/tz-how-to.html, the initial LETTER
         should be deduced from the first RULE whose SAVE == 0.
-
-        As of 2018i, 6 zone policies are affected:
-            ['Troll', 'Armenia', 'Dhaka', 'Pakistan', 'WS', 'SanLuis']
-        corresponding to 4 zones:
-            Pacific/Apia, Asia/Dhaka, Asia/Karachi, Asia/Yerevan
         """
-        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
-            if not self._has_prior_rule(rules):
+            if len(rules) == 1:
+                self._convert_to_anchor(rules[0])
+            else:
                 anchor_rule = self._get_anchor_rule(rules)
                 rules.insert(0, anchor_rule)
-                add_comment(
-                    notable_policies, name,
-                    f"Added anchor rule at year {MIN_YEAR}")
-
-        merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
-
-    def _has_prior_rule(self, rules: List[ZoneRuleRaw]) -> bool:
-        """Return True if rules has a rule prior to (self.start_year-1).
-        """
-        for rule in rules:
-            from_year = rule['from_year']
-            if from_year < self.start_year - 1:
-                return True
-        return False
 
     def _get_anchor_rule(self, rules: List[ZoneRuleRaw]) -> ZoneRuleRaw:
         """Return the anchor rule that will act as the earliest rule with SAVE
@@ -1235,9 +1217,11 @@ class Transformer:
             'rule': Optional[ZoneRuleRaw],
         })
 
-        # Find the rule that generates the earliest transition. The `rules`
-        # array will never be empty, so this will always produce a non-empty
-        # anchor_info['rule'].
+        # Find the earliest rule with a DSTOFF of 0. The `rules` array will
+        # never be empty, but the [start_year, until_year) cutoff may eliminate
+        # too many rules which may result in no rule with DSTOFF of 0. In
+        # practice, I haven't seen this happen, so let's just throw an exception
+        # if that is the case. It would take extra logic to fix this.
         anchor_info: AnchorInfo = {
             'earliestDate': (MAX_UNTIL_YEAR, 12, 31),
             'rule': None,
@@ -1262,25 +1246,31 @@ class Transformer:
         #
         # The alternative was to avoid creating a copy, but simply set the
         # original's `from_year` to MIN_YEAR. But that produced an error in the
-        # _check_transitions_sorted() method in zone_processor.py. I'm not
-        # sure why.
+        # _check_transitions_sorted() method in zone_processor.py for Asia/Gaza
+        # in year 19000 because the yearly transition rule that landed too close
+        # to the start of the ZoneEra transition, but they were using 2
+        # different suffixes (9/30 24:00u versus 10/1 00:00w), and the current
+        # zone_processor.py code was not able to handle them.
         assert anchor_info['rule'] is not None
         anchor_rule = anchor_info['rule'].copy()
-        anchor_rule['from_year'] = MIN_YEAR
-        anchor_rule['to_year'] = MIN_YEAR
-        anchor_rule['in_month'] = 1
-        anchor_rule['on_day_of_week'] = 0
-        anchor_rule['on_day_of_month'] = 1
-        anchor_rule['at_time'] = '0'
-        anchor_rule['at_time_suffix'] = 'w'
-        anchor_rule['delta_offset'] = '0'
-        anchor_rule['at_seconds'] = 0
-        anchor_rule['at_seconds_truncated'] = 0
-        anchor_rule['delta_seconds'] = 0
-        anchor_rule['delta_seconds_truncated'] = 0
-        anchor_rule['raw_line'] = 'Anchor: ' + anchor_rule['raw_line']
-        anchor_rule['anchor'] = True
+        self._convert_to_anchor(anchor_rule)
         return anchor_rule
+
+    def _convert_to_anchor(self, rule: ZoneRuleRaw) -> None:
+        rule['from_year'] = MIN_YEAR
+        rule['to_year'] = MIN_YEAR
+        rule['in_month'] = 1
+        rule['on_day_of_week'] = 0  # 0, match onDayOfMonth exactly
+        rule['on_day_of_month'] = 1
+        rule['at_time'] = '0'
+        rule['at_time_suffix'] = 'w'
+        rule['delta_offset'] = '0'
+        rule['at_seconds'] = 0
+        rule['at_seconds_truncated'] = 0
+        rule['delta_seconds'] = 0
+        rule['delta_seconds_truncated'] = 0
+        rule['raw_line'] = 'Anchor: ' + rule['raw_line']
+        rule['anchor'] = True
 
     def _remove_rules_with_border_transitions(
         self, policies_map: PoliciesMap,
