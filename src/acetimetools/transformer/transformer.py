@@ -263,8 +263,35 @@ class Transformer:
                 index += 1
 
     # --------------------------------------------------------------------
-    # Methods related to Zones.
+    # Part 1: Some sanity checks, gathering, and include filtering.
     # --------------------------------------------------------------------
+
+    def _filter_include_links(
+        self,
+        links_map: LinksMap,
+        include_list: Set[str]
+    ) -> LinksMap:
+        """Remove links missing from include list."""
+        if not include_list:
+            return links_map
+
+        results: LinksMap = {}
+        removed_links: CommentsMap = {}
+        for link_name, zone_name in links_map.items():
+            if link_name in include_list:
+                results[link_name] = zone_name
+            else:
+                add_comment(
+                    removed_links, link_name,
+                    "Link missing from include list"
+                )
+
+        self._print_comments_map(
+            label='Removed %s links missing from include list',
+            comments=removed_links,
+        )
+        merge_comments(self.all_removed_links, removed_links)
+        return results
 
     def _filter_include_zones(
         self,
@@ -292,6 +319,10 @@ class Transformer:
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
+
+    # --------------------------------------------------------------------
+    # Part 2: Transform the zones_map.
+    # --------------------------------------------------------------------
 
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too old, i.e. before (self.start_year-1).
@@ -858,35 +889,6 @@ class Transformer:
         merge_comments(self.all_notable_zones, notable_zones)
         return results
 
-    def _remove_zones_without_rules(
-        self, zones_map: ZonesMap, policies_map: PoliciesMap
-    ) -> ZonesMap:
-        """Remove zone eras whose RULES field contains a reference to
-        a set of Rules, which cannot be found.
-        """
-        results: ZonesMap = {}
-        removed_zones: CommentsMap = {}
-        for name, eras in zones_map.items():
-            valid = True
-            for era in eras:
-                policy_name = era['rules']
-                if (policy_name not in ['-', ':']
-                        and policy_name not in policies_map):
-                    valid = False
-                    add_comment(
-                        removed_zones, name,
-                        f"policy '{policy_name}' not found")
-                    break
-            if valid:
-                results[name] = eras
-
-        self._print_comments_map(
-            label='Removed %s zone infos without rules',
-            comments=removed_zones,
-        )
-        merge_comments(self.all_removed_zones, removed_zones)
-        return results
-
     def _remove_zones_with_non_monotonic_until(
         self, zones_map: ZonesMap,
     ) -> ZonesMap:
@@ -969,135 +971,8 @@ class Transformer:
         return zones_map
 
     # --------------------------------------------------------------------
-    # Methods related to Rules
+    # Part 3: Transformations requiring both zones_map and policies_map.
     # --------------------------------------------------------------------
-
-    def _remove_rules_multiple_transitions_in_month(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Some Zone policies have Rules which specify multiple DST transitions
-        within in the same month:
-            * Egypt (Found '2' transitions in year/month '2010-09')
-            * Palestine (Found '2' transitions in year/month '2011-08')
-            * Spain (Found '2' transitions in year/month '1938-04')
-            * Tunisia (Found '2' transitions in year/month '1943-04')
-        """
-        CountsMap = Dict[Tuple[str, int, int], int]
-
-        # First pass: collect number of transitions for each (year, month) pair.
-        counts: CountsMap = {}
-        for name, rules in policies_map.items():
-            for rule in rules:
-                from_year = rule['from_year']
-                to_year = rule['to_year']
-                month = rule['in_month']
-                for year in range(from_year, to_year + 1):
-                    key = (name, year, month)
-                    count = counts.get(key)
-                    count = count + 1 if count else 1
-                    counts[key] = count
-
-        # Second pass: Collect rule policies which have multiple transitions
-        # in one month.
-        removals: Dict[str, Tuple[int, int, int]] = {}
-        for key, count in counts.items():
-            if count > 1:
-                policy_name = key[0]
-                year = key[1]
-                month = key[2]
-                removals[policy_name] = (count, year, month)
-
-        # Third pass: Remove rule policies with multiple counts.
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            removal = removals.get(name)
-            if removal:
-                add_comment(
-                    removed_policies,
-                    name,
-                    f"Found {removal[0]} transitions in year/month "
-                    f"'{removal[1]:04}-{removal[2]:02}'"
-                )
-            else:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with multiple transitions in 1 month',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
-        """Convert '-' into ''"""
-        for name, rules in policies_map.items():
-            for rule in rules:
-                if rule['letter'] == '-':
-                    rule['letter'] = ''
-        return policies_map
-
-    def _remove_rules_long_dst_letter(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Return a new map which filters out rules with long DST letter.
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                letter = rule['letter']
-                if len(letter) > 1:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"LETTER '{letter}' too long")
-                    break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with long DST letter',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _remove_rules_invalid_at_time_suffix(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove rules whose at_time contains an unsupported suffix. Current
-        supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are identifical
-        to 'u' and they do not currently appear in any TZ file, so let's catch
-        them because it could indicate a bug somewhere in our parser or
-        somewhere else.
-        """
-        supported_suffices = ['w', 's', 'u']
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                suffix = rule['at_time_suffix']
-                suffix = suffix if suffix else 'w'
-                rule['at_time_suffix'] = suffix
-                if suffix not in supported_suffices:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"unsupported AT time suffix '{suffix}'")
-                    break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with unsupported AT suffix',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
 
     def _mark_rules_used_by_zones(
         self, zones_map: ZonesMap, policies_map: PoliciesMap,
@@ -1157,6 +1032,10 @@ class Transformer:
                 begin_year = era['until_year']
 
         return (zones_map, policies_map)
+
+    # --------------------------------------------------------------------
+    # Part 4: Transform the policies_map
+    # --------------------------------------------------------------------
 
     def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
         """Remove RULE entries which have not been marked as used by the
@@ -1221,6 +1100,244 @@ class Transformer:
             comments=removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _remove_rules_multiple_transitions_in_month(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Some Zone policies have Rules which specify multiple DST transitions
+        within in the same month:
+            * Egypt (Found '2' transitions in year/month '2010-09')
+            * Palestine (Found '2' transitions in year/month '2011-08')
+            * Spain (Found '2' transitions in year/month '1938-04')
+            * Tunisia (Found '2' transitions in year/month '1943-04')
+        """
+        CountsMap = Dict[Tuple[str, int, int], int]
+
+        # First pass: collect number of transitions for each (year, month) pair.
+        counts: CountsMap = {}
+        for name, rules in policies_map.items():
+            for rule in rules:
+                from_year = rule['from_year']
+                to_year = rule['to_year']
+                month = rule['in_month']
+                for year in range(from_year, to_year + 1):
+                    key = (name, year, month)
+                    count = counts.get(key)
+                    count = count + 1 if count else 1
+                    counts[key] = count
+
+        # Second pass: Collect rule policies which have multiple transitions
+        # in one month.
+        removals: Dict[str, Tuple[int, int, int]] = {}
+        for key, count in counts.items():
+            if count > 1:
+                policy_name = key[0]
+                year = key[1]
+                month = key[2]
+                removals[policy_name] = (count, year, month)
+
+        # Third pass: Remove rule policies with multiple counts.
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            removal = removals.get(name)
+            if removal:
+                add_comment(
+                    removed_policies,
+                    name,
+                    f"Found {removal[0]} transitions in year/month "
+                    f"'{removal[1]:04}-{removal[2]:02}'"
+                )
+            else:
+                results[name] = rules
+
+        self._print_comments_map(
+            label='Removed %s policies with multiple transitions in 1 month',
+            comments=removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _create_rules_with_expanded_at_time(
+        self,
+        policies_map: PoliciesMap,
+        policies_to_zones: PoliciesToZones,
+    ) -> PoliciesMap:
+        """ Create 'at_seconds' parameter from rule['at_time'].
+        """
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        notable_policies: CommentsMap = {}
+        for policy_name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                at_time = rule['at_time']
+                at_seconds = time_string_to_seconds(at_time)
+                if at_seconds == INVALID_SECONDS:
+                    valid = False
+                    add_comment(
+                        removed_policies, policy_name,
+                        f"invalid AT time '{at_time}'" % at_time)
+                    break
+                if at_seconds < 0:
+                    valid = False
+                    add_comment(
+                        removed_policies, policy_name,
+                        f"negative AT time '{at_time}'" % at_time)
+                    break
+
+                at_seconds_truncated = truncate_to_granularity(
+                    at_seconds, self.until_at_granularity)
+                if at_seconds != at_seconds_truncated:
+                    if self.strict:
+                        valid = False
+                        add_comment(
+                            removed_policies, policy_name,
+                            f"AT time '{at_time}' must be multiples of "
+                            f"'{self.until_at_granularity}' seconds")
+                        break
+                    else:
+                        hm = seconds_to_hm_string(at_seconds_truncated)
+                        add_comment(
+                            notable_policies, policy_name,
+                            f"AT time '{at_time}' truncated to '{hm}'")
+                else:
+                    # Warning if AT has finer granularity than 1-minute
+                    if at_seconds % 60 != 0:
+                        add_comment(
+                            notable_policies, policy_name,
+                            f"AT time '{at_time}' not multiple of 1-min")
+
+                rule['at_seconds'] = at_seconds
+                rule['at_seconds_truncated'] = at_seconds_truncated
+            if valid:
+                results[policy_name] = rules
+
+        self._print_comments_map(
+            label='Removed %s policies with invalid AT field',
+            comments=removed_policies,
+        )
+        self._print_comments_map(
+            label='Noted %s policies with notable AT field',
+            comments=notable_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        merge_comments(self.all_notable_policies, notable_policies)
+        return results
+
+    def _remove_rules_invalid_at_time_suffix(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Remove rules whose at_time contains an unsupported suffix. Current
+        supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are identifical
+        to 'u' and they do not currently appear in any TZ file, so let's catch
+        them because it could indicate a bug somewhere in our parser or
+        somewhere else.
+        """
+        supported_suffices = ['w', 's', 'u']
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                suffix = rule['at_time_suffix']
+                suffix = suffix if suffix else 'w'
+                rule['at_time_suffix'] = suffix
+                if suffix not in supported_suffices:
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"unsupported AT time suffix '{suffix}'")
+                    break
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            label='Removed %s policies with unsupported AT suffix',
+            comments=removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _create_rules_with_expanded_delta_offset(
+        self,
+        policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """ Create 'delta_seconds' and 'delta_seconds_truncated' from
+        rule['delta_offset'].
+        """
+        results = {}
+        removed_policies: CommentsMap = {}
+        notable_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                delta_offset = rule['delta_offset']
+                delta_seconds = time_string_to_seconds(delta_offset)
+                if delta_seconds == INVALID_SECONDS:
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"invalid SAVE '{delta_offset}'")
+                    break
+                if delta_seconds not in (0, 3600):
+                    add_comment(
+                        notable_policies, name,
+                        f"SAVE '{delta_offset}' different from 1:00")
+
+                # Truncate to requested granularity.
+                delta_seconds_truncated = truncate_to_granularity(
+                    delta_seconds, self.delta_granularity)
+                if delta_seconds != delta_seconds_truncated:
+                    if self.strict:
+                        valid = False
+                        add_comment(
+                            removed_policies, name,
+                            f"SAVE '{delta_offset}' must be "
+                            f"a multiple of '{self.delta_granularity}' "
+                            f"seconds")
+                        break
+                    else:
+                        add_comment(
+                            notable_policies, name,
+                            f"SAVE '{delta_offset}' truncated to"
+                            f"a multiple of '{self.delta_granularity}' "
+                            f"seconds")
+                else:
+                    if delta_seconds % 60 != 0:
+                        add_comment(
+                            notable_policies, name,
+                            f"SAVE '{delta_offset}' not multiple of 1-min")
+
+                # Check that delta seconds can fit in a 4-bit timeCode field
+                # with 15-minute granularity, defined as (timeCode =
+                # delta_seconds / 900s + 1h) which encodes -1:00 as 0 and 3:45
+                # as 15.
+                delta_code = delta_seconds_truncated // 900
+                if delta_code < -4 or delta_code > 11:
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"SAVE delta_offset '{delta_offset}' "
+                        "too large for 4-bits")
+                    break
+
+                rule['delta_seconds'] = delta_seconds
+                rule['delta_seconds_truncated'] = delta_seconds_truncated
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            label='Removed %s policies with invalid SAVE field',
+            comments=removed_policies,
+        )
+        self._print_comments_map(
+            label='Noted %s policies with notable SAVE field',
+            comments=notable_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        merge_comments(self.all_notable_policies, notable_policies)
         return results
 
     def _create_rules_with_on_day_expansion(
@@ -1356,6 +1473,14 @@ class Transformer:
         rule['raw_line'] = 'Anchor: ' + rule['raw_line']
         rule['anchor'] = True
 
+    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
+        """Convert '-' into ''"""
+        for name, rules in policies_map.items():
+            for rule in rules:
+                if rule['letter'] == '-':
+                    rule['letter'] = ''
+        return policies_map
+
     def _remove_rules_with_border_transitions(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
@@ -1392,151 +1517,32 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _create_rules_with_expanded_at_time(
+    def _remove_rules_long_dst_letter(
         self,
         policies_map: PoliciesMap,
-        policies_to_zones: PoliciesToZones,
     ) -> PoliciesMap:
-        """ Create 'at_seconds' parameter from rule['at_time'].
+        """Return a new map which filters out rules with long DST letter.
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
-        notable_policies: CommentsMap = {}
-        for policy_name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                at_time = rule['at_time']
-                at_seconds = time_string_to_seconds(at_time)
-                if at_seconds == INVALID_SECONDS:
-                    valid = False
-                    add_comment(
-                        removed_policies, policy_name,
-                        f"invalid AT time '{at_time}'" % at_time)
-                    break
-                if at_seconds < 0:
-                    valid = False
-                    add_comment(
-                        removed_policies, policy_name,
-                        f"negative AT time '{at_time}'" % at_time)
-                    break
-
-                at_seconds_truncated = truncate_to_granularity(
-                    at_seconds, self.until_at_granularity)
-                if at_seconds != at_seconds_truncated:
-                    if self.strict:
-                        valid = False
-                        add_comment(
-                            removed_policies, policy_name,
-                            f"AT time '{at_time}' must be multiples of "
-                            f"'{self.until_at_granularity}' seconds")
-                        break
-                    else:
-                        hm = seconds_to_hm_string(at_seconds_truncated)
-                        add_comment(
-                            notable_policies, policy_name,
-                            f"AT time '{at_time}' truncated to '{hm}'")
-                else:
-                    # Warning if AT has finer granularity than 1-minute
-                    if at_seconds % 60 != 0:
-                        add_comment(
-                            notable_policies, policy_name,
-                            f"AT time '{at_time}' not multiple of 1-min")
-
-                rule['at_seconds'] = at_seconds
-                rule['at_seconds_truncated'] = at_seconds_truncated
-            if valid:
-                results[policy_name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with invalid AT field',
-            comments=removed_policies,
-        )
-        self._print_comments_map(
-            label='Noted %s policies with notable AT field',
-            comments=notable_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        merge_comments(self.all_notable_policies, notable_policies)
-        return results
-
-    def _create_rules_with_expanded_delta_offset(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """ Create 'delta_seconds' and 'delta_seconds_truncated' from
-        rule['delta_offset'].
-        """
-        results = {}
-        removed_policies: CommentsMap = {}
-        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
             valid = True
             for rule in rules:
-                delta_offset = rule['delta_offset']
-                delta_seconds = time_string_to_seconds(delta_offset)
-                if delta_seconds == INVALID_SECONDS:
+                letter = rule['letter']
+                if len(letter) > 1:
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"invalid SAVE '{delta_offset}'")
+                        f"LETTER '{letter}' too long")
                     break
-                if delta_seconds not in (0, 3600):
-                    add_comment(
-                        notable_policies, name,
-                        f"SAVE '{delta_offset}' different from 1:00")
-
-                # Truncate to requested granularity.
-                delta_seconds_truncated = truncate_to_granularity(
-                    delta_seconds, self.delta_granularity)
-                if delta_seconds != delta_seconds_truncated:
-                    if self.strict:
-                        valid = False
-                        add_comment(
-                            removed_policies, name,
-                            f"SAVE '{delta_offset}' must be "
-                            f"a multiple of '{self.delta_granularity}' "
-                            f"seconds")
-                        break
-                    else:
-                        add_comment(
-                            notable_policies, name,
-                            f"SAVE '{delta_offset}' truncated to"
-                            f"a multiple of '{self.delta_granularity}' "
-                            f"seconds")
-                else:
-                    if delta_seconds % 60 != 0:
-                        add_comment(
-                            notable_policies, name,
-                            f"SAVE '{delta_offset}' not multiple of 1-min")
-
-                # Check that delta seconds can fit in a 4-bit timeCode field
-                # with 15-minute granularity, defined as (timeCode =
-                # delta_seconds / 900s + 1h) which encodes -1:00 as 0 and 3:45
-                # as 15.
-                delta_code = delta_seconds_truncated // 900
-                if delta_code < -4 or delta_code > 11:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"SAVE delta_offset '{delta_offset}' "
-                        "too large for 4-bits")
-                    break
-
-                rule['delta_seconds'] = delta_seconds
-                rule['delta_seconds_truncated'] = delta_seconds_truncated
             if valid:
                 results[name] = rules
 
         self._print_comments_map(
-            label='Removed %s policies with invalid SAVE field',
+            label='Removed %s policies with long DST letter',
             comments=removed_policies,
         )
-        self._print_comments_map(
-            label='Noted %s policies with notable SAVE field',
-            comments=notable_policies,
-        )
         merge_comments(self.all_removed_policies, removed_policies)
-        merge_comments(self.all_notable_policies, notable_policies)
         return results
 
     # TODO: This does not quite work because there are rules whose
@@ -1558,8 +1564,37 @@ class Transformer:
         return policies_map
 
     # --------------------------------------------------------------------
-    # Methods related to Links.
+    # Part 5: Remove unused zones and links.
     # --------------------------------------------------------------------
+
+    def _remove_zones_without_rules(
+        self, zones_map: ZonesMap, policies_map: PoliciesMap
+    ) -> ZonesMap:
+        """Remove zone eras whose RULES field contains a reference to
+        a set of Rules, which cannot be found.
+        """
+        results: ZonesMap = {}
+        removed_zones: CommentsMap = {}
+        for name, eras in zones_map.items():
+            valid = True
+            for era in eras:
+                policy_name = era['rules']
+                if (policy_name not in ['-', ':']
+                        and policy_name not in policies_map):
+                    valid = False
+                    add_comment(
+                        removed_zones, name,
+                        f"policy '{policy_name}' not found")
+                    break
+            if valid:
+                results[name] = eras
+
+        self._print_comments_map(
+            label='Removed %s zone infos without rules',
+            comments=removed_zones,
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        return results
 
     def _remove_links_to_missing_zones(
         self,
@@ -1582,6 +1617,10 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    # --------------------------------------------------------------------
+    # Part 6: Detect zones and links whose normalized names conflict.
+    # --------------------------------------------------------------------
 
     def _detect_zones_and_links_with_similar_names(
         self,
@@ -1619,35 +1658,8 @@ class Transformer:
 
         return result_zones, result_links
 
-    def _filter_include_links(
-        self,
-        links_map: LinksMap,
-        include_list: Set[str]
-    ) -> LinksMap:
-        """Remove links missing from include list."""
-        if not include_list:
-            return links_map
-
-        results: LinksMap = {}
-        removed_links: CommentsMap = {}
-        for link_name, zone_name in links_map.items():
-            if link_name in include_list:
-                results[link_name] = zone_name
-            else:
-                add_comment(
-                    removed_links, link_name,
-                    "Link missing from include list"
-                )
-
-        self._print_comments_map(
-            label='Removed %s links missing from include list',
-            comments=removed_links,
-        )
-        merge_comments(self.all_removed_links, removed_links)
-        return results
-
     # --------------------------------------------------------------------
-    # Additional extractions or transformations
+    # Part 8: Add additional results
     # --------------------------------------------------------------------
 
     def _generate_zone_ids(self, zones_map: ZonesMap) -> Dict[str, int]:
