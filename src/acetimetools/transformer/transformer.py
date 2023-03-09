@@ -901,40 +901,29 @@ class Transformer:
             valid = True
             prev_until = None
             for era in eras:
-                # yapf: disable
-                current_until = (
+                # current_until
+                c = (
                     era['until_year'],
                     era['until_month'] if era['until_month'] else 0,
                     era['until_day'] if era['until_day_string'] else 0,
                     era['until_seconds'] if era['until_seconds'] else 0
                 )
-                # yapf: enable
                 if prev_until:
-                    if current_until <= prev_until:
+                    if c <= prev_until:
                         valid = False
                         add_comment(
-                            removed_zones,
-                            name,
+                            removed_zones, name,
                             'non increasing UNTIL: '
-                            f'{current_until[0]:04}-'
-                            f'{current_until[1]:02}-'
-                            f'{current_until[2]:02} '
-                            f'{current_until[3]}s'
+                            f'{c[0]:04}-{c[1]:02}-{c[2]:02} {c[3]}s'
                         )
                         break
-                prev_until = current_until
-            if valid and current_until[0] != MAX_UNTIL_YEAR:
+                prev_until = c
+            if valid and c[0] != MAX_UNTIL_YEAR:
                 valid = False
                 add_comment(
-                    removed_zones,
-                    name,
-                    (
-                        'invalid final UNTIL: '
-                        f'{current_until[0]:04}-'
-                        f'{current_until[1]:02}-'
-                        f'{current_until[2]:02} '
-                        f'{current_until[3]}s'
-                    )
+                    removed_zones, name,
+                    'invalid final UNTIL: '
+                    f'{c[0]:04}-{c[1]:02}-{c[2]:02} {c[3]}s'
                 )
 
             if valid:
