@@ -3,7 +3,6 @@
 # MIT License.
 
 import logging
-import sys
 import re
 import datetime
 from collections import OrderedDict
@@ -997,10 +996,9 @@ class Transformer:
 
                 rules = policies_map.get(policy_name)
                 if not rules:
-                    logging.error(
-                        "Zone '%s': Could not find policy '%s': "
-                        + "should not happen", zone_name, policy_name)
-                    sys.exit(1)
+                    raise Exception(
+                        f"Zone '{zone_name}': Could not find policy "
+                        f"'{policy_name}'")
 
                 # Make all Rules which overlap with the current Zone Era.
                 # Some Zone Era have an until_month, until_day and until_time
