@@ -120,6 +120,11 @@ class Transformer:
         )
 
         # Part 1: Some sanity checks, gathering, and include filtering.
+        if not self.generate_int16_years:
+            if not is_year_tiny(self.start_year):
+                raise Exception(f"Start year {self.start_year} not tiny")
+            if not is_year_tiny(self.until_year):
+                raise Exception(f"Until year {self.until_year} not tiny")
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
         original_min_year, original_max_year = \
@@ -143,8 +148,10 @@ class Transformer:
         zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
         zones_map = self._create_short_format_strings(zones_map)
+        if not self.generate_int16_years:
+            zones_map = self._create_tiny_until_years(zones_map)
 
-        # Part 3: Transformations requring both zones_map and policies_map.
+        # Part 3: Transformations requiring both zones_map and policies_map.
         zones_map, policies_map = self._mark_rules_used_by_zones(
             zones_map=zones_map, policies_map=policies_map)
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
@@ -169,6 +176,8 @@ class Transformer:
                 policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
+        if not self.generate_int16_years:
+            policies_map = self._create_tiny_from_to_years(policies_map)
 
         # Part 5: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
@@ -946,6 +955,19 @@ class Transformer:
                 era['format_short'] = era['format'].replace('%s', '%')
         return zones_map
 
+    def _create_tiny_until_years(self, zones_map: ZonesMap) -> ZonesMap:
+        for name, eras in zones_map.items():
+            for era in eras:
+                until_year = era['until_year']
+                if until_year == MAX_UNTIL_YEAR:
+                    continue
+                if not is_year_tiny(until_year):
+                    raise Exception(f"{name}: UNTIL {until_year} not tiny")
+                until_year_tiny = until_year - EPOCH_YEAR_FOR_TINY
+                era['until_year_tiny'] = until_year_tiny
+
+        return zones_map
+
     # --------------------------------------------------------------------
     # Methods related to Rules
     # --------------------------------------------------------------------
@@ -1516,6 +1538,24 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         merge_comments(self.all_notable_policies, notable_policies)
         return results
+
+    # TODO: This does not quite work because there are rules whose
+    # [from_year,start_year] straddles the self.start_year. The from_year
+    # needs to be extended back to -Infinity.
+    def _create_tiny_from_to_years(
+        self, policies_map: PoliciesMap
+    ) -> PoliciesMap:
+        for name, rules in policies_map.items():
+            for rule in rules:
+                from_year = rule['from_year']
+                if from_year != MIN_YEAR and from_year != MAX_TO_YEAR:
+                    rule['from_year_tiny'] = from_year - EPOCH_YEAR_FOR_TINY
+
+                to_year = rule['to_year']
+                if to_year != MIN_YEAR and to_year != MAX_TO_YEAR:
+                    rule['to_year_tiny'] = to_year - EPOCH_YEAR_FOR_TINY
+
+        return policies_map
 
     # --------------------------------------------------------------------
     # Methods related to Links.
