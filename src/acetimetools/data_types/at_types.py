@@ -25,9 +25,12 @@ used by multiple packages.
 # Constants used by various modules.
 # -----------------------------------------------------------------------------
 
-# AceTime Epoch is 2000-01-01. Used to generate 8-bit year fields when
-# generate_int16_years is False, so this is really not used anymore.
-EPOCH_YEAR: int = 2000
+# The epoch year used to generate 8-bit year fields when generate_int16_years is
+# False. yearTiny = year - EPOCH_YEAR_FOR_TINY. Setting this to 2100 allows us
+# to represent the years in the range of [1974,2226], with year_tiny=-128
+# representing an error condition, and year_tiny=-127 representing -Infinity,
+# and year_tiny=+127 representing +Infinity.
+EPOCH_YEAR_FOR_TINY: int = 2100
 
 # Indicate +Infinity UNTIL year (represented by empty field).
 MAX_UNTIL_YEAR: int = 32767
@@ -54,8 +57,9 @@ INVALID_YEAR: int = -32768
 # Tiny (int8_t) version of INVALID_YEAR.
 INVALID_YEAR_TINY: int = -128
 
-# Number of seconds from Unix Epoch (1970-01-01 00:00:00) to AceTime Epoch
-# (2000-01-01 00:00:00)
+# Number of seconds from Unix Epoch (1970-01-01) to the AceTime v1 Epoch
+# (2000-01-01). In AceTime v2, the epoch becomes a runtime adjustable parameter,
+# so I don't think it is used anywhere in the AceTimeTools code base.
 SECONDS_SINCE_UNIX_EPOCH = 946684800
 
 
@@ -93,8 +97,8 @@ class ZoneRuleRaw(TypedDict, total=False):
     anchor: bool  # True if this is an Anchor rule
 
     # Derived from above by artransformer.py
-    from_year_tiny: int  # (from_year - 2000), w/ special cases for MIN and MAX
-    to_year_tiny: int  # (to_year - 2000), w/ special cases for MIN and MAX
+    from_year_tiny: int  # (from_year - EPOCH_YEAR_FOR_TINY)
+    to_year_tiny: int  # (to_year - EPOCH_YEAR_FOR_TINY)
     at_time_code: int  # at_time in units of 15-min
     at_time_minute: int  # at_time remainder minutes
     at_time_modifier: int  # suffix + at_time_minute
@@ -156,7 +160,7 @@ class ZoneEraRaw(TypedDict, total=False):
     offset_minute: int  # STD offset remainder minutes
     delta_code: int  # DST offset in units of 15-min
     delta_code_encoded: int  # delta_code + offset_minute, in 2 x 4-bits
-    until_year_tiny: int  # until_year - 2000, w/ special cases for MIN and MAX
+    until_year_tiny: int  # until_year - EPOCH_YEAR_FOR_TINY)
     until_time_code: int  # until_time in units of 15-min
     until_time_minute: int  # until_time remainder minutes
     until_time_modifier: int  # suffix + until_time_minute

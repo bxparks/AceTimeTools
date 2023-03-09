@@ -281,8 +281,9 @@ class Transformer:
 
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too old, i.e. before (self.start_year-1).
-        For start_year 2000, and viewing_months>13,
-        ZoneProcessor.init_for_year() could be called with 1999.
+        If the start_year is 2000, and viewing_months>13,
+        ZoneProcessor.init_for_year() could be called with 1999, so we use
+        `start_year-1`.
         """
         results: ZonesMap = {}
         count = 0
@@ -1021,18 +1022,14 @@ class Transformer:
     ) -> Tuple[ZonesMap, PoliciesMap]:
         """Mark all rules which are required by various zones. There are 2 ways
         that a rule can be used by a zone era:
-            1) The rule's from_year or to_year are >= (self.start_year - 1), or
-            2) The rule is the most recent transition that happened before
-            self.start_year.
 
-        If start_year == 2000, this will pick up rules for 1998. This is because
-        if viewing_months == 13, then ZoneProcessor.init_for_year() could be
-        called with 1999, which then needs rules for 1998 to extract the "most
-        recent prior" Transition before Jan 1, 1999.
+        1) The rule's from_year or to_year are >= (self.start_year - 1), or
+        2) The rule is the most recent transition that happened before
+        self.start_year.
 
-        For viewing_months==14, init_for_year() will always be called with 2000
-        or higher, so we just need 1999 data to get the most recent prior
-        Transition before Jan 1, 2000.
+        The viewing_months is always 14, so init_for_year() will always be
+        called with 2000 or higher, so we just need 1999 data to get the most
+        recent prior Transition before Jan 1, 2000.
         """
         for zone_name, eras in zones_map.items():
             begin_year = self.start_year - 1
