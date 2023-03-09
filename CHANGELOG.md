@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+* v1.6.0 (2023-03-09)
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`
           data structures.
