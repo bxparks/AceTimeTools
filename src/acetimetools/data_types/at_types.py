@@ -27,9 +27,10 @@ used by multiple packages.
 
 # The epoch year used to generate 8-bit year fields when generate_int16_years is
 # False. yearTiny = year - EPOCH_YEAR_FOR_TINY. Setting this to 2100 allows us
-# to represent the years in the range of [1974,2226], with year_tiny=-128
-# representing an error condition, and year_tiny=-127 representing -Infinity,
-# and year_tiny=+127 representing +Infinity.
+# to represent the years in the range of [1974,2225], with year_tiny=-128
+# representing an error condition, year_tiny=-127 representing -Infinity, 126
+# representing +Infinity for the TO field, and 127 representing +Infinity for
+# the UNTIL field.
 EPOCH_YEAR_FOR_TINY: int = 2100
 
 # Indicate +Infinity UNTIL year (represented by empty field).

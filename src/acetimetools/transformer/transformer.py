@@ -23,9 +23,13 @@ from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import add_comment
 from acetimetools.data_types.at_types import merge_comments
+from acetimetools.data_types.at_types import EPOCH_YEAR_FOR_TINY
+from acetimetools.data_types.at_types import INVALID_YEAR
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR
+from acetimetools.data_types.at_types import MIN_YEAR_TINY
 from acetimetools.data_types.at_types import MAX_TO_YEAR
+from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
 
 INVALID_SECONDS = 999999  # 277h46m69s
 
@@ -281,9 +285,8 @@ class Transformer:
 
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too old, i.e. before (self.start_year-1).
-        If the start_year is 2000, and viewing_months>13,
-        ZoneProcessor.init_for_year() could be called with 1999, so we use
-        `start_year-1`.
+        If the start_year is 2000, ZoneProcessor.init_for_year() could be called
+        with 1999, so we use `start_year-1`.
         """
         results: ZonesMap = {}
         count = 0
@@ -307,14 +310,13 @@ class Transformer:
     def _remove_zone_eras_too_new(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too new, i.e. after self.until_year.
         We need at least one year after the last valid year (i.e. until_year),
-        so we need zone eras valid to at least until_year. For
-        viewing_months=36, we need until_year + 1. So let's remove zone eras
-        which starts at until_year + 2 or greater.
+        so we need zone eras valid to at least until_year.
 
         TODO: If a zone era is removed because it is too far in the future, it
         is no longer guaranteed that the last zone era ends with MAX_UNTIL_YEAR.
         If the ZoneProcessor code is called with a year greater than
-        self.until_year, it may cause a loop to crash.
+        self.until_year, it may cause a loop to crash. I think this means that
+        we should not run this transformation.
         """
         results: ZonesMap = {}
         count = 0
@@ -1109,8 +1111,8 @@ class Transformer:
         self,
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields do not fit in an
-        int8_t. In other words, y < 1872 or (y > 2127 and y != 9999).
+        """Remove policies which have FROM and TO fields do not fit in an int8_t
+        with a base EPOCH_YEAR_FOR_TINY (2100).
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
@@ -1119,12 +1121,17 @@ class Transformer:
             for rule in rules:
                 from_year = rule['from_year']
                 to_year = rule['to_year']
-                if not is_year_tiny(from_year) or not is_year_tiny(from_year):
+                if not is_year_tiny(from_year):
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"from_year ({from_year}) or to_year ({to_year}) "
-                        f" outside int8_t")
+                        f"from_year ({from_year}) exceeds int8_t")
+                    break
+                if not is_year_tiny(to_year):
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"to_year ({to_year}) exceeds int8_t")
                     break
             if valid:
                 results[name] = rules
@@ -1756,10 +1763,15 @@ def find_earliest_subsequent_rules(
 
 
 def is_year_tiny(year: int) -> bool:
-    """Determine if year fits in an int8_t field. MAX_TO_YEAR(9999) is a marker
-    for 'max'.
-    """
-    return year >= 1872 and (year == MAX_TO_YEAR or year <= 2127)
+    """Determine if year fits in an int8_t field."""
+    year_tiny = year - EPOCH_YEAR_FOR_TINY
+    return (
+        year == INVALID_YEAR
+        or year == MIN_YEAR
+        or year == MAX_TO_YEAR
+        or year == MAX_UNTIL_YEAR
+        or (MIN_YEAR_TINY < year_tiny and year_tiny < MAX_TO_YEAR_TINY)
+    )
 
 
 def calc_day_of_month(
