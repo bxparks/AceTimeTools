@@ -648,7 +648,7 @@ class Transformer:
             label='Removed %s zone infos with unsupported UNTIL time suffix',
             comments=removed_zones,
         )
-        merge_comments(self.all_removed_policies, removed_zones)
+        merge_comments(self.all_removed_zones, removed_zones)
         return results
 
     def _create_zones_with_expanded_offset_string(
