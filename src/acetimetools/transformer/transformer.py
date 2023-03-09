@@ -130,6 +130,7 @@ class Transformer:
         # Part 2: Transform the zones_map.
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
+        zones_map = self._extend_zone_eras_until(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
         if self.scope == 'basic':
             zones_map = self._remove_zone_with_non_simple_until_year(zones_map)
@@ -289,22 +290,43 @@ class Transformer:
         with 1999, so we use `start_year-1`.
         """
         results: ZonesMap = {}
+        notable_zones: CommentsMap = {}
+        removed_zones: CommentsMap = {}
         count = 0
         for name, eras in zones_map.items():
             keep_eras: List[ZoneEraRaw] = []
             for era in eras:
                 if era['until_year'] >= self.start_year - 1:
                     keep_eras.append(era)
-                else:
-                    count += 1
-            if keep_eras:
-                results[name] = keep_eras
 
-        logging.info(
-            'Removed %s zone eras before year %04d',
-            count,
-            self.start_year,
+            removed_count = len(eras) - len(keep_eras)
+            count += removed_count
+
+            if removed_count == 0:
+                results[name] = eras
+            elif removed_count < len(eras):
+                results[name] = keep_eras
+                add_comment(
+                    notable_zones, name,
+                    f'Removed {removed_count} zone eras before '
+                    f'year {self.start_year}'
+                )
+            else:
+                add_comment(
+                    removed_zones, name,
+                    f'All eras are too old, < year {self.start_year}'
+                )
+
+        self._print_comments_map(
+            label='Removed %s zone infos with eras too old',
+            comments=removed_zones,
         )
+        self._print_comments_map(
+            label='Noted %s zone infos with eras too old',
+            comments=notable_zones,
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        merge_comments(self.all_notable_zones, notable_zones)
         return results
 
     def _remove_zone_eras_too_new(self, zones_map: ZonesMap) -> ZonesMap:
@@ -319,6 +341,8 @@ class Transformer:
         we should not run this transformation.
         """
         results: ZonesMap = {}
+        notable_zones: CommentsMap = {}
+        removed_zones: CommentsMap = {}
         count = 0
         for name, eras in zones_map.items():
             keep_eras: List[ZoneEraRaw] = []
@@ -326,19 +350,53 @@ class Transformer:
             for era in eras:
                 if start_year <= self.until_year + 1:
                     keep_eras.append(era)
-                else:
-                    count += 1
                 # the next era's start year is this era's until_year
                 start_year = era['until_year']
-            if keep_eras:
-                results[name] = keep_eras
 
-        logging.info(
-            "Removed %s zone eras starting after %04d",
-            count,
-            self.until_year,
+            removed_count = len(eras) - len(keep_eras)
+            count += removed_count
+
+            if removed_count == 0:
+                results[name] = eras
+            elif removed_count < len(eras):
+                results[name] = keep_eras
+                add_comment(
+                    notable_zones, name,
+                    f'Removed {removed_count} zone eras after '
+                    f'year {self.until_year}'
+                )
+            else:
+                add_comment(
+                    removed_zones, name,
+                    f'All eras are too new, > year {self.until_year}'
+                )
+
+        self._print_comments_map(
+            label='Removed %s zone infos with eras too new',
+            comments=removed_zones,
         )
+        self._print_comments_map(
+            label='Noted %s zone infos with eras too new',
+            comments=notable_zones,
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        merge_comments(self.all_notable_zones, notable_zones)
         return results
+
+    def _extend_zone_eras_until(self, zones_map: ZonesMap) -> ZonesMap:
+        """Extend the UNTIL field of last zone era to +Infinity if it is not
+        already +Infinity. This happens if zone eras too far in the future were
+        removed by _remove_zone_eras_too_new().
+        """
+        for name, eras in zones_map.items():
+            last_era = eras[-1]
+            if last_era['until_year'] != MAX_UNTIL_YEAR:
+                last_era['until_year'] = MAX_UNTIL_YEAR
+                last_era['raw_line'] = 'Extended: ' + last_era['raw_line']
+                # Don't bother adding an entry in notable_zones, because there
+                # would already be a note about removing eras "too new".
+
+        return zones_map
 
     def _remove_zones_without_eras(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zones without any eras, which can happen if the start_year and
