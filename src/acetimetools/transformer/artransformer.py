@@ -18,7 +18,7 @@ from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import MemoryMap
 from acetimetools.data_types.at_types import SizeofMap
-from acetimetools.data_types.at_types import EPOCH_YEAR
+from acetimetools.data_types.at_types import EPOCH_YEAR_FOR_TINY
 from acetimetools.data_types.at_types import MAX_TO_YEAR
 from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
 from acetimetools.data_types.at_types import MIN_YEAR
@@ -385,7 +385,7 @@ def _to_tiny_year(year: int) -> int:
     elif year == MIN_YEAR:
         return MIN_YEAR_TINY
     else:
-        return year - EPOCH_YEAR
+        return year - EPOCH_YEAR_FOR_TINY
 
 
 def _to_tiny_until_year(year: int) -> int:
@@ -397,7 +397,7 @@ def _to_tiny_until_year(year: int) -> int:
     elif year == MIN_YEAR:
         return MIN_YEAR_TINY
     else:
-        return year - EPOCH_YEAR
+        return year - EPOCH_YEAR_FOR_TINY
 
 
 class EncodedTime(NamedTuple):

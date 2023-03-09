@@ -227,9 +227,9 @@ def main() -> None:
         default=2000)
     parser.add_argument(
         '--until_year',
-        help='Until year of Zone Eras (default: 2038)',
+        help='Until year of Zone Eras (default: 2100)',
         type=int,
-        default=2038)
+        default=2100)
 
     parser.add_argument(
         '--granularity',
@@ -349,7 +349,7 @@ def main() -> None:
     )
 
     # Generate full int16_t years instead int8_t years which are offsets from
-    # the year 2000.
+    # the year EPOCH_YEAR_FOR_TINY.
     parser.add_argument(
         '--generate_int16_years',
         help='Generate int16_t years instead of int8_t years',

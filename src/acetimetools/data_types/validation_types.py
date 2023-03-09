@@ -49,7 +49,7 @@ from typing_extensions import TypedDict
 # * 'T': a monthly test sample, if the 1st was invalid for some reason
 # * 'Y': end of year test sample
 TestItem = TypedDict("TestItem", {
-    'epoch': int,  # seconds from AceTime epoch of 2000-01-01T00:00:00Z
+    'epoch': int,  # seconds from AceTime epoch (usually 2050-01-01)
     'total_offset': int,  # total UTC offset in seconds
     'dst_offset': int,  # DST offset in seconds
     'y': int,
