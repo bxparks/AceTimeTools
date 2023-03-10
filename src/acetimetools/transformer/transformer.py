@@ -325,9 +325,7 @@ class Transformer:
         with 1999, so we use `start_year-1`.
         """
         results: ZonesMap = {}
-        notable_zones: CommentsMap = {}
         removed_zones: CommentsMap = {}
-        count = 0
         for name, eras in zones_map.items():
             keep_eras: List[ZoneEraRaw] = []
             for era in eras:
@@ -335,17 +333,12 @@ class Transformer:
                     keep_eras.append(era)
 
             removed_count = len(eras) - len(keep_eras)
-            count += removed_count
 
+            # Update results.
             if removed_count == 0:
                 results[name] = eras
             elif removed_count < len(eras):
                 results[name] = keep_eras
-                add_comment(
-                    notable_zones, name,
-                    f'Removed {removed_count} zone eras before '
-                    f'year {self.start_year}'
-                )
             else:
                 add_comment(
                     removed_zones, name,
@@ -355,11 +348,7 @@ class Transformer:
         self._print_comments_map(
             'Removed %s zone infos with eras too old', removed_zones,
         )
-        self._print_comments_map(
-            'Noted %s zone infos with eras too old', notable_zones,
-        )
         merge_comments(self.all_removed_zones, removed_zones)
-        merge_comments(self.all_notable_zones, notable_zones)
         return results
 
     def _remove_zone_eras_too_new(self, zones_map: ZonesMap) -> ZonesMap:
@@ -973,7 +962,6 @@ class Transformer:
 
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
-        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
             for rule in rules:
                 rule['used'] = False
@@ -994,15 +982,12 @@ class Transformer:
                 if rule['used']:
                     used_rules.append(rule)
 
+            # Update results.
             removed_count = len(rules) - len(used_rules)
             if removed_count == 0:
                 results[name] = rules
             elif removed_count < len(rules):
                 results[name] = used_rules
-                add_comment(
-                    notable_policies, name,
-                    f'Removed {removed_count} rules far past or far future'
-                )
             else:
                 add_comment(
                     removed_policies, name,
@@ -1010,11 +995,7 @@ class Transformer:
                 )
 
         self._print_comments_map('Removed %s policies', removed_policies)
-        self._print_comments_map(
-            'Noted %s policies with removed rules', notable_policies
-        )
         merge_comments(self.all_removed_policies, removed_policies)
-        merge_comments(self.all_notable_policies, notable_policies)
         return results
 
     def _remove_rules_not_tiny(
