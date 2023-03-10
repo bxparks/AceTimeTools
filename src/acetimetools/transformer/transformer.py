@@ -152,8 +152,6 @@ class Transformer:
 
         # Part 3: Transformations requiring both zones_map and policies_map.
         policies_map = self._remove_unused_policies(zones_map, policies_map)
-        zones_map, policies_map = self._mark_rules_used_by_zones(
-            zones_map, policies_map)
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
 
         # Part 4: Transform the policies_map
@@ -964,95 +962,47 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _mark_rules_used_by_zones(
-        self, zones_map: ZonesMap, policies_map: PoliciesMap,
-    ) -> Tuple[ZonesMap, PoliciesMap]:
-        """Mark all rules which are required by various zones. There are 2 ways
-        that a rule can be used by a zone era:
-
-        1) The rule's from_year or to_year are >= (self.start_year - 1), or
-        2) The rule is the most recent transition that happened before
-        self.start_year.
-
-        The viewing_months is always 14, so init_for_year() will always be
-        called with 2000 or higher, so we just need 1999 data to get the most
-        recent prior Transition before Jan 1, 2000.
-        """
-        for zone_name, eras in zones_map.items():
-            begin_year = self.start_year - 1
-            for era in eras:
-                policy_name = era['rules']
-                if policy_name in ['-', ':']:
-                    continue
-
-                rules = policies_map.get(policy_name)
-                if not rules:
-                    raise Exception(
-                        f"Zone '{zone_name}': Could not find policy "
-                        f"'{policy_name}'")
-
-                # Make all Rules which overlap with the current Zone Era.
-                # Some Zone Era have an until_month, until_day and until_time
-                # components. To be conservative, we need to expand the
-                # until_year to the following year, so the effective zone era
-                # interval becomes [begin_year, until_year+1).
-                until_year = min(era['until_year'], self.until_year)
-                matching_rules = find_matching_rules(
-                    rules, begin_year, until_year + 1)
-                for rule in matching_rules:
-                    rule['used'] = True
-
-                # Find latest Rules just prior to the begin_year.
-                # Result: It looks like all of these prior rules are
-                # already picked up by previous calls to find_matching_rules().
-                prior_rules = find_latest_prior_rules(rules, begin_year)
-                for rule in prior_rules:
-                    rule['used'] = True
-
-                # Find earliest Rules subsequent to the until_year mark.
-                # Result: It looks like all of these subsequent rules are
-                # already picked up by previous calls to find_matching_rules().
-                subsequent_rules = find_earliest_subsequent_rules(
-                    rules, until_year + 1)
-                for rule in subsequent_rules:
-                    rule['used'] = True
-
-                # Set the begin year of the next ZoneEra
-                begin_year = era['until_year']
-
-        return (zones_map, policies_map)
-
     # --------------------------------------------------------------------
     # Part 4: Transform the policies_map
     # --------------------------------------------------------------------
 
     def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
-        """Remove RULE entries which have not been marked as used by the
-        _mark_rules_used_by_zones() method.
-        """
+        """Remove RULE entries which are too old or too new."""
+        start_year = self.start_year - 1
+        until_year = self.until_year + 1
+
         results: PoliciesMap = {}
-        removed_rule_count = 0
         removed_policies: CommentsMap = {}
+        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
             used_rules = []
+            removed_count = 0
             for rule in rules:
-                if rule.get('used'):
+                if rule_overlaps_interval(rule, start_year, until_year):
                     used_rules.append(rule)
-                    # Set the 'used' to None to remove from JSON output.
-                    del rule['used']
                 else:
-                    removed_rule_count += 1
-            if used_rules:
-                results[name] = used_rules
-            else:
-                add_comment(removed_policies, name, 'unused')
+                    removed_count += 1
 
-        logging.info(
-            'Removed %s rule policies (with %s rules) not used',
-            len(removed_policies),
-            removed_rule_count
+            if removed_count == 0:
+                results[name] = rules
+            elif removed_count < len(rules):
+                results[name] = used_rules
+                add_comment(
+                    notable_policies, name,
+                    f'Removed {removed_count} rules'
+                )
+            else:
+                add_comment(
+                    removed_policies, name,
+                    'All rules too old or too new'
+                )
+
+        self._print_comments_map('Removed %s policies', removed_policies)
+        self._print_comments_map(
+            'Noted %s policies with removed rules', notable_policies
         )
         merge_comments(self.all_removed_policies, removed_policies)
+        merge_comments(self.all_notable_policies, notable_policies)
         return results
 
     def _remove_rules_out_of_bounds(
@@ -1690,22 +1640,20 @@ def time_string_to_seconds(time_string: str) -> int:
     return sign * ((hour * 60 + minute) * 60 + second)
 
 
-def find_matching_rules(
-    rules: List[ZoneRuleRaw],
-    era_from: int,
-    era_until: int,
-) -> List[ZoneRuleRaw]:
-    """Return the rules which overlap with the Zone Era interval [eraFrom,
-    eraUntil). The Rule interval is [ruleFrom, ruleTo + 1). Overlap happens
-    (ruleFrom < eraUntil) && (eraFrom < ruleTo+1). The expression (eraFrom <
-    ruleTo+1) can be written as (eraFrom <= ruleTo) since these values are
-    integers.
+def rule_overlaps_interval(
+    rule: ZoneRuleRaw, start_year: int, until_year: int,
+) -> bool:
+    """Check if rule [from,to] overlaps [start,until) interval.
+
+                [from                to]
+    --------)[----------------)[-------------
+           start             until
+
+    Overlap happens if:
+
+        (from < until) && (start <= to)
     """
-    matches = []
-    for rule in rules:
-        if rule['from_year'] < era_until and era_from <= rule['to_year']:
-            matches.append(rule)
-    return matches
+    return rule['from_year'] < until_year and start_year <= rule['to_year']
 
 
 def find_latest_prior_rules(
