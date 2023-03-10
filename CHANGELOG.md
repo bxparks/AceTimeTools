@@ -1,6 +1,13 @@
 # Changelog
 
 * Unreleased
+    * `transformer.py`
+        * Filter out ZoneRules using a coarse-trained comparison to
+          `[start_year, until_year), instead of loop through every ZoneEra item,
+          and doing a mark and sweep on the referenced ZoneRule.
+            * This picks up a few extra ZoneRule records in some older
+              ZonePolicies, but makes the code far simpler and easier to
+              maintain.
 * v1.6.0 (2023-03-09)
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`

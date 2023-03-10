@@ -3,7 +3,6 @@
 # MIT License.
 
 import logging
-import sys
 import re
 import datetime
 from collections import OrderedDict
@@ -120,6 +119,11 @@ class Transformer:
         )
 
         # Part 1: Some sanity checks, gathering, and include filtering.
+        if not self.generate_int16_years:
+            if not is_year_tiny(self.start_year):
+                raise Exception(f"Start year {self.start_year} not tiny")
+            if not is_year_tiny(self.until_year):
+                raise Exception(f"Until year {self.until_year} not tiny")
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
         original_min_year, original_max_year = \
@@ -130,6 +134,7 @@ class Transformer:
         # Part 2: Transform the zones_map.
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
+        zones_map = self._extend_zone_eras_until(zones_map)
         zones_map = self._remove_zones_without_eras(zones_map)
         if self.scope == 'basic':
             zones_map = self._remove_zone_with_non_simple_until_year(zones_map)
@@ -142,16 +147,17 @@ class Transformer:
         zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
         zones_map = self._create_short_format_strings(zones_map)
+        if not self.generate_int16_years:
+            zones_map = self._create_tiny_until_years(zones_map)
 
-        # Part 3: Transformations requring both zones_map and policies_map.
-        zones_map, policies_map = self._mark_rules_used_by_zones(
-            zones_map=zones_map, policies_map=policies_map)
+        # Part 3: Transformations requiring both zones_map and policies_map.
+        policies_map = self._remove_unused_policies(zones_map, policies_map)
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
 
         # Part 4: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
         if not self.generate_int16_years:
-            policies_map = self._remove_rules_out_of_bounds(policies_map)
+            policies_map = self._remove_rules_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_multiple_transitions_in_month(
                 policies_map)
@@ -168,6 +174,8 @@ class Transformer:
                 policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
+        if not self.generate_int16_years:
+            policies_map = self._create_tiny_from_to_years(policies_map)
 
         # Part 5: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
@@ -215,7 +223,6 @@ class Transformer:
 
     def _print_comments_map(
         self,
-        *,
         label: str,
         comments: CommentsMap,
         max_comments: int = 5,
@@ -253,8 +260,34 @@ class Transformer:
                 index += 1
 
     # --------------------------------------------------------------------
-    # Methods related to Zones.
+    # Part 1: Some sanity checks, gathering, and include filtering.
     # --------------------------------------------------------------------
+
+    def _filter_include_links(
+        self,
+        links_map: LinksMap,
+        include_list: Set[str]
+    ) -> LinksMap:
+        """Remove links missing from include list."""
+        if not include_list:
+            return links_map
+
+        results: LinksMap = {}
+        removed_links: CommentsMap = {}
+        for link_name, zone_name in links_map.items():
+            if link_name in include_list:
+                results[link_name] = zone_name
+            else:
+                add_comment(
+                    removed_links, link_name,
+                    "Link missing from include list"
+                )
+
+        self._print_comments_map(
+            'Removed %s links missing from include list', removed_links,
+        )
+        merge_comments(self.all_removed_links, removed_links)
+        return results
 
     def _filter_include_zones(
         self,
@@ -277,11 +310,14 @@ class Transformer:
                 )
 
         self._print_comments_map(
-            label='Removed %s zone infos missing from include list',
-            comments=removed_zones,
+            'Removed %s zone infos missing from include list', removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
+
+    # --------------------------------------------------------------------
+    # Part 2: Transform the zones_map.
+    # --------------------------------------------------------------------
 
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too old, i.e. before (self.start_year-1).
@@ -289,22 +325,30 @@ class Transformer:
         with 1999, so we use `start_year-1`.
         """
         results: ZonesMap = {}
-        count = 0
+        removed_zones: CommentsMap = {}
         for name, eras in zones_map.items():
             keep_eras: List[ZoneEraRaw] = []
             for era in eras:
                 if era['until_year'] >= self.start_year - 1:
                     keep_eras.append(era)
-                else:
-                    count += 1
-            if keep_eras:
-                results[name] = keep_eras
 
-        logging.info(
-            'Removed %s zone eras before year %04d',
-            count,
-            self.start_year,
+            removed_count = len(eras) - len(keep_eras)
+
+            # Update results.
+            if removed_count == 0:
+                results[name] = eras
+            elif removed_count < len(eras):
+                results[name] = keep_eras
+            else:
+                add_comment(
+                    removed_zones, name,
+                    f'All eras are too old, < year {self.start_year}'
+                )
+
+        self._print_comments_map(
+            'Removed %s zone infos with eras too old', removed_zones,
         )
+        merge_comments(self.all_removed_zones, removed_zones)
         return results
 
     def _remove_zone_eras_too_new(self, zones_map: ZonesMap) -> ZonesMap:
@@ -319,6 +363,8 @@ class Transformer:
         we should not run this transformation.
         """
         results: ZonesMap = {}
+        notable_zones: CommentsMap = {}
+        removed_zones: CommentsMap = {}
         count = 0
         for name, eras in zones_map.items():
             keep_eras: List[ZoneEraRaw] = []
@@ -326,19 +372,51 @@ class Transformer:
             for era in eras:
                 if start_year <= self.until_year + 1:
                     keep_eras.append(era)
-                else:
-                    count += 1
                 # the next era's start year is this era's until_year
                 start_year = era['until_year']
-            if keep_eras:
-                results[name] = keep_eras
 
-        logging.info(
-            "Removed %s zone eras starting after %04d",
-            count,
-            self.until_year,
+            removed_count = len(eras) - len(keep_eras)
+            count += removed_count
+
+            if removed_count == 0:
+                results[name] = eras
+            elif removed_count < len(eras):
+                results[name] = keep_eras
+                add_comment(
+                    notable_zones, name,
+                    f'Removed {removed_count} zone eras after '
+                    f'year {self.until_year}'
+                )
+            else:
+                add_comment(
+                    removed_zones, name,
+                    f'All eras are too new, > year {self.until_year}'
+                )
+
+        self._print_comments_map(
+            'Removed %s zone infos with eras too new', removed_zones,
         )
+        self._print_comments_map(
+            'Noted %s zone infos with eras too new', notable_zones,
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        merge_comments(self.all_notable_zones, notable_zones)
         return results
+
+    def _extend_zone_eras_until(self, zones_map: ZonesMap) -> ZonesMap:
+        """Extend the UNTIL field of last zone era to +Infinity if it is not
+        already +Infinity. This happens if zone eras too far in the future were
+        removed by _remove_zone_eras_too_new().
+        """
+        for name, eras in zones_map.items():
+            last_era = eras[-1]
+            if last_era['until_year'] != MAX_UNTIL_YEAR:
+                last_era['until_year'] = MAX_UNTIL_YEAR
+                last_era['raw_line'] = 'Extended: ' + last_era['raw_line']
+                # Don't bother adding an entry in notable_zones, because there
+                # would already be a note about removing eras "too new".
+
+        return zones_map
 
     def _remove_zones_without_eras(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zones without any eras, which can happen if the start_year and
@@ -353,8 +431,7 @@ class Transformer:
                 add_comment(removed_zones, name, "no ZoneEra found")
 
         self._print_comments_map(
-            label='Removed %s zone infos without ZoneEras',
-            comments=removed_zones,
+            'Removed %s zone infos without ZoneEras', removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -379,8 +456,8 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with UNTIL containing month/day/time',
-            comments=removed_zones,
+            'Removed %s zone infos with UNTIL containing month/day/time',
+            removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -440,12 +517,10 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with invalid UNTIL day',
-            comments=removed_zones,
+            'Removed %s zone infos with invalid UNTIL day', removed_zones
         )
         self._print_comments_map(
-            label='Noted %s zone infos with notable UNTIL day',
-            comments=notable_zones,
+            'Noted %s zone infos with notable UNTIL day', notable_zones
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -505,12 +580,10 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with invalid UNTIL time',
-            comments=removed_zones,
+            'Removed %s zone infos with invalid UNTIL time', removed_zones,
         )
         self._print_comments_map(
-            label='Noted %s zone infos with notable UNTIL time',
-            comments=notable_zones,
+            'Noted %s zone infos with notable UNTIL time', notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -548,10 +621,10 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with unsupported UNTIL time suffix',
-            comments=removed_zones,
+            'Removed %s zone infos with unsupported UNTIL time suffix',
+            removed_zones,
         )
-        merge_comments(self.all_removed_policies, removed_zones)
+        merge_comments(self.all_removed_zones, removed_zones)
         return results
 
     def _create_zones_with_expanded_offset_string(
@@ -608,12 +681,10 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with invalid STDOFF field',
-            comments=removed_zones,
+            'Removed %s zone infos with invalid STDOFF field', removed_zones,
         )
         self._print_comments_map(
-            label='Noted %s zone infos with notable STDOFF field',
-            comments=notable_zones,
+            'Noted %s zone infos with notable STDOFF field', notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -666,12 +737,11 @@ class Transformer:
                 results[zone_name] = eras
 
         self._print_comments_map(
-            label='Removed %s zones with invalid RULES and FORMAT combo',
-            comments=removed_zones,
+            'Removed %s zones with invalid RULES and FORMAT combo',
+            removed_zones,
         )
         self._print_comments_map(
-            label='Noted %s zones with notable RULES and FORMAT combo',
-            comments=notable_zones,
+            'Noted %s zones with notable RULES and FORMAT combo', notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -780,44 +850,13 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with invalid RULES',
-            comments=removed_zones,
+            'Removed %s zone infos with invalid RULES', removed_zones,
         )
         self._print_comments_map(
-            label='Noted %s zone infos with notable RULES',
-            comments=notable_zones,
+            'Noted %s zone infos with notable RULES', notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
-        return results
-
-    def _remove_zones_without_rules(
-        self, zones_map: ZonesMap, policies_map: PoliciesMap
-    ) -> ZonesMap:
-        """Remove zone eras whose RULES field contains a reference to
-        a set of Rules, which cannot be found.
-        """
-        results: ZonesMap = {}
-        removed_zones: CommentsMap = {}
-        for name, eras in zones_map.items():
-            valid = True
-            for era in eras:
-                policy_name = era['rules']
-                if (policy_name not in ['-', ':']
-                        and policy_name not in policies_map):
-                    valid = False
-                    add_comment(
-                        removed_zones, name,
-                        f"policy '{policy_name}' not found")
-                    break
-            if valid:
-                results[name] = eras
-
-        self._print_comments_map(
-            label='Removed %s zone infos without rules',
-            comments=removed_zones,
-        )
-        merge_comments(self.all_removed_zones, removed_zones)
         return results
 
     def _remove_zones_with_non_monotonic_until(
@@ -833,48 +872,36 @@ class Transformer:
             valid = True
             prev_until = None
             for era in eras:
-                # yapf: disable
-                current_until = (
+                # current_until
+                c = (
                     era['until_year'],
                     era['until_month'] if era['until_month'] else 0,
                     era['until_day'] if era['until_day_string'] else 0,
                     era['until_seconds'] if era['until_seconds'] else 0
                 )
-                # yapf: enable
                 if prev_until:
-                    if current_until <= prev_until:
+                    if c <= prev_until:
                         valid = False
                         add_comment(
-                            removed_zones,
-                            name,
+                            removed_zones, name,
                             'non increasing UNTIL: '
-                            f'{current_until[0]:04}-'
-                            f'{current_until[1]:02}-'
-                            f'{current_until[2]:02} '
-                            f'{current_until[3]}s'
+                            f'{c[0]:04}-{c[1]:02}-{c[2]:02} {c[3]}s'
                         )
                         break
-                prev_until = current_until
-            if valid and current_until[0] != MAX_UNTIL_YEAR:
+                prev_until = c
+            if valid and c[0] != MAX_UNTIL_YEAR:
                 valid = False
                 add_comment(
-                    removed_zones,
-                    name,
-                    (
-                        'invalid final UNTIL: '
-                        f'{current_until[0]:04}-'
-                        f'{current_until[1]:02}-'
-                        f'{current_until[2]:02} '
-                        f'{current_until[3]}s'
-                    )
+                    removed_zones, name,
+                    'invalid final UNTIL: '
+                    f'{c[0]:04}-{c[1]:02}-{c[2]:02} {c[3]}s'
                 )
 
             if valid:
                 results[name] = eras
 
         self._print_comments_map(
-            label='Removed %s zone infos with invalid UNTIL fields',
-            comments=removed_zones,
+            'Removed %s zone infos with invalid UNTIL fields', removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         return results
@@ -888,9 +915,124 @@ class Transformer:
                 era['format_short'] = era['format'].replace('%s', '%')
         return zones_map
 
+    def _create_tiny_until_years(self, zones_map: ZonesMap) -> ZonesMap:
+        for name, eras in zones_map.items():
+            for era in eras:
+                until_year = era['until_year']
+                if until_year == MAX_UNTIL_YEAR:
+                    continue
+                if not is_year_tiny(until_year):
+                    raise Exception(f"{name}: UNTIL {until_year} not tiny")
+                until_year_tiny = until_year - EPOCH_YEAR_FOR_TINY
+                era['until_year_tiny'] = until_year_tiny
+
+        return zones_map
+
     # --------------------------------------------------------------------
-    # Methods related to Rules
+    # Part 3: Transformations requiring both zones_map and policies_map.
     # --------------------------------------------------------------------
+
+    def _remove_unused_policies(
+        self, zones_map: ZonesMap, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+
+        policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
+        for policy_name, rules in policies_map.items():
+            if policy_name in policies_to_zones:
+                results[policy_name] = rules
+            else:
+                add_comment(removed_policies, policy_name, 'unused')
+
+        self._print_comments_map(
+            'Removed %s zone policies unused', removed_policies
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    # --------------------------------------------------------------------
+    # Part 4: Transform the policies_map
+    # --------------------------------------------------------------------
+
+    def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
+        """Remove RULE entries which are too old or too new."""
+        start_year = self.start_year - 1
+        until_year = self.until_year + 1
+
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            for rule in rules:
+                rule['used'] = False
+
+            # Mark rules overlapping [start,until).
+            for rule in rules:
+                if rule_overlaps_interval(rule, start_year, until_year):
+                    rule['used'] = True
+
+            # Mark latest prior rules.
+            priors = find_latest_prior_rules(rules, start_year)
+            for rule in priors:
+                rule['used'] = True
+
+            # Collect remaining rules.
+            used_rules: List[ZoneRuleRaw] = []
+            for rule in rules:
+                if rule['used']:
+                    used_rules.append(rule)
+
+            # Update results.
+            removed_count = len(rules) - len(used_rules)
+            if removed_count == 0:
+                results[name] = rules
+            elif removed_count < len(rules):
+                results[name] = used_rules
+            else:
+                add_comment(
+                    removed_policies, name,
+                    'All rules too old or too new'
+                )
+
+        self._print_comments_map('Removed %s policies', removed_policies)
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _remove_rules_not_tiny(
+        self,
+        policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Remove policies which have FROM and TO fields do not fit in a tiny
+        year field (8-bit integer) with a base EPOCH_YEAR_FOR_TINY (2100).
+        """
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                from_year = rule['from_year']
+                to_year = rule['to_year']
+                if not is_year_tiny(from_year):
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"from_year ({from_year}) exceeds int8_t")
+                    break
+                if not is_year_tiny(to_year):
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"to_year ({to_year}) exceeds int8_t")
+                    break
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            'Removed %s policies with FROM or TO out of bounds',
+            removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
 
     def _remove_rules_multiple_transitions_in_month(
         self, policies_map: PoliciesMap,
@@ -943,371 +1085,8 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            label='Removed %s policies with multiple transitions in 1 month',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
-        """Convert '-' into ''"""
-        for name, rules in policies_map.items():
-            for rule in rules:
-                if rule['letter'] == '-':
-                    rule['letter'] = ''
-        return policies_map
-
-    def _remove_rules_long_dst_letter(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Return a new map which filters out rules with long DST letter.
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                letter = rule['letter']
-                if len(letter) > 1:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"LETTER '{letter}' too long")
-                    break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with long DST letter',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _remove_rules_invalid_at_time_suffix(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove rules whose at_time contains an unsupported suffix. Current
-        supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are identifical
-        to 'u' and they do not currently appear in any TZ file, so let's catch
-        them because it could indicate a bug somewhere in our parser or
-        somewhere else.
-        """
-        supported_suffices = ['w', 's', 'u']
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                suffix = rule['at_time_suffix']
-                suffix = suffix if suffix else 'w'
-                rule['at_time_suffix'] = suffix
-                if suffix not in supported_suffices:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"unsupported AT time suffix '{suffix}'")
-                    break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with unsupported AT suffix',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _mark_rules_used_by_zones(
-        self, zones_map: ZonesMap, policies_map: PoliciesMap,
-    ) -> Tuple[ZonesMap, PoliciesMap]:
-        """Mark all rules which are required by various zones. There are 2 ways
-        that a rule can be used by a zone era:
-
-        1) The rule's from_year or to_year are >= (self.start_year - 1), or
-        2) The rule is the most recent transition that happened before
-        self.start_year.
-
-        The viewing_months is always 14, so init_for_year() will always be
-        called with 2000 or higher, so we just need 1999 data to get the most
-        recent prior Transition before Jan 1, 2000.
-        """
-        for zone_name, eras in zones_map.items():
-            begin_year = self.start_year - 1
-            for era in eras:
-                policy_name = era['rules']
-                if policy_name in ['-', ':']:
-                    continue
-
-                rules = policies_map.get(policy_name)
-                if not rules:
-                    logging.error(
-                        "Zone '%s': Could not find policy '%s': "
-                        + "should not happen", zone_name, policy_name)
-                    sys.exit(1)
-
-                # Make all Rules which overlap with the current Zone Era.
-                # Some Zone Era have an until_month, until_day and until_time
-                # components. To be conservative, we need to expand the
-                # until_year to the following year, so the effective zone era
-                # interval becomes [begin_year, until_year+1).
-                until_year = min(era['until_year'], self.until_year)
-                matching_rules = find_matching_rules(rules, begin_year,
-                                                     until_year + 1)
-                for rule in matching_rules:
-                    rule['used'] = True
-
-                # Find latest Rules just prior to the begin_year.
-                # Result: It looks like all of these prior rules are
-                # already picked up by previous calls to find_matching_rules().
-                prior_rules = find_latest_prior_rules(rules, begin_year)
-                for rule in prior_rules:
-                    rule['used'] = True
-
-                # Find earliest Rules subsequent to the until_year mark.
-                # Result: It looks like all of these subsequent rules are
-                # already picked up by previous calls to find_matching_rules().
-                subsequent_rules = find_earliest_subsequent_rules(
-                    rules, until_year + 1)
-                for rule in subsequent_rules:
-                    rule['used'] = True
-
-                # Set the begin year of the next ZoneEra
-                begin_year = era['until_year']
-
-        return (zones_map, policies_map)
-
-    def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
-        """Remove RULE entries which have not been marked as used by the
-        _mark_rules_used_by_zones() method.
-        """
-        results: PoliciesMap = {}
-        removed_rule_count = 0
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            used_rules = []
-            for rule in rules:
-                if rule.get('used'):
-                    used_rules.append(rule)
-                    # Set the 'used' to None to remove from JSON output.
-                    del rule['used']
-                else:
-                    removed_rule_count += 1
-            if used_rules:
-                results[name] = used_rules
-            else:
-                add_comment(removed_policies, name, 'unused')
-
-        logging.info(
-            'Removed %s rule policies (with %s rules) not used',
-            len(removed_policies),
-            removed_rule_count
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _remove_rules_out_of_bounds(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields do not fit in an int8_t
-        with a base EPOCH_YEAR_FOR_TINY (2100).
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                from_year = rule['from_year']
-                to_year = rule['to_year']
-                if not is_year_tiny(from_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"from_year ({from_year}) exceeds int8_t")
-                    break
-                if not is_year_tiny(to_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"to_year ({to_year}) exceeds int8_t")
-                    break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with FROM or TO out of bounds',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _create_rules_with_on_day_expansion(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Create rule['on_day_of_week'] and rule['on_day_of_month'] from
-        rule['on_day']. The on_day_of_month will be negative if "<=" is used.
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                on_day = rule['on_day']
-                (on_day_of_week, on_day_of_month) = _parse_on_day_string(on_day)
-
-                if (on_day_of_week, on_day_of_month) == (0, 0):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"invalid on_day '{on_day}'")
-                    break
-
-                # *ZoneProcessor.h classes currently do not support
-                # "dayOfWeek<=6" or "dayOfWeek>=26" if the shift causes the year
-                # to change.
-                if on_day_of_week != 0 and on_day_of_month != 0:
-                    if (-7 <= on_day_of_month
-                            and on_day_of_month < -1
-                            and rule['in_month'] == 1):
-                        valid = False
-                        add_comment(
-                            removed_policies, name,
-                            f"cannot shift '{on_day}' from Jan to prev year")
-                        break
-                    if 26 <= on_day_of_month and rule['in_month'] == 12:
-                        valid = False
-                        add_comment(
-                            removed_policies, name,
-                            f"cannot shift '{on_day}' from Dec to next year")
-                        break
-
-                rule['on_day_of_week'] = on_day_of_week
-                rule['on_day_of_month'] = on_day_of_month
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with invalid ON field',
-            comments=removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _create_rules_with_anchor_transition(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Create a synthetic "anchor" transition with SAVE == 0 with a FROM
-        year of MIN_YEAR (i.e. -Infinity) to guarantee that at least one Rule
-        matches for any input `year`. According to
-        https://data.iana.org/time-zones/tz-how-to.html, the initial LETTER
-        should be deduced from the first RULE whose SAVE == 0.
-        """
-        for name, rules in policies_map.items():
-            if len(rules) == 1:
-                self._convert_to_anchor(rules[0])
-            else:
-                anchor_rule = self._get_anchor_rule(rules)
-                rules.insert(0, anchor_rule)
-        return policies_map
-
-    def _get_anchor_rule(self, rules: List[ZoneRuleRaw]) -> ZoneRuleRaw:
-        """Return the anchor rule that will act as the earliest rule with SAVE
-        == 0.
-        """
-        AnchorInfo = TypedDict('AnchorInfo', {
-            'earliestDate': Tuple[int, int, int],
-            'rule': Optional[ZoneRuleRaw],
-        })
-
-        # Find the earliest rule with a DSTOFF of 0. The `rules` array will
-        # never be empty, but the [start_year, until_year) cutoff may eliminate
-        # too many rules which may result in no rule with DSTOFF of 0. In
-        # practice, I haven't seen this happen, so let's just throw an exception
-        # if that is the case. It would take extra logic to fix this.
-        anchor_info: AnchorInfo = {
-            'earliestDate': (MAX_UNTIL_YEAR, 12, 31),
-            'rule': None,
-        }
-        for rule in rules:
-            from_year = rule['from_year']
-            in_month = rule['in_month']
-            on_day_of_week = rule['on_day_of_week']
-            on_day_of_month = rule['on_day_of_month']
-            month, day = calc_day_of_month(
-                from_year, in_month, on_day_of_week, on_day_of_month)
-            rule_date = (from_year, month, day)
-
-            if (rule['delta_seconds'] == 0
-                    and rule_date < anchor_info['earliestDate']):
-                anchor_info['earliestDate'] = rule_date
-                anchor_info['rule'] = rule
-
-        # Create a copy of that Rule, preserving the SAVE, LETTER, and original
-        # `raw_line`, but clobbering the FROM field to MIN_YEAR so that it is
-        # guaranteed to be the first matching Rule.
-        #
-        # The alternative was to avoid creating a copy, but simply set the
-        # original's `from_year` to MIN_YEAR. But that produced an error in the
-        # _check_transitions_sorted() method in zone_processor.py for Asia/Gaza
-        # in year 19000 because the yearly transition rule that landed too close
-        # to the start of the ZoneEra transition, but they were using 2
-        # different suffixes (9/30 24:00u versus 10/1 00:00w), and the current
-        # zone_processor.py code was not able to handle them.
-        assert anchor_info['rule'] is not None
-        anchor_rule = anchor_info['rule'].copy()
-        self._convert_to_anchor(anchor_rule)
-        return anchor_rule
-
-    def _convert_to_anchor(self, rule: ZoneRuleRaw) -> None:
-        rule['from_year'] = MIN_YEAR
-        rule['to_year'] = MIN_YEAR
-        rule['in_month'] = 1
-        rule['on_day_of_week'] = 0  # 0, match onDayOfMonth exactly
-        rule['on_day_of_month'] = 1
-        rule['at_time'] = '0'
-        rule['at_time_suffix'] = 'w'
-        rule['delta_offset'] = '0'
-        rule['at_seconds'] = 0
-        rule['at_seconds_truncated'] = 0
-        rule['delta_seconds'] = 0
-        rule['delta_seconds_truncated'] = 0
-        rule['raw_line'] = 'Anchor: ' + rule['raw_line']
-        rule['anchor'] = True
-
-    def _remove_rules_with_border_transitions(
-        self, policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove rules where the transition occurs on the first day of the
-        year (Jan 1). That situation is not supported by BasicZoneProcessor. On
-        the other hand, a transition at the end of the year (Dec 31) is
-        supported by BasicZoneProcessor.
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, rules in policies_map.items():
-            valid = True
-            for rule in rules:
-                from_year = rule['from_year']
-                to_year = rule['to_year']
-                month = rule['in_month']
-                on_day_of_month = rule['on_day_of_month']
-                if from_year > MIN_YEAR and to_year > MIN_YEAR:
-                    if month == 1 and on_day_of_month == 1:
-                        valid = False
-                        add_comment(
-                            removed_policies, name,
-                            "Transition on Jan 1 not supported "
-                            f"({from_year:04}-{month:02}-{on_day_of_month:02})"
-                        )
-                        break
-            if valid:
-                results[name] = rules
-
-        self._print_comments_map(
-            label='Removed %s policies with border Transitions',
-            comments=removed_policies,
+            'Removed %s policies with multiple transitions in 1 month',
+            removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
@@ -1368,15 +1147,46 @@ class Transformer:
                 results[policy_name] = rules
 
         self._print_comments_map(
-            label='Removed %s policies with invalid AT field',
-            comments=removed_policies,
+            'Removed %s policies with invalid AT field', removed_policies,
         )
         self._print_comments_map(
-            label='Noted %s policies with notable AT field',
-            comments=notable_policies,
+            'Noted %s policies with notable AT field', notable_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         merge_comments(self.all_notable_policies, notable_policies)
+        return results
+
+    def _remove_rules_invalid_at_time_suffix(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Remove rules whose at_time contains an unsupported suffix. Current
+        supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are identifical
+        to 'u' and they do not currently appear in any TZ file, so let's catch
+        them because it could indicate a bug somewhere in our parser or
+        somewhere else.
+        """
+        supported_suffices = ['w', 's', 'u']
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                suffix = rule['at_time_suffix']
+                suffix = suffix if suffix else 'w'
+                rule['at_time_suffix'] = suffix
+                if suffix not in supported_suffices:
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"unsupported AT time suffix '{suffix}'")
+                    break
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            'Removed %s policies with unsupported AT suffix', removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
         return results
 
     def _create_rules_with_expanded_delta_offset(
@@ -1448,20 +1258,203 @@ class Transformer:
                 results[name] = rules
 
         self._print_comments_map(
-            label='Removed %s policies with invalid SAVE field',
-            comments=removed_policies,
+            'Removed %s policies with invalid SAVE field', removed_policies,
         )
         self._print_comments_map(
-            label='Noted %s policies with notable SAVE field',
-            comments=notable_policies,
+            'Noted %s policies with notable SAVE field', notable_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         merge_comments(self.all_notable_policies, notable_policies)
         return results
 
+    def _create_rules_with_on_day_expansion(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Create rule['on_day_of_week'] and rule['on_day_of_month'] from
+        rule['on_day']. The on_day_of_month will be negative if "<=" is used.
+        """
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                on_day = rule['on_day']
+                (on_day_of_week, on_day_of_month) = _parse_on_day_string(on_day)
+
+                if (on_day_of_week, on_day_of_month) == (0, 0):
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"invalid on_day '{on_day}'")
+                    break
+
+                # *ZoneProcessor.h classes currently do not support
+                # "dayOfWeek<=6" or "dayOfWeek>=26" if the shift causes the year
+                # to change.
+                if on_day_of_week != 0 and on_day_of_month != 0:
+                    if (-7 <= on_day_of_month
+                            and on_day_of_month < -1
+                            and rule['in_month'] == 1):
+                        valid = False
+                        add_comment(
+                            removed_policies, name,
+                            f"cannot shift '{on_day}' from Jan to prev year")
+                        break
+                    if 26 <= on_day_of_month and rule['in_month'] == 12:
+                        valid = False
+                        add_comment(
+                            removed_policies, name,
+                            f"cannot shift '{on_day}' from Dec to next year")
+                        break
+
+                rule['on_day_of_week'] = on_day_of_week
+                rule['on_day_of_month'] = on_day_of_month
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            'Removed %s policies with invalid ON field', removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _create_rules_with_anchor_transition(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Create a synthetic "anchor" transition with SAVE == 0 with a FROM
+        year of MIN_YEAR (i.e. -Infinity) to guarantee that at least one Rule
+        matches for any input `year`. According to
+        https://data.iana.org/time-zones/tz-how-to.html, the initial LETTER
+        should be deduced from the first RULE whose SAVE == 0.
+        """
+        for name, rules in policies_map.items():
+            if len(rules) == 1:
+                _convert_to_anchor(rules[0])
+            else:
+                anchor_rule = _get_anchor_rule(rules)
+                rules.insert(0, anchor_rule)
+        return policies_map
+
+    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
+        """Convert '-' into ''"""
+        for name, rules in policies_map.items():
+            for rule in rules:
+                if rule['letter'] == '-':
+                    rule['letter'] = ''
+        return policies_map
+
+    def _remove_rules_with_border_transitions(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Remove rules where the transition occurs on the first day of the
+        year (Jan 1). That situation is not supported by BasicZoneProcessor. On
+        the other hand, a transition at the end of the year (Dec 31) is
+        supported by BasicZoneProcessor.
+        """
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                from_year = rule['from_year']
+                to_year = rule['to_year']
+                month = rule['in_month']
+                on_day_of_month = rule['on_day_of_month']
+                if from_year > MIN_YEAR and to_year > MIN_YEAR:
+                    if month == 1 and on_day_of_month == 1:
+                        valid = False
+                        add_comment(
+                            removed_policies, name,
+                            "Transition on Jan 1 not supported "
+                            f"({from_year:04}-{month:02}-{on_day_of_month:02})"
+                        )
+                        break
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            'Removed %s policies with border Transitions', removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    def _remove_rules_long_dst_letter(
+        self,
+        policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        """Return a new map which filters out rules with long DST letter.
+        """
+        results: PoliciesMap = {}
+        removed_policies: CommentsMap = {}
+        for name, rules in policies_map.items():
+            valid = True
+            for rule in rules:
+                letter = rule['letter']
+                if len(letter) > 1:
+                    valid = False
+                    add_comment(
+                        removed_policies, name,
+                        f"LETTER '{letter}' too long")
+                    break
+            if valid:
+                results[name] = rules
+
+        self._print_comments_map(
+            'Removed %s policies with long DST letter', removed_policies,
+        )
+        merge_comments(self.all_removed_policies, removed_policies)
+        return results
+
+    # TODO: This does not quite work because there are rules whose
+    # [from_year,start_year] straddles the self.start_year. The from_year
+    # needs to be extended back to -Infinity.
+    def _create_tiny_from_to_years(
+        self, policies_map: PoliciesMap
+    ) -> PoliciesMap:
+        for name, rules in policies_map.items():
+            for rule in rules:
+                from_year = rule['from_year']
+                if from_year != MIN_YEAR and from_year != MAX_TO_YEAR:
+                    rule['from_year_tiny'] = from_year - EPOCH_YEAR_FOR_TINY
+
+                to_year = rule['to_year']
+                if to_year != MIN_YEAR and to_year != MAX_TO_YEAR:
+                    rule['to_year_tiny'] = to_year - EPOCH_YEAR_FOR_TINY
+
+        return policies_map
+
     # --------------------------------------------------------------------
-    # Methods related to Links.
+    # Part 5: Remove unused zones and links.
     # --------------------------------------------------------------------
+
+    def _remove_zones_without_rules(
+        self, zones_map: ZonesMap, policies_map: PoliciesMap
+    ) -> ZonesMap:
+        """Remove zone eras whose RULES field contains a reference to
+        a set of Rules, which cannot be found.
+        """
+        results: ZonesMap = {}
+        removed_zones: CommentsMap = {}
+        for name, eras in zones_map.items():
+            valid = True
+            for era in eras:
+                policy_name = era['rules']
+                if (policy_name not in ['-', ':']
+                        and policy_name not in policies_map):
+                    valid = False
+                    add_comment(
+                        removed_zones, name,
+                        f"policy '{policy_name}' not found")
+                    break
+            if valid:
+                results[name] = eras
+
+        self._print_comments_map(
+            'Removed %s zone infos without rules',
+            removed_zones,
+        )
+        merge_comments(self.all_removed_zones, removed_zones)
+        return results
 
     def _remove_links_to_missing_zones(
         self,
@@ -1479,11 +1472,15 @@ class Transformer:
                     f'Target Zone "{zone_name}" missing')
 
         self._print_comments_map(
-            label='Removed %s links with missing zones',
-            comments=removed_links,
+            'Removed %s links with missing zones',
+            removed_links,
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    # --------------------------------------------------------------------
+    # Part 6: Detect zones and links whose normalized names conflict.
+    # --------------------------------------------------------------------
 
     def _detect_zones_and_links_with_similar_names(
         self,
@@ -1521,35 +1518,8 @@ class Transformer:
 
         return result_zones, result_links
 
-    def _filter_include_links(
-        self,
-        links_map: LinksMap,
-        include_list: Set[str]
-    ) -> LinksMap:
-        """Remove links missing from include list."""
-        if not include_list:
-            return links_map
-
-        results: LinksMap = {}
-        removed_links: CommentsMap = {}
-        for link_name, zone_name in links_map.items():
-            if link_name in include_list:
-                results[link_name] = zone_name
-            else:
-                add_comment(
-                    removed_links, link_name,
-                    "Link missing from include list"
-                )
-
-        self._print_comments_map(
-            label='Removed %s links missing from include list',
-            comments=removed_links,
-        )
-        merge_comments(self.all_removed_links, removed_links)
-        return results
-
     # --------------------------------------------------------------------
-    # Additional extractions or transformations
+    # Part 8: Add additional results
     # --------------------------------------------------------------------
 
     def _generate_zone_ids(self, zones_map: ZonesMap) -> Dict[str, int]:
@@ -1663,22 +1633,20 @@ def time_string_to_seconds(time_string: str) -> int:
     return sign * ((hour * 60 + minute) * 60 + second)
 
 
-def find_matching_rules(
-    rules: List[ZoneRuleRaw],
-    era_from: int,
-    era_until: int,
-) -> List[ZoneRuleRaw]:
-    """Return the rules which overlap with the Zone Era interval [eraFrom,
-    eraUntil). The Rule interval is [ruleFrom, ruleTo + 1). Overlap happens
-    (ruleFrom < eraUntil) && (eraFrom < ruleTo+1). The expression (eraFrom <
-    ruleTo+1) can be written as (eraFrom <= ruleTo) since these values are
-    integers.
+def rule_overlaps_interval(
+    rule: ZoneRuleRaw, start_year: int, until_year: int,
+) -> bool:
+    """Check if rule [from,to] overlaps [start,until) interval.
+
+                [from                to]
+    --------)[----------------)[-------------
+           start             until
+
+    Overlap happens if:
+
+        (from < until) && (start <= to)
     """
-    matches = []
-    for rule in rules:
-        if rule['from_year'] < era_until and era_from <= rule['to_year']:
-            matches.append(rule)
-    return matches
+    return rule['from_year'] < until_year and start_year <= rule['to_year']
 
 
 def find_latest_prior_rules(
@@ -2027,3 +1995,69 @@ def _detect_tzdb_years(
                 max_year = from_year
 
     return min_year, max_year
+
+
+def _get_anchor_rule(rules: List[ZoneRuleRaw]) -> ZoneRuleRaw:
+    """Return the anchor rule that will act as the earliest rule with SAVE
+    == 0.
+    """
+    AnchorInfo = TypedDict('AnchorInfo', {
+        'earliestDate': Tuple[int, int, int],
+        'rule': Optional[ZoneRuleRaw],
+    })
+
+    # Find the earliest rule with a DSTOFF of 0. The `rules` array will
+    # never be empty, but the [start_year, until_year) cutoff may eliminate
+    # too many rules which may result in no rule with DSTOFF of 0. In
+    # practice, I haven't seen this happen, so let's just throw an exception
+    # if that is the case. It would take extra logic to fix this.
+    anchor_info: AnchorInfo = {
+        'earliestDate': (MAX_UNTIL_YEAR, 12, 31),
+        'rule': None,
+    }
+    for rule in rules:
+        from_year = rule['from_year']
+        in_month = rule['in_month']
+        on_day_of_week = rule['on_day_of_week']
+        on_day_of_month = rule['on_day_of_month']
+        month, day = calc_day_of_month(
+            from_year, in_month, on_day_of_week, on_day_of_month)
+        rule_date = (from_year, month, day)
+
+        if (rule['delta_seconds'] == 0
+                and rule_date < anchor_info['earliestDate']):
+            anchor_info['earliestDate'] = rule_date
+            anchor_info['rule'] = rule
+
+    # Create a copy of that Rule, preserving the SAVE, LETTER, and original
+    # `raw_line`, but clobbering the FROM field to MIN_YEAR so that it is
+    # guaranteed to be the first matching Rule.
+    #
+    # The alternative was to avoid creating a copy, but simply set the
+    # original's `from_year` to MIN_YEAR. But that produced an error in the
+    # _check_transitions_sorted() method in zone_processor.py for Asia/Gaza
+    # in year 19000 because the yearly transition rule that landed too close
+    # to the start of the ZoneEra transition, but they were using 2
+    # different suffixes (9/30 24:00u versus 10/1 00:00w), and the current
+    # zone_processor.py code was not able to handle them.
+    assert anchor_info['rule'] is not None
+    anchor_rule = anchor_info['rule'].copy()
+    _convert_to_anchor(anchor_rule)
+    return anchor_rule
+
+
+def _convert_to_anchor(rule: ZoneRuleRaw) -> None:
+    rule['from_year'] = MIN_YEAR
+    rule['to_year'] = MIN_YEAR
+    rule['in_month'] = 1
+    rule['on_day_of_week'] = 0  # 0, match onDayOfMonth exactly
+    rule['on_day_of_month'] = 1
+    rule['at_time'] = '0'
+    rule['at_time_suffix'] = 'w'
+    rule['delta_offset'] = '0'
+    rule['at_seconds'] = 0
+    rule['at_seconds_truncated'] = 0
+    rule['delta_seconds'] = 0
+    rule['delta_seconds_truncated'] = 0
+    rule['raw_line'] = 'Anchor: ' + rule['raw_line']
+    rule['anchor'] = True
