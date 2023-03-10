@@ -975,21 +975,33 @@ class Transformer:
         removed_policies: CommentsMap = {}
         notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
-            used_rules = []
-            removed_count = 0
+            for rule in rules:
+                rule['used'] = False
+
+            # Mark rules overlapping [start,until).
             for rule in rules:
                 if rule_overlaps_interval(rule, start_year, until_year):
-                    used_rules.append(rule)
-                else:
-                    removed_count += 1
+                    rule['used'] = True
 
+            # Mark latest prior rules.
+            priors = find_latest_prior_rules(rules, start_year)
+            for rule in priors:
+                rule['used'] = True
+
+            # Collect remaining rules.
+            used_rules: List[ZoneRuleRaw] = []
+            for rule in rules:
+                if rule['used']:
+                    used_rules.append(rule)
+
+            removed_count = len(rules) - len(used_rules)
             if removed_count == 0:
                 results[name] = rules
             elif removed_count < len(rules):
                 results[name] = used_rules
                 add_comment(
                     notable_policies, name,
-                    f'Removed {removed_count} rules'
+                    f'Removed {removed_count} rules far past or far future'
                 )
             else:
                 add_comment(
