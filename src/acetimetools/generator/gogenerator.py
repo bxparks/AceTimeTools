@@ -37,6 +37,10 @@ class GoGenerator:
     ZONE_INFOS_FILE_NAME = 'zone_infos.go'
     ZONE_POLICIES_FILE_NAME = 'zone_policies.go'
     ZONE_REGISTRY_FILE_NAME = 'zone_registry.go'
+    ZONE_INFOS_TEST_FILE_NAME = 'zone_infos_test.go'
+    ZONE_POLICIES_TEST_FILE_NAME = 'zone_policies_test.go'
+    ZONE_REGISTRY_TEST_FILE_NAME = 'zone_registry_test.go'
+    READER_TEST_FILE_NAME = 'reader_test.go'
 
     def __init__(
         self,
@@ -91,12 +95,21 @@ class GoGenerator:
     def generate_files(self, output_dir: str) -> None:
         self._write_file(output_dir, self.ZONE_POLICIES_FILE_NAME,
                          self._generate_policies())
+        self._write_file(output_dir, self.ZONE_POLICIES_TEST_FILE_NAME,
+                         self._generate_policies_test())
 
         self._write_file(output_dir, self.ZONE_INFOS_FILE_NAME,
                          self._generate_infos())
+        self._write_file(output_dir, self.ZONE_INFOS_TEST_FILE_NAME,
+                         self._generate_infos_test())
 
         self._write_file(output_dir, self.ZONE_REGISTRY_FILE_NAME,
                          self._generate_registry())
+        self._write_file(output_dir, self.ZONE_REGISTRY_TEST_FILE_NAME,
+                         self._generate_registry_test())
+
+        self._write_file(output_dir, self.READER_TEST_FILE_NAME,
+                         self._generate_reader_test())
 
     def _write_file(self, output_dir: str, filename: str, content: str) -> None:
         full_filename = os.path.join(output_dir, filename)
@@ -171,27 +184,24 @@ class GoGenerator:
     # ------------------------------------------------------------------------
 
     def _generate_policies(self) -> str:
-        zone_rules_string = self._generate_rules_string(self.policies_map)
         zone_rules_data, chunk_size, count = self._generate_rules_data(
             self.policies_map)
         zone_rules_data_string = convert_to_go_string(
-            zone_rules_data, chunk_size, '\t\t')
+            zone_rules_data, chunk_size, '\t')
         zone_rule_chunk_size = chunk_size
         zone_rule_count = count
 
-        zone_policies_string = self._generate_policies_string(
-            self.policy_index_size_map)
         zone_policies_data, chunk_size, count = self._generate_policies_data(
             self.policy_index_size_map)
         zone_policies_data_string = convert_to_go_string(
-            zone_policies_data, chunk_size, '\t\t')
+            zone_policies_data, chunk_size, '\t')
         zone_policy_chunk_size = chunk_size
         zone_policy_count = count
 
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
-        letter_data = '" +\n\t\t"'.join(self.letters_map.keys())
+        letter_data = '" +\n\t"'.join(self.letters_map.keys())
         letter_offsets = _render_offsets(
             [x[1] for x in self.letters_map.values()]
         )
@@ -199,39 +209,28 @@ class GoGenerator:
         return self._generate_header() + f"""\
 package {self.db_namespace}
 
-import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
-)
-
 // ---------------------------------------------------------------------------
 // String constants.
 // ---------------------------------------------------------------------------
 
-const (
-\t// All ZoneRule.Letter entries concatenated together.
-\tLetterData = "{letter_data}"
-)
+// All ZoneRule.Letter entries concatenated together.
+const LetterData = "{letter_data}"
 
-var (
-\t// Byte offset into LetterData for each index. The actual Letter string
-\t// at index `i` given by the `ZoneRule.Letter` field is
-\t// `LetterData[LetterOffsets[i]:LetterOffsets[i+1]]`.
-\tLetterOffsets = []uint8{{
+// Byte offset into LetterData for each index. The actual Letter string
+// at index `i` given by the `ZoneRule.Letter` field is
+// `LetterData[LetterOffsets[i]:LetterOffsets[i+1]]`.
+var LetterOffsets = []uint8{{
 {letter_offsets}
-\t}}
-)
+}}
 
 // ---------------------------------------------------------------------------
-// ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
-// from all ZonePolicyRecords.
+// ZoneRulesData is the encoded version of ZoneRuleRecords in
+// {GoGenerator.ZONE_POLICIES_TEST_FILE_NAME}. It contains an array of
+// ZoneRuleRecord encoded as string.
 //
 // Supported zone policies: {len(self.policies_map)}
 // numRules: {self.num_rules}
 // ---------------------------------------------------------------------------
-
-var ZoneRuleRecords = []zoneinfo.ZoneRuleRecord{{
-{zone_rules_string}
-}}
 
 const ZoneRuleCount = {zone_rule_count}
 
@@ -241,13 +240,13 @@ const ZoneRuleChunkSize = {zone_rule_chunk_size}
 const ZoneRulesData = {zone_rules_data_string}
 
 // ---------------------------------------------------------------------------
-// ZonePolicyRecords contain indexes into the ZoneRuleRecords.
+// ZonePoliciesData is the encoded version of ZonePolicyRecords in
+// {GoGenerator.ZONE_POLICIES_TEST_FILE_NAME}. It contains an array of
+// ZonePolicyRecord which is a pair of (index, count) into the ZoneRuleRecords
+// array.
+//
 // Supported zone policies: {len(self.policies_map)}
 // ---------------------------------------------------------------------------
-
-var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
-{zone_policies_string}
-}}
 
 const ZonePolicyCount = {zone_policy_count}
 
@@ -267,6 +266,39 @@ const ZonePoliciesData = {zone_policies_data_string}
 // ---------------------------------------------------------------------------
 
 {notable_policy_items}
+"""
+
+    def _generate_policies_test(self) -> str:
+        zone_rules_string = self._generate_rules_string(self.policies_map)
+        zone_policies_string = self._generate_policies_string(
+            self.policy_index_size_map)
+
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+// ---------------------------------------------------------------------------
+// ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
+// from all ZonePolicyRecords.
+//
+// Supported zone policies: {len(self.policies_map)}
+// numRules: {self.num_rules}
+// ---------------------------------------------------------------------------
+
+var ZoneRuleRecords = []zoneinfo.ZoneRuleRecord{{
+{zone_rules_string}
+}}
+
+// ---------------------------------------------------------------------------
+// ZonePolicyRecords contain indexes into the ZoneRuleRecords.
+// Supported zone policies: {len(self.policies_map)}
+// ---------------------------------------------------------------------------
+
+var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
+{zone_policies_string}
+}}
 
 """
 
@@ -408,18 +440,16 @@ const ZonePoliciesData = {zone_policies_data_string}
     # ------------------------------------------------------------------------
 
     def _generate_infos(self) -> str:
-        zone_eras_string = self._generate_eras_string(self.zones_map)
         zone_eras_data, chunk_size, count = self._generate_eras_data(
             self.zones_map)
         zone_eras_data_string = convert_to_go_string(
-            zone_eras_data, chunk_size, '\t\t')
+            zone_eras_data, chunk_size, '\t')
         zone_era_chunk_size = chunk_size
         zone_era_count = count
 
-        zone_infos_string = self._generate_infos_string()
         zone_infos_data, chunk_size, count = self._generate_infos_data()
         zone_infos_data_string = convert_to_go_string(
-            zone_infos_data, chunk_size, '\t\t')
+            zone_infos_data, chunk_size, '\t')
         zone_info_chunk_size = chunk_size
         zone_info_count = count
 
@@ -430,12 +460,12 @@ const ZonePoliciesData = {zone_policies_data_string}
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
-        format_data = '" +\n\t\t"'.join(self.formats_map.keys())
+        format_data = '" +\n\t"'.join(self.formats_map.keys())
         format_offsets = _render_offsets(
             [x[1] for x in self.formats_map.values()]
         )
 
-        name_data = '" +\n\t\t"'.join(self.names_map.keys())
+        name_data = '" +\n\t"'.join(self.names_map.keys())
         name_offsets = _render_offsets(
             [x[1] for x in self.names_map.values()]
         )
@@ -449,49 +479,36 @@ const ZonePoliciesData = {zone_policies_data_string}
         return self._generate_header() + f"""\
 package {self.db_namespace}
 
-import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
-)
-
 // ---------------------------------------------------------------------------
 // String constants.
 // ---------------------------------------------------------------------------
 
-const (
-\t// All ZoneEra.Format entries concatenated together.
-\tFormatData = "{format_data}"
+// All ZoneEra.Format entries concatenated together.
+const FormatData = "{format_data}"
 
-\t// All ZoneInfo.Name entries concatenated togther.
-\tNameData = "{name_data}"
-)
+// All ZoneInfo.Name entries concatenated togther.
+const NameData = "{name_data}"
 
-var (
-\t// Byte offset into FormatData for each index. The actual Format string
-\t// at index `i` given by the `ZoneEra.Format` field is
-\t// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
-\tFormatOffsets = []uint16{{
+// Byte offset into FormatData for each index. The actual Format string
+// at index `i` given by the `ZoneEra.Format` field is
+// `FormatData[FormatOffsets[i]:FormatOffsets[i+1]]`.
+var FormatOffsets = []uint16{{
 {format_offsets}
 }}
 
-\t// Byte offset into NameData for each index. The actual Letter string
-\t// at index `i` given by the `ZoneRule.Name` field is
-\t// `NameData[NameOffsets[i]:NameOffsets[i+1]]`.
-\tNameOffsets = []uint16{{
+// Byte offset into NameData for each index. The actual Letter string
+// at index `i` given by the `ZoneRule.Name` field is
+// `NameData[NameOffsets[i]:NameOffsets[i+1]]`.
+var NameOffsets = []uint16{{
 {name_offsets}
-\t}}
-)
+}}
 
 // ---------------------------------------------------------------------------
-// ZoneEraRecords is an array of zoneinfo.ZoneEraRecord items concatenated
-// together.
+// ZoneErasData is the encoded version of ZoneEraRecords.
 //
 // Supported zones: {num_zones}
 // numEras: {self.num_eras}
 // ---------------------------------------------------------------------------
-
-var ZoneEraRecords = []zoneinfo.ZoneEraRecord{{
-{zone_eras_string}
-}}
 
 const ZoneEraCount = {zone_era_count}
 
@@ -506,10 +523,6 @@ const ZoneErasData = {zone_eras_data_string}
 //
 // Total: {num_zones_and_links} ({num_zones} zones, {num_links} links)
 // ---------------------------------------------------------------------------
-
-var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
-{zone_infos_string}
-}}
 
 const ZoneInfoCount = {zone_info_count}
 
@@ -541,6 +554,44 @@ const ZoneInfosData = {zone_infos_data_string}
 // ---------------------------------------------------------------------------
 
 {notable_link_items}
+"""
+
+    def _generate_infos_test(self) -> str:
+        zone_eras_string = self._generate_eras_string(self.zones_map)
+        zone_infos_string = self._generate_infos_string()
+        num_zones = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_zones_and_links = len(self.zones_and_links)
+
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// ZoneEraRecords is an array of ZoneEraRecord items concatenated together
+// across all zones.
+//
+// Supported zones: {num_zones}
+// numEras: {self.num_eras}
+// ---------------------------------------------------------------------------
+
+var ZoneEraRecords = []zoneinfo.ZoneEraRecord{{
+{zone_eras_string}
+}}
+
+// ---------------------------------------------------------------------------
+// ZoneInfoRecords is an array of ZoneInfoRecord items concatenated together
+// across all zones.
+//
+// Total: {num_zones_and_links} ({num_zones} zones, {num_links} links)
+// ---------------------------------------------------------------------------
+
+var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
+{zone_infos_string}
+}}
 """
 
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
@@ -737,7 +788,6 @@ const ZoneInfosData = {zone_infos_data_string}
 
     def _generate_registry(self) -> str:
         zone_and_link_ids_string = self._generate_zone_and_link_ids()
-        zone_and_link_indexes_string = self._generate_zone_and_link_indexes()
 
         num_zones = len(self.zones_map)
         num_links = len(self.links_map)
@@ -755,31 +805,6 @@ import (
 // ---------------------------------------------------------------------------
 
 const TzDatabaseVersion string = "{self.tz_version}"
-
-// RecordContext contains references to the various arrays of ZoneRuleRecord,
-// ZonePolicyRecord, ZoneEraRecord, and ZoneInfoRecord objects, as well as the
-// strings used by those objects.
-//
-// The `acetime` package uses the encoded XxxData objects, not the XxxRecord
-// objects referenced here. These XxxRecord objects are used only for testing
-// purposes, to verify that the XxxData objects were properly generated, and can
-// be read back and reconstructed to be identical to the XxxRecord objects.
-var RecordContext = zoneinfo.ZoneRecordContext{{
-\tTzDatabaseVersion: TzDatabaseVersion,
-\tStartYear: {self.start_year},
-\tUntilYear: {self.until_year},
-\tMaxTransitions: {self.max_buf_size},
-\tLetterData: LetterData,
-\tLetterOffsets: LetterOffsets,
-\tFormatData: FormatData,
-\tFormatOffsets: FormatOffsets,
-\tNameData: NameData,
-\tNameOffsets: NameOffsets,
-\tZoneRuleRecords: ZoneRuleRecords,
-\tZonePolicyRecords: ZonePolicyRecords,
-\tZoneEraRecords: ZoneEraRecords,
-\tZoneInfoRecords: ZoneInfoRecords,
-}}
 
 // DataContext contains references to various XxxData objects and strings. These
 // are the binary encoded versions of the various XxxRecord objects. This object
@@ -825,6 +850,50 @@ var DataContext = zoneinfo.ZoneDataContext{{
 const (
 {zone_and_link_ids_string}
 )
+"""
+
+    def _generate_registry_test(self) -> str:
+        zone_and_link_indexes_string = self._generate_zone_and_link_indexes()
+
+        num_zones = len(self.zones_map)
+        num_links = len(self.links_map)
+        num_zones_and_links = len(self.zones_and_links)
+
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/zoneinfo"
+)
+
+// ---------------------------------------------------------------------------
+// Zone Context
+// ---------------------------------------------------------------------------
+
+// RecordContext contains references to the various arrays of ZoneRuleRecord,
+// ZonePolicyRecord, ZoneEraRecord, and ZoneInfoRecord objects, as well as the
+// strings used by those objects.
+//
+// The `acetime` package uses the encoded XxxData objects, not the XxxRecord
+// objects referenced here. These XxxRecord objects are used only for testing
+// purposes, to verify that the XxxData objects were properly generated, and can
+// be read back and reconstructed to be identical to the XxxRecord objects.
+var RecordContext = zoneinfo.ZoneRecordContext{{
+\tTzDatabaseVersion: TzDatabaseVersion,
+\tStartYear: {self.start_year},
+\tUntilYear: {self.until_year},
+\tMaxTransitions: {self.max_buf_size},
+\tLetterData: LetterData,
+\tLetterOffsets: LetterOffsets,
+\tFormatData: FormatData,
+\tFormatOffsets: FormatOffsets,
+\tNameData: NameData,
+\tNameOffsets: NameOffsets,
+\tZoneRuleRecords: ZoneRuleRecords,
+\tZonePolicyRecords: ZonePolicyRecords,
+\tZoneEraRecords: ZoneEraRecords,
+\tZoneInfoRecords: ZoneInfoRecords,
+}}
 
 // ---------------------------------------------------------------------------
 // Zone Indexes. Index into the ZoneInfoRecords array. Intended for unit tests
@@ -868,6 +937,36 @@ const (
 \tZoneInfoIndex{normalized_name} uint16 = {index} // {name}
 """
         return s
+
+    def _generate_reader_test(self) -> str:
+        return self._generate_header() + f"""\
+package {self.db_namespace}
+
+import (
+\t"github.com/bxparks/AceTimeGo/internal"
+\t"testing"
+)
+
+// Verify that ZoneInfosData is identical to ZoneInfoRecords.
+func TestZoneInfoReader(t *testing.T) {{
+	internal.VerifyZoneInfoReader(t, &DataContext, &RecordContext)
+}}
+
+// Verify that ZoneErasData is identical to ZoneEraRecords.
+func TestZoneEraReader(t *testing.T) {{
+	internal.VerifyZoneEraReader(t, &DataContext, &RecordContext)
+}}
+
+// Verify that ZonePoliciesData is identical to ZonePolicyRecords.
+func TestZonePolicyReader(t *testing.T) {{
+	internal.VerifyZonePolicyReader(t, &DataContext, &RecordContext)
+}}
+
+// Verify that ZoneRulesData is identical to ZoneRuleRecords.
+func TestZoneRuleReader(t *testing.T) {{
+	internal.VerifyZoneRuleReader(t, &DataContext, &RecordContext)
+}}
+"""
 
 
 def _render_comments_map(comments: CommentsMap, indent: str = '') -> str:
@@ -953,7 +1052,7 @@ def _get_time_modifier_comment(
     return f'{suffixStr} + remainder={remainder_seconds}'
 
 
-def _render_offsets(offsets: Iterable[int], prefix: str = '\t\t') -> str:
+def _render_offsets(offsets: Iterable[int], prefix: str = '\t') -> str:
     """Return a comma-separated list integers as a string suitable for Golang,
     with a newline added every 10 elements for readability. The logic to
     correctly handle trailing commas, spaces, and newlines properly was trickier
