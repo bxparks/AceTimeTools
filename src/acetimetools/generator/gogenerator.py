@@ -949,22 +949,22 @@ import (
 
 // Verify that ZoneInfosData is identical to ZoneInfoRecords.
 func TestZoneInfoReader(t *testing.T) {{
-	internal.VerifyZoneInfoReader(t, &DataContext, &RecordContext)
+\tinternal.VerifyZoneInfoReader(t, &DataContext, &RecordContext)
 }}
 
 // Verify that ZoneErasData is identical to ZoneEraRecords.
 func TestZoneEraReader(t *testing.T) {{
-	internal.VerifyZoneEraReader(t, &DataContext, &RecordContext)
+\tinternal.VerifyZoneEraReader(t, &DataContext, &RecordContext)
 }}
 
 // Verify that ZonePoliciesData is identical to ZonePolicyRecords.
 func TestZonePolicyReader(t *testing.T) {{
-	internal.VerifyZonePolicyReader(t, &DataContext, &RecordContext)
+\tinternal.VerifyZonePolicyReader(t, &DataContext, &RecordContext)
 }}
 
 // Verify that ZoneRulesData is identical to ZoneRuleRecords.
 func TestZoneRuleReader(t *testing.T) {{
-	internal.VerifyZoneRuleReader(t, &DataContext, &RecordContext)
+\tinternal.VerifyZoneRuleReader(t, &DataContext, &RecordContext)
 }}
 """
 
