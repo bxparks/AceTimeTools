@@ -157,7 +157,7 @@ class Transformer:
         # Part 4: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
         if not self.generate_int16_years:
-            policies_map = self._remove_rules_out_of_bounds(policies_map)
+            policies_map = self._remove_rules_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_multiple_transitions_in_month(
                 policies_map)
@@ -1005,12 +1005,12 @@ class Transformer:
         merge_comments(self.all_notable_policies, notable_policies)
         return results
 
-    def _remove_rules_out_of_bounds(
+    def _remove_rules_not_tiny(
         self,
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields do not fit in an int8_t
-        with a base EPOCH_YEAR_FOR_TINY (2100).
+        """Remove policies which have FROM and TO fields do not fit in a tiny
+        year field (8-bit integer) with a base EPOCH_YEAR_FOR_TINY (2100).
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
