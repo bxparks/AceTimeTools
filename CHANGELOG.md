@@ -1,13 +1,19 @@
 # Changelog
 
 * Unreleased
+* v1.6.1 (2023-03-10)
     * `transformer.py`
-        * Filter out ZoneRules using a coarse-trained comparison to
+        * Filter out ZoneRules using a coarse-grained comparison to
           `[start_year, until_year), instead of loop through every ZoneEra item,
           and doing a mark and sweep on the referenced ZoneRule.
             * This picks up a few extra ZoneRule records in some older
               ZonePolicies, but makes the code far simpler and easier to
               maintain.
+    * `gogenerator.py`
+        * Separate out the `XxxRecord` objects into `zone_infos_test.go`,
+          `zone_policies_test.go`, `zone_registry_test.go`.
+        * Auto-generate `reader_test.go` directly into the `zonedb*/` directory
+          and use the `zone_test.go` files.
 * v1.6.0 (2023-03-09)
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`
