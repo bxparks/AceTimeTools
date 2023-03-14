@@ -323,9 +323,7 @@ class TransformerResult:
     go_names_map: OffsetMap  # {name -> byte_offset}
     go_zone_and_link_index_map: IndexMap  # {zone -> index}
     go_policy_index_size_map: IndexSizeMap  # {policy -> (index, offset, size)}
-    go_rule_count: int  # total num rules across all policies
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
-    go_era_count: int  # total num eras across all zone infos
     go_memory_map: MemoryMap  # memory usage for AceTimeGo
 
 
@@ -375,6 +373,8 @@ class ZoneInfoDatabase(TypedDict):
     num_zones: int
     num_policies: int
     num_links: int
+    num_eras: int
+    num_rules: int
 
     # Data from Extractor filtered through Transformer
     zones_map: ZonesMap
@@ -420,9 +420,7 @@ class ZoneInfoDatabase(TypedDict):
     go_names_map: OffsetMap  # all name strings
     go_zone_and_link_index_map: IndexMap  # combined index map, sorted by zoneId
     go_policy_index_size_map: IndexSizeMap  # policy -> (index, offset, size)
-    go_rule_count: int  # total num rules across all policies
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
-    go_era_count: int  # total num eras across all zone infos
     go_memory_map: MemoryMap
 
 
@@ -455,15 +453,19 @@ def create_zone_info_database(
         'strict': strict,
         'compress': compress,
 
-        # Data from Extractor filtered through Transformer.
+        # Source data from Transformer.
         'num_zones': len(tresult.zones_map),
         'num_policies': len(tresult.policies_map),
         'num_links': len(tresult.links_map),
+        'num_eras': sum([len(eras) for _, eras in tresult.zones_map.items()]),
+        'num_rules': sum([
+            len(rules) for _, rules in tresult.policies_map.items()
+        ]),
         'zones_map': tresult.zones_map,
         'policies_map': tresult.policies_map,
         'links_map': tresult.links_map,
 
-        # Data from Transformer.
+        # Derived data from Transformer.
         'zone_ids': tresult.zone_ids,
         'link_ids': tresult.link_ids,
         'removed_zones': _sort_comments(tresult.removed_zones),
@@ -503,9 +505,7 @@ def create_zone_info_database(
         'go_names_map': tresult.go_names_map,
         'go_zone_and_link_index_map': tresult.go_zone_and_link_index_map,
         'go_policy_index_size_map': tresult.go_policy_index_size_map,
-        'go_rule_count': tresult.go_rule_count,
         'go_info_index_size_map': tresult.go_info_index_size_map,
-        'go_era_count': tresult.go_era_count,
         'go_memory_map': tresult.go_memory_map,
     }
 
