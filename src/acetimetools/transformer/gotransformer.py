@@ -82,9 +82,7 @@ class GoTransformer:
 
         tresult.go_zone_and_link_index_map = zone_and_link_index_map
         tresult.go_policy_index_size_map = policy_index_size_map
-        tresult.go_rule_count = rule_count
         tresult.go_info_index_size_map = info_index_size_map
-        tresult.go_era_count = era_count
         tresult.go_names_map = names_map
         tresult.go_formats_map = formats_map
         tresult.go_letters_map = letters_map
