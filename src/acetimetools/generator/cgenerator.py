@@ -153,6 +153,12 @@ class CGenerator:
 // Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
 // Max Buffer Size: {self.max_buf_size}
 //
+// Records:
+//   Infos: {num_zones_and_links}
+//   Eras: {self.num_eras}
+//   Policies: {self.num_policies}
+//   Rules: {self.num_rules}
+//
 // Memory (8-bits):
 //   Rules: {self.memory_map8['rules']}
 //   Policies: {self.memory_map8['policies']}
