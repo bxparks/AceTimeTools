@@ -207,7 +207,7 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
 ({self.num_zones} zones, {self.num_links} links)
 # Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
-//
+#
 # Original Years:  [{self.original_min_year},{self.original_max_year}]
 # Generated Years: [{self.generated_min_year},{self.generated_max_year}]
 #
