@@ -1,6 +1,10 @@
 # Changelog
 
 * Unreleased
+* v1.6.2 (2023-03-24)
+    * Add 'Records' section in the file header of zonedb generated files.
+        * Contains the number of records for Info, Era, Policy, and Rule
+          tables.
 * v1.6.1 (2023-03-10)
     * `transformer.py`
         * Filter out ZoneRules using a coarse-grained comparison to
