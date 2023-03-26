@@ -656,11 +656,15 @@ class Transformer:
                         f"invalid STDOFF '{offset_string}'")
                     break
 
-                # Check for non-multiple of :15 minutes.
+                # Check for non-multiple of :15 minutes or :30 minutes.
                 if offset_seconds % 900 != 0:
                     add_comment(
                         notable_zones, name,
                         f"STDOFF '{offset_string}' not multiple of :15 min")
+                elif offset_seconds % 1800 != 0:
+                    add_comment(
+                        notable_zones, name,
+                        f"STDOFF '{offset_string}' not multiple of :30 min")
 
                 # Truncate offset to requested granularity.
                 offset_seconds_truncated = truncate_to_granularity(
