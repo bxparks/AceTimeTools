@@ -392,11 +392,12 @@ ZONE_INFO_{zone_normalized_name}: ZoneInfo = {{
 """
 
     def _generate_era_item(self, era: ZoneEraRaw) -> str:
-        policy_name = era['rules']
-        if policy_name in ['-', ':']:
+        policy_name = era['policy_name']
+        if policy_name is None:
             zone_policy = 'None'
         else:
-            zone_policy = f'ZONE_POLICY_{normalize_name(policy_name)}'
+            policy_normalized_name = normalize_name(policy_name)
+            zone_policy = f'ZONE_POLICY_{policy_normalized_name}'
 
         raw_line = normalize_raw(era['raw_line'])
         offset_seconds = era['offset_seconds_truncated']

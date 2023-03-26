@@ -621,8 +621,8 @@ var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
             entry = self.formats_map[format_short]
             format_index = entry[0]  # (index, offset)
 
-            policy_name = era['rules']
-            if policy_name in ['-', ':']:
+            policy_name = era['policy_name']
+            if policy_name is None:
                 policy_name = ""
             policy_index = policy_index_size_map[policy_name][0]
             if policy_name == "":
@@ -678,8 +678,8 @@ var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
         return data, chunk_size, count
 
     def _generate_era_data(self, data: bytearray, era: ZoneEraRaw) -> None:
-        policy_name = era['rules']
-        if policy_name in ['-', ':']:
+        policy_name = era['policy_name']
+        if policy_name is None:
             policy_name = ""
         policy_index = self.policy_index_size_map[policy_name][0]
 

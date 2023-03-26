@@ -604,11 +604,12 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
     def _generate_era_item(
         self, zone_name: str, era: ZoneEraRaw
     ) -> str:
-        rules_policy_name = era['rules']
-        if rules_policy_name == '-' or rules_policy_name == ':':
+        policy_name = era['policy_name']
+        if policy_name is None:
             zone_policy = 'nullptr'
         else:
-            zone_policy = f'&kZonePolicy{normalize_name(rules_policy_name)}'
+            policy_normalized_name = normalize_name(policy_name)
+            zone_policy = f'&kZonePolicy{policy_normalized_name}'
 
         offset_code = era['offset_code']
         delta_code = era['delta_code_encoded']

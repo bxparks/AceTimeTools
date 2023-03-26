@@ -187,13 +187,7 @@ class ArduinoTransformer:
         """
         for zone_name, eras in zones_map.items():
             for era in eras:
-
-                # Determine the current delta seconds, based on the RULES field.
-                rule_policy_name = era['rules']
-                if rule_policy_name == ':':
-                    delta_seconds = era['era_delta_seconds_truncated']
-                else:
-                    delta_seconds = 0
+                delta_seconds = era['era_delta_seconds_truncated']
 
                 # Generate the STDOFF and DST delta offset codes.
                 offset_encoded = _to_era_offset_and_delta(

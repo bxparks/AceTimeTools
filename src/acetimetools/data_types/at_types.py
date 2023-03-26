@@ -132,8 +132,8 @@ class ZoneEraRaw(TypedDict, total=False):
                                 -6:00       US      C%sT
 
     """
-    offset_string: str   # STD offset from UTC/GMT
-    rules: str  # name of the Rule in effect, '-', or ':'
+    offset_string: str   # STDOFF columnfrom UTC/GMT
+    rules: str  # RULES column, name of RULE, '-', or 'hh:mm'
     format: str  # abbreviation format (e.g. P%sT, E%sT, GMT/BST)
     until_year: int  # MAX_UNTIL_YEAR means 'max'
     until_year_only: bool  # true if only the year is given
@@ -147,9 +147,13 @@ class ZoneEraRaw(TypedDict, total=False):
     format_short: str  # Arduino version of format with %s -> %
     offset_seconds: int  # STD offset from UTC/GMT in seconds
     offset_seconds_truncated: int  # offset_seconds truncated to granularity
-    # If RULES is a DST offset string of the form # hh:mm[:ss], then 'rules' is
-    # set to ':', and'era_delta_seconds' contains the parsed delta offset from
-    # UTC in seconds. If RULES is '-', then this is set to 0.
+    # If RULES is a string reference to a policy (i.e. set of RULES), this is
+    # set to the policy name. Otherwise, this is set to 'None' to indicate a
+    # fixed DST offset of '-' or 'hh:mm'.
+    policy_name: Optional[str]
+    # If RULES is a fixed DST offset string of the form 'hh:mm[:ss]', then
+    # 'era_delta_seconds' contains the parsed delta offset from UTC in seconds.
+    # If RULES is '-' or a named policy name, then this is set to 0.
     era_delta_seconds: int
     era_delta_seconds_truncated: int  # truncated to granularity
     until_day: int  # 1-31

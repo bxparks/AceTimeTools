@@ -629,12 +629,13 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
     def _generate_era_item(
         self, zone_name: str, era: ZoneEraRaw
     ) -> str:
-        rules_policy_name = era['rules']
-        if rules_policy_name == '-' or rules_policy_name == ':':
+        policy_name = era['policy_name']
+        if policy_name is None:
             zone_policy = 'NULL'
         else:
-            zone_policy = f"""\
-&k{self.db_namespace}ZonePolicy{normalize_name(rules_policy_name)}"""
+            policy_normalized_name = normalize_name(policy_name)
+            zone_policy = \
+                f"&k{self.db_namespace}ZonePolicy{policy_normalized_name}"
 
         offset_seconds = era['offset_seconds_truncated']
         if self.generate_hires:

@@ -61,8 +61,8 @@ def _gather_zones_to_policies(
     zones_to_policies: ZonesToPolicies = {}
     for zone_name, eras in zones_map.items():
         for era in eras:
-            rule_name = era['rules']
-            if rule_name not in [':', '-']:
+            policy_name = era['policy_name']
+            if policy_name:
                 policies = cast(
                     Optional[Set[str]],
                     zones_to_policies.get(zone_name)
@@ -70,7 +70,7 @@ def _gather_zones_to_policies(
                 if policies is None:
                     policies = set()
                     zones_to_policies[zone_name] = policies
-                policies.add(rule_name)
+                policies.add(policy_name)
     return zones_to_policies
 
 
@@ -146,18 +146,18 @@ def _note_zones_with_odd_utc_offset(
                     f"STDOFF '{offset_string}' not at :00 or :30 mark")
                 break
 
-            # Check the RULES column, which has 3 options: a policy name,
-            # '-', or ':'.
-            rule_name = era['rules']
+            # Check the DST offset from the RULES column.
+            rules_name = era['rules']
+            policy_name = era['policy_name']
             found_odd_offset = False
-            if rule_name == ':':
+            if policy_name is None:
                 if era['era_delta_seconds'] % 1800 != 0:
                     add_comment(
                         notable_zones, zone_name,
-                        f"RULES '{rule_name}' not at :00 or :30 mark")
-            elif rule_name != '-':
+                        f"RULES '{rules_name}' not at :00 or :30 mark")
+            else:
                 # RULES contains a reference to a policy
-                rules = policies_map.get(rule_name)
+                rules = policies_map.get(policy_name)
                 assert rules is not None
                 for rule in rules:
                     # Check SAVE column for non :00 or :30
@@ -165,7 +165,7 @@ def _note_zones_with_odd_utc_offset(
                     if rule['delta_seconds'] % 1800 != 0:
                         add_comment(
                             notable_zones, zone_name,
-                            f"SAVE '{save_string}' in Rule {rule_name}"
+                            f"SAVE '{save_string}' in Rule {rules_name}"
                             f' not at :00 or :30 mark')
                         found_odd_offset = True
                         break
