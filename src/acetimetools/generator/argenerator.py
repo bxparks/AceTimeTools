@@ -608,7 +608,8 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         if policy_name is None:
             zone_policy = 'nullptr'
         else:
-            zone_policy = f'&kZonePolicy{policy_name}'
+            policy_normalized_name = normalize_name(policy_name)
+            zone_policy = f'&kZonePolicy{policy_normalized_name}'
 
         offset_code = era['offset_code']
         delta_code = era['delta_code_encoded']
