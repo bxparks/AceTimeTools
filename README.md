@@ -13,6 +13,17 @@ to support other languages and environments.
 
 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
+<a name="Installation"></a>
+## Installation
+
+This project is not on PyPI yet, so you must install it from the git repo.
+
+```
+$ git clone github.com/bxparks/AceTimeTools
+$ cd AceTimeTools
+$ pip3 install -e .
+```
+
 ## Summary of Tools
 
 Here is a quick summary of the various tools:
@@ -102,9 +113,9 @@ zone_strings.{h,cpp}         |                           (AceTimeValidation)
     * `$ git clone https://github.com/eggert/tz`
 * [AceTimePython](https://github.com/bxparks/AceTimePython)
     * This causes a partial circular dependency.
-    * AceTimeTool generates the `zonedb` files used by the AceTimePython
+    * AceTimeTools generates the `zonedb` files used by the AceTimePython
       classes.
-    * But AceTimeTool feeds the in-memory transient versions of the `zonedb`
+    * But AceTimeTools feeds the in-memory transient versions of the `zonedb`
       files into the `zone_processor.py` module in AceTimePython to estimate the
       Transition buffer sizes, which is then included in the actual
       `src/acetime/zonedb` files written into the AceTimePython library.
