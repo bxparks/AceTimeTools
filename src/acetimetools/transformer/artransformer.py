@@ -25,7 +25,6 @@ from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR_TINY
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
-from acetimetools.data_types.at_types import add_comment
 
 
 class ArduinoTransformer:
@@ -149,13 +148,6 @@ class ArduinoTransformer:
                 rule['at_time_seconds_modifier'] = \
                     at_encoded.time_seconds_modifier
 
-                # Check if AT is not on 15-minute boundary
-                if at_encoded.time_remainder != 0:
-                    add_comment(
-                        self.tresult.notable_policies, policy_name,
-                        f"AT '{rule['at_time']}' not on 15-minute boundary"
-                    )
-
                 # These will always be integers because transformer.py
                 # truncated them to 900 seconds appropriately.
                 delta_encoded = _to_rule_delta(rule['delta_seconds_truncated'])
@@ -175,11 +167,6 @@ class ArduinoTransformer:
                     letter=letter,
                     indexed_letters=indexed_letters,
                 )
-                if len(letter) > 1:
-                    add_comment(
-                        self.tresult.notable_policies, policy_name,
-                        f"LETTER '{letter}' not single character"
-                    )
 
     def _process_eras(self, zones_map: ZonesMap) -> None:
         """Convert various ZoneRule fields into values that are consumed by the
@@ -204,14 +191,6 @@ class ArduinoTransformer:
                     offset_encoded.offset_seconds_remainder
                 era['delta_minutes'] = offset_encoded.delta_minutes
 
-                # Check if STDOFF is not on 15-minute boundary
-                if offset_encoded.offset_remainder != 0:
-                    add_comment(
-                        self.tresult.notable_zones, zone_name,
-                        f"STDOFF '{era['offset_string']}' "
-                        "not on 15-minute boundary"
-                    )
-
                 # Generate the UNTIL fields needed by Arduino ZoneProcessors
                 era['until_year_tiny'] = _to_tiny_until_year(era['until_year'])
                 until_encoded = _to_encoded_at_or_until_time(
@@ -227,13 +206,6 @@ class ArduinoTransformer:
                     until_encoded.time_seconds_remainder
                 era['until_time_seconds_modifier'] = \
                     until_encoded.time_seconds_modifier
-
-                # Check if UNTIL is not on 15-minute boundary
-                if until_encoded.time_remainder != 0:
-                    add_comment(
-                        self.tresult.notable_zones, zone_name,
-                        f"UNTIL '{era['until_time']}' not on 15-minute boundary"
-                    )
 
     def _generate_memory_map(self, sizes: SizeofMap) -> MemoryMap:
         num_zones = len(self.zones_map)

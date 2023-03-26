@@ -7,6 +7,10 @@
         * Set to `None` if RULES is '-' or 'hh:mm'.
         * Fixed offsets already go into `era['era_delta_seconds']`.
         * Makes it much easier to distinguish the 3 different types of RULES.
+    * Move various 'notable' comments from `artransformer.py` to
+      `transformer.py`.
+        * Notable Xxx comments are now included in all AceTimeXxx libraries,
+          instead of just the `AceTime` library.
 * v1.6.2 (2023-03-24)
     * Add 'Records' section in the file header of zonedb generated files.
         * Contains the number of records for Info, Era, Policy, and Rule

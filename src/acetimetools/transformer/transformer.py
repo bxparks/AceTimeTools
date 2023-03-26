@@ -540,19 +540,28 @@ class Transformer:
             for era in eras:
                 until_time = era['until_time']
                 until_seconds = time_string_to_seconds(until_time)
+
+                # Check for errors.
                 if until_seconds == INVALID_SECONDS:
                     valid = False
                     add_comment(
                         removed_zones, name,
-                        f"invalid UNTIL time '{until_time}'")
+                        f"invalid UNTIL '{until_time}'")
                     break
                 if until_seconds < 0:
                     valid = False
                     add_comment(
                         removed_zones, name,
-                        f"negative UNTIL time '{until_time}'")
+                        f"negative UNTIL '{until_time}'")
                     break
 
+                # Check UNTIL on 15-minute boundary
+                if until_seconds % 900 != 0:
+                    add_comment(
+                        notable_zones, name,
+                        f"UNTIL '{until_time}' not multiple of :15 min")
+
+                # Validate truncation.
                 until_seconds_truncated = truncate_to_granularity(
                     until_seconds, self.until_at_granularity)
                 if until_seconds != until_seconds_truncated:
@@ -560,19 +569,19 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_zones, name,
-                            f"UNTIL time '{until_time}' must be multiples "
+                            f"UNTIL '{until_time}' must be multiples "
                             f"of '{self.until_at_granularity}' seconds")
                         break
                     else:
                         hm = seconds_to_hm_string(until_seconds_truncated)
                         add_comment(
                             notable_zones, name,
-                            f"UNTIL time '{until_time}' truncated to '{hm}'")
+                            f"UNTIL '{until_time}' truncated to '{hm}'")
                 else:
                     if until_seconds % 60 != 0:
                         add_comment(
                             notable_zones, name,
-                            f"UNTIL time '{until_time}' not multiple of 1-min")
+                            f"UNTIL '{until_time}' not multiple of :01 min")
 
                 era['until_seconds'] = until_seconds
                 era['until_seconds_truncated'] = until_seconds_truncated
@@ -580,10 +589,10 @@ class Transformer:
                 results[name] = eras
 
         self._print_comments_map(
-            'Removed %s zone infos with invalid UNTIL time', removed_zones,
+            'Removed %s zone infos with invalid UNTIL', removed_zones,
         )
         self._print_comments_map(
-            'Noted %s zone infos with notable UNTIL time', notable_zones,
+            'Noted %s zone infos with notable UNTIL', notable_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
         merge_comments(self.all_notable_zones, notable_zones)
@@ -592,7 +601,7 @@ class Transformer:
     def _remove_zones_invalid_until_time_suffix(
         self, zones_map: ZonesMap,
     ) -> ZonesMap:
-        """Remove zones whose UNTIL time contains an unsupported suffix.
+        """Remove zones whose UNTIL contains an unsupported suffix.
         """
         # Define the supported time suffices. Basic supports only 'w', while
         # Extended supports all suffixes. The 'g' and 'z' is the same as 'u' and
@@ -615,13 +624,13 @@ class Transformer:
                     valid = False
                     add_comment(
                         removed_zones, name,
-                        f"unsupported UNTIL time suffix '{suffix}'")
+                        f"unsupported UNTIL suffix '{suffix}'")
                     break
             if valid:
                 results[name] = eras
 
         self._print_comments_map(
-            'Removed %s zone infos with unsupported UNTIL time suffix',
+            'Removed %s zone infos with unsupported UNTIL suffix',
             removed_zones,
         )
         merge_comments(self.all_removed_zones, removed_zones)
@@ -647,11 +656,11 @@ class Transformer:
                         f"invalid STDOFF '{offset_string}'")
                     break
 
-                # Check for non-multiple of :30 minutes.
-                if offset_seconds % 1800 != 0:
+                # Check for non-multiple of :15 minutes.
+                if offset_seconds % 900 != 0:
                     add_comment(
                         notable_zones, name,
-                        f"STDOFF '{offset_string}' not at :00 or :30 mark")
+                        f"STDOFF '{offset_string}' not multiple of :15 min")
 
                 # Truncate offset to requested granularity.
                 offset_seconds_truncated = truncate_to_granularity(
@@ -803,16 +812,15 @@ class Transformer:
                             f"unexpected 0:00 in RULES '{rules_string}'")
                         break
 
-                    # Check for odd value, like negative, or non-multiple of
-                    # :30 minutes.
+                    # Check for odd value, like negative, or not equal to 1:00.
                     if era_delta_seconds < 0:
                         add_comment(
                             notable_zones, name,
                             f"RULES '{rules_string}' is a negative DST")
-                    elif era_delta_seconds % 1800 != 0:
+                    elif era_delta_seconds not in [0, 3600]:
                         add_comment(
                             notable_zones, name,
-                            f"RULES '{rules_string}' not at :00 or :30 mark")
+                            f"RULES '{rules_string}' different from 1:00")
 
                     # Check that RULES delta is a multiple of 15-minutes
                     # (or whatever delta_granularity is set to).
@@ -836,7 +844,8 @@ class Transformer:
                         if era_delta_seconds % 60 != 0:
                             add_comment(
                                 notable_zones, name,
-                                f"RULES '{rules_string}' not multiple of 1-min")
+                                f"RULES '{rules_string}' "
+                                "not multiple of :01 min")
 
                     # Check that rules_delta fits inside 4-bits, because that's
                     # how it is stored in the Arduino zonedb files.
@@ -1124,19 +1133,28 @@ class Transformer:
             for rule in rules:
                 at_time = rule['at_time']
                 at_seconds = time_string_to_seconds(at_time)
+
+                # Check for errors.
                 if at_seconds == INVALID_SECONDS:
                     valid = False
                     add_comment(
                         removed_policies, policy_name,
-                        f"invalid AT time '{at_time}'" % at_time)
+                        f"invalid AT '{at_time}'" % at_time)
                     break
                 if at_seconds < 0:
                     valid = False
                     add_comment(
                         removed_policies, policy_name,
-                        f"negative AT time '{at_time}'" % at_time)
+                        f"negative AT '{at_time}'" % at_time)
                     break
 
+                # Check if AT is not on 15-minute boundary
+                if at_seconds % 900 != 0:
+                    add_comment(
+                        notable_policies, policy_name,
+                        f"AT '{rule['at_time']}' not multiple of :15 min")
+
+                # Check truncation.
                 at_seconds_truncated = truncate_to_granularity(
                     at_seconds, self.until_at_granularity)
                 if at_seconds != at_seconds_truncated:
@@ -1144,20 +1162,19 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_policies, policy_name,
-                            f"AT time '{at_time}' must be multiples of "
+                            f"AT '{at_time}' must be multiples of "
                             f"'{self.until_at_granularity}' seconds")
-                        break
-                    else:
-                        hm = seconds_to_hm_string(at_seconds_truncated)
-                        add_comment(
-                            notable_policies, policy_name,
-                            f"AT time '{at_time}' truncated to '{hm}'")
+
+                    hm = seconds_to_hm_string(at_seconds_truncated)
+                    add_comment(
+                        notable_policies, policy_name,
+                        f"AT '{at_time}' truncated to '{hm}'")
                 else:
                     # Warning if AT has finer granularity than 1-minute
                     if at_seconds % 60 != 0:
                         add_comment(
                             notable_policies, policy_name,
-                            f"AT time '{at_time}' not multiple of 1-min")
+                            f"AT '{at_time}' not multiple of 1-min")
 
                 rule['at_seconds'] = at_seconds
                 rule['at_seconds_truncated'] = at_seconds_truncated
@@ -1196,7 +1213,7 @@ class Transformer:
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"unsupported AT time suffix '{suffix}'")
+                        f"unsupported AT suffix '{suffix}'")
                     break
             if valid:
                 results[name] = rules
@@ -1357,10 +1374,20 @@ class Transformer:
 
     def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
         """Convert '-' into ''"""
+        notable_policies: CommentsMap = {}
         for name, rules in policies_map.items():
             for rule in rules:
                 if rule['letter'] == '-':
                     rule['letter'] = ''
+
+                # Note if 'letter' is more than one letter.
+                letter = rule['letter']
+                if len(letter) > 1:
+                    add_comment(
+                        notable_policies, name,
+                        f"LETTER '{letter}' not single character")
+
+        merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
 
     def _remove_rules_with_border_transitions(
