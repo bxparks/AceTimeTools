@@ -1,21 +1,27 @@
 # Changelog
 
 * Unreleased
+* 1.6.3 (2023-03-26)
     * Extract RULES (in `era['rules']`) into separate fields.
         * Copy the policy name (RULE name) string into `era['policy_name']` if
           it's a reference to a policy.
         * Set to `None` if RULES is '-' or 'hh:mm'.
         * Fixed offsets already go into `era['era_delta_seconds']`.
         * Makes it much easier to distinguish the 3 different types of RULES.
+    * Always flag negative DST offsets
+        * Negative DST can occur through the RULES field in the ZONE records,
+          or the SAVE field in the RULE records.
+        * Update comment generation to generate notable comments in both cases.
+        * Search for 'negative' in the comments of the zonedb files.
     * Move various 'notable' comments from `artransformer.py` to
       `transformer.py`.
         * Notable Xxx comments are now included in all AceTimeXxx libraries,
           instead of just the `AceTime` library.
-* v1.6.2 (2023-03-24)
+* 1.6.2 (2023-03-24)
     * Add 'Records' section in the file header of zonedb generated files.
         * Contains the number of records for Info, Era, Policy, and Rule
           tables.
-* v1.6.1 (2023-03-10)
+* 1.6.1 (2023-03-10)
     * `transformer.py`
         * Filter out ZoneRules using a coarse-grained comparison to
           `[start_year, until_year), instead of loop through every ZoneEra item,
@@ -28,7 +34,7 @@
           `zone_policies_test.go`, `zone_registry_test.go`.
         * Auto-generate `reader_test.go` directly into the `zonedb*/` directory
           and use the `zone_test.go` files.
-* v1.6.0 (2023-03-09)
+* 1.6.0 (2023-03-09)
     * `cgenerator.py`
         * Use `--db_namespace` flag to define the prefix of various `zonedb`
           data structures.
@@ -58,7 +64,7 @@
           rules at year -32767.
         * Allows zone processor algorithms (AceTime, AceTimeC, AceTimeGo) to
           work over all years `[0,10000)`, even after truncation.
-* v1.5.0 (2023-02-13)
+* 1.5.0 (2023-02-13)
     * Rename `rules_delta_seconds` to `era_delta_seconds` for better
       self-documentation.
         * This field is determined by the `RULES` column in the Zone entry when
@@ -75,11 +81,11 @@
         * Unify data encoding of `ZoneInfo.deltaCode` and `ZoneRule.deltaCode`
           for "basic" zonedb files.
     * Calculate min and max years for original and generated zonedb entries.
-* v1.4.3 (2023-02-04)
+* 1.4.3 (2023-02-04)
     * `argenerator.py`, `cgenerator.py`:
         * Simplify encoding of `Rule.LETTER` as an index into
           `ZoneContext.letters`.
-* v1.4.2 (2023-02-02)
+* 1.4.2 (2023-02-02)
     * `tzcompiler.sh`:
         * Incorporate `copytz.sh` functionality directly to avoid dependency on
           another shell script.
@@ -88,18 +94,18 @@
         * Add `trap` statement to perform auto-cleanup of the `tzfiles/`
           temporary directory.
         * Add `--tzrepo` to specify the location of the TZDB repo explicitly.
-* v1.4.1 (2023-01-29)
+* 1.4.1 (2023-01-29)
     * `argenerator.py`
         * Remove LinkRegistry.
         * Add `targetInfo` to `ZoneInfo` to unify fat and symbolic Links.
     * `cgenerator.py`
         * Remove LinkRegistry.
         * Add `targetInfo` to `ZoneInfo` to unify fat and symbolic Links.
-* v1.4.0 (2023-01-29)
+* 1.4.0 (2023-01-29)
     * Support the AceTimeGo library through `gotransfomer.py` and
       `gogenerator.py`.
     * Simplify calling API of various `XxxTransformer` classes.
-* v1.3.0 (2023-01-17)
+* 1.3.0 (2023-01-17)
     * `copytz.sh`
         * Remove all files other than the raw TZDB files from the TZ DB git repo
           after performing a 'git clone'.
@@ -110,7 +116,7 @@
           links to include in the zonedb output.
         * Used to generate `testing/zonedb/` and `testing/zonedbx` databases
           which are used by unit tests.
-* v1.2.1 (2023-01-10)
+* 1.2.1 (2023-01-10)
     * `cgenerator.py`
         * Rename `kAtcPolicyXxx` to `kAtcZonePolicyXxx` for consistency.
         * Include notable policy comments into `zone_infos.h` and
@@ -121,35 +127,35 @@
         * Use 'git clone --branch tag' instead of 'git checkout tag'.
         * Eliminates modification of the target git repo.
         * Allows concurrent execution of `tzcompiler.sh`.
-* v1.2.0 (2022-12-04)
+* 1.2.0 (2022-12-04)
     * If there are duplicate normalized zone names or link names, throw an
       exception to make it a fatal condition.
         * Allows detection and fixing of this problem, instead of silently
           dropping zones or links.
     * Detect Link to Link and throw exception.
     * Include notable policy comments into `zone_infos.h` and `zone_infos.py`.
-* v1.1.4 (2022-11-02)
+* 1.1.4 (2022-11-02)
     * Add `--generate_int16_year` flag to generate year fields with `int16_t`
       type instead of `int8_t`.
     * Print the 3 notable zones whose UTC offset is not on the :00 or :30 mark.
-* v1.1.3 (2022-10-22)
+* 1.1.3 (2022-10-22)
     * Use `ZoneProcessor.is_terminal_year()` to allow `bufestimator.py` to
       finish early when `until_year` is very large, e.g. 10000.
-* v1.1.2 (2022-10-07)
+* 1.1.2 (2022-10-07)
     * Simplify `copytz.sh` by using `git clone` against the local repo to
       extract the files at a specific tag, instead of using `git checkout`.
         * Eliminates the need for `flock(1)` which is not supported on MacOS.
-* v1.1.1 (2022-03-22)
+* 1.1.1 (2022-03-22)
     * Update docstring. No code changes.
-    * This is a maintenance release to match the AceTime v1.11.3 release.
-* v1.1.0 (2022-02-14)
+    * This is a maintenance release to match the AceTime 1.11.3 release.
+* 1.1.0 (2022-02-14)
     * Identify zones and policies whose DST shifts are not 0:00 or 1:00.
     * Simplify rendering of `CommentsMap` to support multiple comment lines.
     * Set the `eras` field of Link entries to the target `ZoneInfo` instead
       the `ZoneEras`, converting hard links to symbolic links.
         * Update `argenerator.py` for AceTime.
         * Update `pygenerator.py` for AceTimePython.
-* v1.0.0 (2022-01-10)
+* 1.0.0 (2022-01-10)
     * Move `compare_xxx` scripts to `AceTimeValidation` repo.
     * Move `acetimetools/generate_validation.py` to `AceTimeValidation` repo.
     * Deprecate and archive `acetimetools/validator` to `archive/`.
@@ -160,7 +166,7 @@
         * Change `acetime.zonedbpy` package to `acetime.zonedb`.
         * Add zone context info to `zone_infos.py` (`TZDB_VERSION`,
           `START_YEAR`, `UNTIL_YEAR`).
-* v0.2 (2021-12-02)
+* 0.2 (2021-12-02)
     * Validate that the zoneId and linkId cannot be 0x00, because 0x00
       is used as an error return code in certain parts of the AceTime C++ code.
     * Remove obsolete `sys.path` hack from `compare_acetz`, `compare_dateutil`,
@@ -177,7 +183,7 @@
     * Add `max_buf_size` to the generated `zonedb*/zone_infos.h` files.
     * Add `compare_zoneinfo` which generates validation data using the Python
       3.9 zoneinfo package.
-* v0.1 (2021-10-06)
+* 0.1 (2021-10-06)
     * Extract `zone_processor.py` and `acetz.py` to new
       [AceTimePython](https://github.com/bxparks/AceTimePython) library.
         * Rename `zone_specifier.py` to `zone_processor.py` to match the
