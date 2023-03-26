@@ -647,6 +647,12 @@ class Transformer:
                         f"invalid STDOFF '{offset_string}'")
                     break
 
+                # Check for non-multiple of :30 minutes.
+                if offset_seconds % 1800 != 0:
+                    add_comment(
+                        notable_zones, name,
+                        f"STDOFF '{offset_string}' not at :00 or :30 mark")
+
                 # Truncate offset to requested granularity.
                 offset_seconds_truncated = truncate_to_granularity(
                     offset_seconds, self.offset_granularity)
@@ -658,11 +664,11 @@ class Transformer:
                             f"STDOFF '{offset_string}' must be multiples of "
                             f"'{self.offset_granularity}' seconds")
                         break
-                    else:
-                        hm = seconds_to_hm_string(offset_seconds_truncated)
-                        add_comment(
-                            notable_zones, name,
-                            f"STDOFF '{offset_string}' truncated to '{hm}'")
+
+                    hm = seconds_to_hm_string(offset_seconds_truncated)
+                    add_comment(
+                        notable_zones, name,
+                        f"STDOFF '{offset_string}' truncated to '{hm}'")
 
                 # Check that offset seconds can fit in a timeCode field
                 # implemented as a signed byte in multiples of 15-minutes.
@@ -779,7 +785,7 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_zones, name,
-                            f"unsupported fixed RULES offset '{rules_string}'")
+                            f"unsupported fixed RULES '{rules_string}'")
                         break
 
                     era_delta_seconds = time_string_to_seconds(rules_string)
@@ -787,19 +793,26 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_zones, name,
-                            f"invalid RULES string '{rules_string}'")
+                            f"invalid RULES '{rules_string}'")
                         break
+
                     if era_delta_seconds == 0:
                         valid = False
                         add_comment(
                             removed_zones, name,
-                            f"unexpected 0:00 RULES string '{rules_string}'")
+                            f"unexpected 0:00 in RULES '{rules_string}'")
                         break
-                    if era_delta_seconds not in (0, 3600):
+
+                    # Check for odd value, like negative, or non-multiple of
+                    # :30 minutes.
+                    if era_delta_seconds < 0:
                         add_comment(
                             notable_zones, name,
-                            f"RULES delta offset '{rules_string}' "
-                            "different from 1:00")
+                            f"RULES '{rules_string}' is a negative DST")
+                    elif era_delta_seconds % 1800 != 0:
+                        add_comment(
+                            notable_zones, name,
+                            f"RULES '{rules_string}' not at :00 or :30 mark")
 
                     # Check that RULES delta is a multiple of 15-minutes
                     # (or whatever delta_granularity is set to).
@@ -810,23 +823,20 @@ class Transformer:
                             valid = False
                             add_comment(
                                 removed_zones, name,
-                                f"RULES delta '{rules_string}' must be "
-                                f"multiples of '{self.delta_granularity}' "
-                                f"seconds")
+                                f"RULES '{rules_string}' must be multiples "
+                                f"of '{self.delta_granularity}' seconds")
                             break
-                        else:
-                            hm = seconds_to_hm_string(
-                                era_delta_seconds_truncated)
-                            add_comment(
-                                notable_zones, name,
-                                f"RULES delta offset '{rules_string}'"
-                                f"truncated to '{hm}'")
+
+                        hm = seconds_to_hm_string(
+                            era_delta_seconds_truncated)
+                        add_comment(
+                            notable_zones, name,
+                            f"RULES '{rules_string}' truncated to '{hm}'")
                     else:
                         if era_delta_seconds % 60 != 0:
                             add_comment(
                                 notable_zones, name,
-                                f"RULES delta offset '{rules_string}' "
-                                "not multiple of 1-min")
+                                f"RULES '{rules_string}' not multiple of 1-min")
 
                     # Check that rules_delta fits inside 4-bits, because that's
                     # how it is stored in the Arduino zonedb files.
@@ -1210,18 +1220,24 @@ class Transformer:
         for name, rules in policies_map.items():
             valid = True
             for rule in rules:
-                delta_offset = rule['delta_offset']
-                delta_seconds = time_string_to_seconds(delta_offset)
+                delta_string = rule['delta_offset']
+                delta_seconds = time_string_to_seconds(delta_string)
                 if delta_seconds == INVALID_SECONDS:
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"invalid SAVE '{delta_offset}'")
+                        f"invalid SAVE '{delta_string}'")
                     break
-                if delta_seconds not in (0, 3600):
+
+                # Check for abnormal DST offset
+                if delta_seconds < 0:
                     add_comment(
                         notable_policies, name,
-                        f"SAVE '{delta_offset}' different from 1:00")
+                        f"SAVE '{delta_string}' is a negative DST")
+                elif delta_seconds not in (0, 3600):
+                    add_comment(
+                        notable_policies, name,
+                        f"SAVE '{delta_string}' different from 1:00")
 
                 # Truncate to requested granularity.
                 delta_seconds_truncated = truncate_to_granularity(
@@ -1231,21 +1247,18 @@ class Transformer:
                         valid = False
                         add_comment(
                             removed_policies, name,
-                            f"SAVE '{delta_offset}' must be "
-                            f"a multiple of '{self.delta_granularity}' "
-                            f"seconds")
+                            f"SAVE '{delta_string}' must be a multiple of "
+                            f"'{self.delta_granularity}' seconds")
                         break
-                    else:
-                        add_comment(
-                            notable_policies, name,
-                            f"SAVE '{delta_offset}' truncated to"
-                            f"a multiple of '{self.delta_granularity}' "
-                            f"seconds")
+                    add_comment(
+                        notable_policies, name,
+                        f"SAVE '{delta_string}' truncated to a multiple of "
+                        f"'{self.delta_granularity}' seconds")
                 else:
                     if delta_seconds % 60 != 0:
                         add_comment(
                             notable_policies, name,
-                            f"SAVE '{delta_offset}' not multiple of 1-min")
+                            f"SAVE '{delta_string}' not multiple of 1-min")
 
                 # Check that delta seconds can fit in a 4-bit timeCode field
                 # with 15-minute granularity, defined as (timeCode =
@@ -1256,8 +1269,7 @@ class Transformer:
                     valid = False
                     add_comment(
                         removed_policies, name,
-                        f"SAVE delta_offset '{delta_offset}' "
-                        "too large for 4-bits")
+                        f"SAVE '{delta_string}' too large for 4-bits")
                     break
 
                 rule['delta_seconds'] = delta_seconds

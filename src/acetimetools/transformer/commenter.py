@@ -15,24 +15,17 @@ from acetimetools.data_types.at_types import PoliciesMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import ZonesToPolicies
-from acetimetools.data_types.at_types import add_comment
-from acetimetools.data_types.at_types import merge_comments
 
 
 class Commenter:
-    """Update notable zone and policy comments.
+    """Merge the comments for each ZonePolicy into the ZoneInfo records which
+    use those ZonePolicies.
     """
 
     def __init__(self) -> None:
         pass
 
     def transform(self, tresult: TransformerResult) -> None:
-        _note_zones_with_odd_utc_offset(
-            tresult.zones_map,
-            tresult.policies_map,
-            tresult.notable_zones,  # this is updated
-        )
-
         tresult.zones_to_policies = _gather_zones_to_policies(
             tresult.zones_map,
             tresult.policies_map,
@@ -125,51 +118,3 @@ def _count_merged_counts_map(comments: MergedCommentsMap) -> int:
                     for policy_reason in policy_reasons:
                         count += 1
     return count
-
-
-def _note_zones_with_odd_utc_offset(
-    zones_map: ZonesMap,
-    policies_map: PoliciesMap,
-    all_notable_zones: CommentsMap,
-) -> None:
-    """Note zones whose UTC offset is not at :00 or :30 mark into the
-    'all_notable_zones' map.
-    """
-    notable_zones: CommentsMap = {}
-    for zone_name, eras in zones_map.items():
-        for era in eras:
-            # Check the STDOFF column for non :00 or :30
-            if era['offset_seconds'] % 1800 != 0:
-                offset_string = era['offset_string']
-                add_comment(
-                    notable_zones, zone_name,
-                    f"STDOFF '{offset_string}' not at :00 or :30 mark")
-                break
-
-            # Check the DST offset from the RULES column.
-            rules_name = era['rules']
-            policy_name = era['policy_name']
-            found_odd_offset = False
-            if policy_name is None:
-                if era['era_delta_seconds'] % 1800 != 0:
-                    add_comment(
-                        notable_zones, zone_name,
-                        f"RULES '{rules_name}' not at :00 or :30 mark")
-            else:
-                # RULES contains a reference to a policy
-                rules = policies_map.get(policy_name)
-                assert rules is not None
-                for rule in rules:
-                    # Check SAVE column for non :00 or :30
-                    save_string = rule['delta_offset']
-                    if rule['delta_seconds'] % 1800 != 0:
-                        add_comment(
-                            notable_zones, zone_name,
-                            f"SAVE '{save_string}' in Rule {rules_name}"
-                            f' not at :00 or :30 mark')
-                        found_odd_offset = True
-                        break
-            if found_odd_offset:
-                break
-
-    merge_comments(all_notable_zones, notable_zones)
