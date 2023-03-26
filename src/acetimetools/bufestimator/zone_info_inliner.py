@@ -14,7 +14,6 @@ from typing import Optional
 
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.transformer.transformer import normalize_name
 from acetime.zonedb_types import ZoneRule
 from acetime.zonedb_types import ZonePolicy
 from acetime.zonedb_types import ZonePolicyMap
@@ -65,8 +64,7 @@ class ZoneInfoInliner:
                 })
                 # yapf: enable
 
-            normalized_name = normalize_name(name)
-            self.zone_policies[normalized_name] = {
+            self.zone_policies[name] = {
                 'name': name,  # policy name
                 'rules': policy_rules
             }
@@ -75,12 +73,11 @@ class ZoneInfoInliner:
         for zone_name, eras in self.zones_map.items():
             zone_eras: List[ZoneEra] = []
             for era in eras:
-                policy_name = era['rules']
+                policy_name = era['policy_name']
                 zone_policy: Optional[ZonePolicy]
-                if policy_name in ['-', ':']:
+                if policy_name is None:
                     zone_policy = None
                 else:
-                    policy_name = normalize_name(policy_name)
                     zone_policy = self.zone_policies[policy_name]
 
                 # yapf: disable

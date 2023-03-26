@@ -142,9 +142,9 @@ class Transformer:
         zones_map = self._create_zones_with_expanded_until_time(zones_map)
         zones_map = self._remove_zones_invalid_until_time_suffix(zones_map)
         zones_map = self._create_zones_with_expanded_offset_string(zones_map)
+        zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_invalid_rules_format_combo(
             zones_map)
-        zones_map = self._create_zones_with_rules_expansion(zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
         zones_map = self._create_short_format_strings(zones_map)
         if not self.generate_int16_years:
@@ -719,7 +719,7 @@ class Transformer:
                     valid = False
                     break
 
-                if era['rules'] == '-' or ':' in era['rules']:
+                if era['policy_name'] is None:
                     if '%' in era['format']:
                         add_comment(
                             removed_zones, zone_name,
@@ -754,15 +754,15 @@ class Transformer:
         zone.era_delta_seconds from zone.rules.
 
         The RULES field can hold the following:
-            1) '-' no rules
-            2) a string reference to a set of Rules
-            3) a delta offset like "01:00" to be added to the STDOFF field
-                (see America/Argentina/San_Luis, Europe/Istanbul for example).
+            1) '-' indicating no DST offset
+            3) a DST offset like "01:00" to be added to the STDOFF field
+            3) a string reference to a Policy contianing a set of Rules
 
-        After this method, the 'zone.rules' contains 3 possible values:
-            1) '-' no rules, or
-            2) a string reference of the zone policy containing the rules, or
-            3) ':' which indicates that 'era_delta_seconds' is defined.
+        After this method, the 'rules' entry is left alone (for reference) with:
+            1) 'policy_name' is set to 'None', and 'era_delta_seconds' set to 0,
+            2) 'policy_name' is set to 'None' and 'era_delta_seconds' set to
+               the DST offset,
+            3) copy of the 'rules' string.
         """
         results: ZonesMap = {}
         removed_zones: CommentsMap = {}
@@ -773,6 +773,9 @@ class Transformer:
                 rules_string = era['rules']
                 if rules_string.find(':') >= 0:
                     if self.scope == 'basic':
+                        # TODO: Feels like this is simple enough that
+                        # AceTime/BasicZoneProcessor should be able to support
+                        # this.
                         valid = False
                         add_comment(
                             removed_zones, name,
@@ -836,16 +839,21 @@ class Transformer:
                             f"RULES '{rules_string}' too large for 4-bits")
                         break
 
-                    # Set the ZoneEra['rules'] to ':' to indicate that the RULES
-                    # field is a DST offset.
-                    era['rules'] = ':'
+                    # Populate the derived fieds, leaving 'rules' unchanged for
+                    # reference.
                     era['era_delta_seconds'] = era_delta_seconds
                     era['era_delta_seconds_truncated'] = \
                         era_delta_seconds_truncated
-                else:
-                    # If '-' or named policy, set to 0.
+                    era['policy_name'] = None
+                elif rules_string == '-':
                     era['era_delta_seconds'] = 0
                     era['era_delta_seconds_truncated'] = 0
+                    era['policy_name'] = None
+                else:
+                    era['era_delta_seconds'] = 0
+                    era['era_delta_seconds_truncated'] = 0
+                    era['policy_name'] = rules_string
+
             if valid:
                 results[name] = eras
 
@@ -1438,9 +1446,8 @@ class Transformer:
         for name, eras in zones_map.items():
             valid = True
             for era in eras:
-                policy_name = era['rules']
-                if (policy_name not in ['-', ':']
-                        and policy_name not in policies_map):
+                policy_name = era['policy_name']
+                if policy_name and policy_name not in policies_map:
                     valid = False
                     add_comment(
                         removed_zones, name,
@@ -1870,8 +1877,8 @@ def _create_policies_to_zones(
     policies_to_zones: PoliciesToZones = {}
     for full_name, eras in zones_map.items():
         for era in eras:
-            policy_name = era['rules']
-            if policy_name not in ['-', ':']:
+            policy_name = era['policy_name']
+            if policy_name:
                 zones = policies_to_zones.get(policy_name)
                 if not zones:
                     zones = []
