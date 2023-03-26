@@ -1,6 +1,12 @@
 # Changelog
 
 * Unreleased
+    * Extract RULES (in `era['rules']`) into separate fields.
+        * Copy the policy name (RULE name) string into `era['policy_name']` if
+          it's a reference to a policy.
+        * Set to `None` if RULES is '-' or 'hh:mm'.
+        * Fixed offsets already go into `era['era_delta_seconds']`.
+        * Makes it much easier to distinguish the 3 different types of RULES.
 * v1.6.2 (2023-03-24)
     * Add 'Records' section in the file header of zonedb generated files.
         * Contains the number of records for Info, Era, Policy, and Rule
