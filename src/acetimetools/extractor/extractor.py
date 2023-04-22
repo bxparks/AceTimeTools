@@ -110,7 +110,6 @@ class Extractor:
     def __init__(self, input_dir: str):
         self.input_dir: str = input_dir
 
-        self.next_line: Optional[str] = None
         self.rule_lines: Dict[str, List[str]] = {}  # ruleName to lines[]
         self.zone_lines: Dict[str, List[str]] = {}  # zoneName to lines[]
         self.link_lines: Dict[str, List[str]] = {}  # linkName to zoneName[]
@@ -155,7 +154,7 @@ class Extractor:
         # prev_tag: str = ''
         prev_name: str = ''
         while True:
-            line: Optional[str] = self._read_line(input)
+            line: Optional[str] = _read_line(input)
             if line is None:
                 break
 
@@ -223,39 +222,6 @@ class Extractor:
             else:
                 self.links_map[link_name] = lines[0]
 
-    def _read_line(self, input: TextIO) -> Optional[str]:
-        """Return the next line, while supporting a one-line push_back().
-        Comment lines begin with a '#' character and are skipped.
-        Blank lines are skipped.
-        Prepending and trailing whitespaces are stripped.
-        Return 'None' if EOF is reached.
-        """
-        if self.next_line:
-            line: str = self.next_line
-            self.next_line = None
-            return line
-
-        while True:
-            line = input.readline()
-
-            # EOF
-            if line == '':
-                return None
-
-            # remove trailing comments
-            i: int = line.find('#')
-            if i >= 0:
-                line = line[:i]
-
-            # strip any trailing whitespaces
-            line = line.rstrip()
-
-            # skip any blank lines after stripping
-            if not line:
-                continue
-
-            return line
-
     def print_summary(self) -> None:
         rule_entry_count = 0
         for name, rules in self.policies_map.items():
@@ -295,6 +261,37 @@ class Extractor:
             self.invalid_zone_lines,
             self.invalid_link_lines,
         )
+
+
+def _read_line(input: TextIO) -> Optional[str]:
+    """Return the next line. Return None if EOF reached.
+
+    * Comment lines beginning with a '#' character are skipped.
+    * Trailing comment lines beginning with '#' are stripped.
+    * Trailing whitespaces are stripped.
+    * Blank lines are skipped.
+    * Leading whitespaces are kept.
+    """
+    while True:
+        line = input.readline()
+
+        # EOF returns ''. A blank line returns '\n'.
+        if line == '':
+            return None
+
+        # remove trailing comments
+        i = line.find('#')
+        if i >= 0:
+            line = line[:i]
+
+        # strip any trailing whitespaces
+        line = line.rstrip()
+
+        # skip any blank lines after stripping
+        if not line:
+            continue
+
+        return line
 
 
 def _add_item(table: Dict[str, List[Any]], name: str, line: Any) -> None:
