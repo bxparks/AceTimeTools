@@ -15,23 +15,28 @@ type can be serialized to JSON directly. The JSON looks like:
   'has_valid_abbrev': bool,
   'has_valid_dst': bool,
   'test_data': {
-    '{zone_name}: [
-      {
-      'epoch': int,
-      'total_offset': int,
-      'dst_offset': int,
-      'y': int,
-      'M': int,
-      'd': int,
-      'h': int,
-      'm': int,
-      's': int,
-      'abbrev': str,
-      'type', str,
-      },
-      [...]
-    ],
-    [...]
+    '{zone_name}: {
+      "transitions": [
+        {
+        'epoch': int,
+        'total_offset': int,
+        'dst_offset': int,
+        'y': int,
+        'M': int,
+        'd': int,
+        'h': int,
+        'm': int,
+        's': int,
+        'abbrev': str,
+        'type', str,
+        },
+        {...}
+      ],
+      "samples": [
+        {...},
+      ]
+    },
+    {...}
   },
 }
 """
@@ -62,8 +67,14 @@ TestItem = TypedDict("TestItem", {
     'type': str,
 })
 
-# The test data set {zone_name -> [TestItem]}
-TestData = Dict[str, List[TestItem]]
+# Test entry is the set of transitions and samples for a single zone.
+TestEntry = TypedDict('TestEntry', {
+    'transitions': List[TestItem],
+    'samples': List[TestItem],
+})
+
+# The test data set {zone_name -> TestEntry}
+TestData = Dict[str, TestEntry]
 
 # The top-level validation data collection. This can be serialized to JSON.
 ValidationData = TypedDict('ValidationData', {
