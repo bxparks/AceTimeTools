@@ -28,104 +28,6 @@ class PythonGenerator:
     implementation does not support the 'Link' zone names.
     """
 
-    ZONE_POLICIES_FILE = """\
-from typing import List
-from ..typing import (
-    ZoneRule,
-    ZonePolicy,
-)
-
-# ---------------------------------------------------------------------------
-# Supported zone policies: {numPolicies}
-# numRules: {numRules}
-# ---------------------------------------------------------------------------
-
-{policyItems}
-
-# ---------------------------------------------------------------------------
-# Unsupported zone policies: {numRemovedPolicies}
-# ---------------------------------------------------------------------------
-
-{removedPolicyItems}
-
-# ---------------------------------------------------------------------------
-# Notable zone policies: {numNotablePolicies}
-# ---------------------------------------------------------------------------
-
-{notablePolicyItems}
-
-"""
-
-    ZONE_INFOS_FILE = """\
-from typing import List
-from ..typing import (
-    ZoneEra,
-    ZoneInfo,
-)
-
-from .zone_policies import *
-
-# ---------------------------------------------------------------------------
-# Zone Context
-# ---------------------------------------------------------------------------
-
-TZDB_VERSION = '{tz_version}'
-START_YEAR = {start_year}
-UNTIL_YEAR = {until_year}
-
-# ---------------------------------------------------------------------------
-# Supported zones: {numInfos}
-# numEras: {numEras}
-# ---------------------------------------------------------------------------
-
-{infoItems}
-
-# ---------------------------------------------------------------------------
-# Supported links: {numLinks}
-# ---------------------------------------------------------------------------
-
-{linkItems}
-
-# ---------------------------------------------------------------------------
-# Unsuported zones: {numRemovedInfos}
-# ---------------------------------------------------------------------------
-
-{removedInfoItems}
-
-# ---------------------------------------------------------------------------
-# Notable zones: {numNotableInfos}
-# ---------------------------------------------------------------------------
-
-{notableInfoItems}
-
-# ---------------------------------------------------------------------------
-# Unsuported links: {numRemovedLinks}
-# ---------------------------------------------------------------------------
-
-{removedLinkItems}
-
-# ---------------------------------------------------------------------------
-# Notable links: {numNotableLinks}
-# ---------------------------------------------------------------------------
-
-{notableLinkItems}
-"""
-
-    ZONE_REGISTRY_FILE = """\
-from ..typing import ZoneInfoMap
-from .zone_infos import *
-
-# Supported Zones: {numZones}
-ZONE_REGISTRY: ZoneInfoMap = {{
-{zoneItems}
-}}
-
-# Supported Zones and Links: {numZonesAndLinks}
-ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
-{zoneAndLinkItems}
-}}
-"""
-
     ZONE_INFOS_FILE_NAME = 'zone_infos.py'
     ZONE_POLICIES_FILE_NAME = 'zone_policies.py'
     ZONE_REGISTRY_FILE_NAME = 'zone_registry.py'
@@ -230,17 +132,32 @@ ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
         removed_policy_items = _render_comments_map(self.removed_policies)
         notable_policy_items = _render_comments_map(self.notable_policies)
 
-        return self._generate_header() + self.ZONE_POLICIES_FILE.format(
-            invocation=self.invocation,
-            tz_version=self.tz_version,
-            tz_files=self.tz_files,
-            numPolicies=len(self.policies_map),
-            numRules=num_rules,
-            policyItems=policy_items,
-            numRemovedPolicies=len(self.removed_policies),
-            removedPolicyItems=removed_policy_items,
-            numNotablePolicies=len(self.notable_policies),
-            notablePolicyItems=notable_policy_items)
+        return self._generate_header() + f"""\
+from typing import List
+from ..typing import (
+    ZoneRule,
+    ZonePolicy,
+)
+
+# ---------------------------------------------------------------------------
+# Supported zone policies: {len(self.policies_map)}
+# numRules: {num_rules}
+# ---------------------------------------------------------------------------
+
+{policy_items}
+
+# ---------------------------------------------------------------------------
+# Unsupported zone policies: {len(self.removed_policies)}
+# ---------------------------------------------------------------------------
+
+{removed_policy_items}
+
+# ---------------------------------------------------------------------------
+# Notable zone policies: {len(self.notable_policies)}
+# ---------------------------------------------------------------------------
+
+{notable_policy_items}
+"""
 
     def _generate_policy_items(
         self,
@@ -319,26 +236,60 @@ ZONE_POLICY_{policy_normalized_name}: ZonePolicy = {{
         removed_link_items = _render_comments_map(self.removed_links)
         notable_link_items = _render_comments_map(self.notable_links)
 
-        return self._generate_header() + self.ZONE_INFOS_FILE.format(
-            invocation=self.invocation,
-            tz_version=self.tz_version,
-            tz_files=self.tz_files,
-            start_year=self.start_year,
-            until_year=self.until_year,
-            numInfos=len(self.zones_map),
-            numEras=num_eras,
-            infoItems=info_items,
-            numLinks=len(self.links_map),
-            linkItems=link_items,
-            numRemovedInfos=len(self.removed_zones),
-            removedInfoItems=removed_info_items,
-            numNotableInfos=len(self.notable_zones),
-            notableInfoItems=notable_info_items,
-            numRemovedLinks=len(self.removed_links),
-            removedLinkItems=removed_link_items,
-            numNotableLinks=len(self.notable_links),
-            notableLinkItems=notable_link_items,
-        )
+        return self._generate_header() + f"""\
+from typing import List
+from ..typing import (
+    ZoneEra,
+    ZoneInfo,
+)
+
+from .zone_policies import *
+
+# ---------------------------------------------------------------------------
+# Zone Context
+# ---------------------------------------------------------------------------
+
+TZDB_VERSION = '{self.tz_version}'
+START_YEAR = {self.start_year}
+UNTIL_YEAR = {self.until_year}
+
+# ---------------------------------------------------------------------------
+# Supported zones: {len(self.zones_map)}
+# numEras: {num_eras}
+# ---------------------------------------------------------------------------
+
+{info_items}
+
+# ---------------------------------------------------------------------------
+# Supported links: {len(self.links_map)}
+# ---------------------------------------------------------------------------
+
+{link_items}
+
+# ---------------------------------------------------------------------------
+# Unsuported zones: {len(self.removed_zones)}
+# ---------------------------------------------------------------------------
+
+{removed_info_items}
+
+# ---------------------------------------------------------------------------
+# Notable zones: {len(self.notable_zones)}
+# ---------------------------------------------------------------------------
+
+{notable_info_items}
+
+# ---------------------------------------------------------------------------
+# Unsuported links: {len(self.removed_links)}
+# ---------------------------------------------------------------------------
+
+{removed_link_items}
+
+# ---------------------------------------------------------------------------
+# Notable links: {len(self.notable_links)}
+# ---------------------------------------------------------------------------
+
+{notable_link_items}
+"""
 
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
         info_items = ''
@@ -431,19 +382,23 @@ ZONE_INFO_{zone_normalized_name}: ZoneInfo = {{
     def _generate_registry(self) -> str:
         zone_items = self._generate_zone_registry_items(self.zones_map)
         zone_and_link_items = self._generate_zone_and_link_registry_items(
-            self.zones_map,
-            self.links_map,
-        )
+            self.zones_map, self.links_map,)
 
-        return self._generate_header() + self.ZONE_REGISTRY_FILE.format(
-            invocation=self.invocation,
-            tz_version=self.tz_version,
-            tz_files=self.tz_files,
-            numZones=len(self.zones_map),
-            zoneItems=zone_items,
-            numZonesAndLinks=len(self.zones_map) + len(self.links_map),
-            zoneAndLinkItems=zone_and_link_items,
-        )
+        numZonesAndLinks = len(self.zones_map) + len(self.links_map)
+        return self._generate_header() + f"""\
+from ..typing import ZoneInfoMap
+from .zone_infos import *
+
+# Supported Zones: {len(self.zones_map)}
+ZONE_REGISTRY: ZoneInfoMap = {{
+{zone_items}
+}}
+
+# Supported Zones and Links: {numZonesAndLinks}
+ZONE_AND_LINK_REGISTRY: ZoneInfoMap = {{
+{zone_and_link_items}
+}}
+"""
 
     def _generate_zone_registry_items(self, zones_map: ZonesMap) -> str:
         """Generate a map of (zone_name -> zoneInfo), sorted by name.
