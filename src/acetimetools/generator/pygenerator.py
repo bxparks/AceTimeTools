@@ -308,7 +308,8 @@ UNTIL_YEAR = {self.until_year}
 # Link name: {link_name} -> {zone_name}
 ZONE_INFO_{link_normalized_name}: ZoneInfo = {{
     'name': '{link_name}',
-    'link_to': ZONE_INFO_{zone_normalized_name}
+    'eras': ZONE_ERAS_{zone_normalized_name},
+    'link_to': ZONE_INFO_{zone_normalized_name},
 }}
 
 """

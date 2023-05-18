@@ -2,6 +2,10 @@
 
 * Unreleased
     * Rename `AceTimePython` library to `acetimepy`.
+    * `pygenerator.py`
+        * Always generate `eras` for Links, turning Links into "hard links".
+        * Simplifies code that handles links in the `acetimepy` project,
+          and matches the handling of links in the AceTime project.
 * 1.6.3 (2023-03-26)
     * Extract RULES (in `era['rules']`) into separate fields.
         * Copy the policy name (RULE name) string into `era['policy_name']` if
