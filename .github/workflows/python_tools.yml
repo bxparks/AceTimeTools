@@ -22,7 +22,7 @@ jobs:
     - name: Checkout Additional Repos
       run: |
         cd ..
-        git clone https://github.com/bxparks/AceTimePython
+        git clone https://github.com/bxparks/acetimepy
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
@@ -34,8 +34,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -e .
-        pip install -r ../AceTimePython/requirements.txt
-        pip install -e ../AceTimePython
+        pip install -r ../acetimepy/requirements.txt
+        pip install -e ../acetimepy
 
     - name: Lint with flake8
       run: |
