@@ -53,10 +53,10 @@ import logging
 from typing import cast
 from datetime import datetime
 
-from acetime.zonedb_types import ZoneInfo
+from acetime.typing import ZoneInfo
 from acetime.zonedb import zone_registry
+from acetime.common import to_utc_string
 from acetime.zone_processor import ZoneProcessor
-from acetime.zone_processor import to_utc_string
 
 
 def main() -> None:

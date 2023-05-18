@@ -35,7 +35,7 @@ Transformer Flags:
 
 * --scope {basic | extended)
     * Selects one of the 2 algorithms supported by AceTime.
-    * AceTimeC, AceTimePython, and AceTimeGo supports only 'extended'.
+    * AceTimeC, acetimepy, and AceTimeGo supports only 'extended'.
 * `--generate_int16_years`
     * Output `from_year` and `to_year` as 16-bit integers instead of 8-bit
       "tiny" integers.
@@ -64,7 +64,7 @@ Generator Flags:
 * `--language` flag is a comma-separated list of generator file:
     * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
     * c: Generate `zone_*.{h,cpp}` files for AceTimeC C lang library
-    * python: Generate `zone_*.py` files for AceTimePython Python library
+    * python: Generate `zone_*.py` files for acetimepy Python library
     * json: Generate `zonedb.json` file.
     * zonelist: Generate a raw list of zone names in 'zones.txt' file.
 * `--output_dir {dir}`
@@ -370,7 +370,7 @@ def main() -> None:
         default='',
     )
 
-    # Skip buffer size estimation, avoid circular dependency to AceTimePython.
+    # Skip buffer size estimation, to avoid circular dependency to acetimepy.
     parser.add_argument(
         '--skip_bufestimator',
         help='Skip buffer size estimator',

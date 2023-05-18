@@ -5,7 +5,7 @@
 These are various scripts and tools which parse the [IANA
 TZ database](https://www.iana.org/time-zones) and generate zoneinfo datasets for
 the [AceTime](https://github.com/bxparks/AceTime) Arduino library and the
-[AceTimePython](https://github.com/bxparks/AceTimePython) library. These tools
+[acetimepy](https://github.com/bxparks/acetimepy) library. These tools
 used to be in the AceTime project itself, but was extracted into a separate repo
 to support other languages and environments.
 
@@ -40,8 +40,8 @@ Here is a quick summary of the various tools:
 * `zinfo.py`
     * a command line interface to the `zone_processor.py` Python
       module using a pre-compiled zoneinfo files in
-      `AceTimePython/src/acetime/zonedb/` directory.
-    * (Maybe move to AceTimePython project? Though it's sometimes useful for
+      `acetimepy/src/acetime/zonedb/` directory.
+    * (Maybe move to acetimepy project? Though it's sometimes useful for
       debugging output of the `tzcompiler.py`)
 * `copytz.sh`
     * script to copy the raw TZDB files from a local copy of the IANA TZDB repo
@@ -73,7 +73,7 @@ extractor            Extractor.parse()
   |               ArduinoTransformer
   |                       |
   |                       v
-  |                BufSizeEstimator <---> AceTimePython/
+  |                BufSizeEstimator <---> acetimepy/
 transformers              |               zone_processor
   |                       v
   |                   Commenter
@@ -111,21 +111,21 @@ zone_strings.{h,cpp}         |                           (AceTimeValidation)
 * [IANA TZ Database](https://github.com/eggert/tz) as a sibling directory
     * `$ cd ..`
     * `$ git clone https://github.com/eggert/tz`
-* [AceTimePython](https://github.com/bxparks/AceTimePython)
+* [acetimepy](https://github.com/bxparks/acetimepy)
     * This causes a partial circular dependency.
-    * AceTimeTools generates the `zonedb` files used by the AceTimePython
+    * AceTimeTools generates the `zonedb` files used by the `acetimepy`
       classes.
     * But AceTimeTools feeds the in-memory transient versions of the `zonedb`
-      files into the `zone_processor.py` module in AceTimePython to estimate the
+      files into the `zone_processor.py` module in `acetimepy` to estimate the
       Transition buffer sizes, which is then included in the actual
-      `src/acetime/zonedb` files written into the AceTimePython library.
+      `src/acetime/zonedb` files written into the `acetimepy` library.
 
 ## Usage
 
 In the following:
 
 * `$ACE_TIME` is the location of the AceTime project
-* `$ACE_TIME_PYTHON` is the location of the AceTimePython project
+* `$ACE_TIME_PYTHON` is the location of the `acetimepy` project
 
 ### Generating ZoneDB Files
 
@@ -141,7 +141,7 @@ $ vi Makefile # Update the TZ_VERSION
 $ make
 ```
 
-**AceTimePython**
+**acetimepy**
 
 ```
 $ cd $ACE_TIME_PYTHON/src/acetime/zonedb

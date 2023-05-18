@@ -30,7 +30,7 @@ class PythonGenerator:
 
     ZONE_POLICIES_FILE = """\
 from typing import List
-from ..zonedb_types import (
+from ..typing import (
     ZoneRule,
     ZonePolicy,
 )
@@ -58,7 +58,7 @@ from ..zonedb_types import (
 
     ZONE_INFOS_FILE = """\
 from typing import List
-from ..zonedb_types import (
+from ..typing import (
     ZoneEra,
     ZoneInfo,
 )
@@ -112,7 +112,7 @@ UNTIL_YEAR = {until_year}
 """
 
     ZONE_REGISTRY_FILE = """\
-from ..zonedb_types import ZoneInfoMap
+from ..typing import ZoneInfoMap
 from .zone_infos import *
 
 # Supported Zones: {numZones}

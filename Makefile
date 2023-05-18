@@ -6,11 +6,11 @@
 
 all: mypy flake8 tests
 
-# The '../AceTimePython/src/acetime' is added because MyPy complains about not
-# finding the typing info when AceTimePython is installed using 'pip3 install'.
+# The '../acetimepy/src/acetime' is added because MyPy complains about not
+# finding the typing info when acetimepy is installed using 'pip3 install'.
 # Seems like typing info is not being installed by pip3.
 mypy:
-	mypy --strict src tests ../AceTimePython/src/acetime
+	mypy --strict src tests ../acetimepy/src/acetime
 
 tests:
 	python3 -m unittest
@@ -33,7 +33,7 @@ flake8:
 #------------------------------------------------------------------------------
 
 # The TZ DB version used for internal testing targets defined below. This does
-# not affect the zonedb files generated in AceTime or AceTimePython.
+# not affect the zonedb files generated in AceTime or acetimepy.
 TZ_VERSION := 2022g
 TZ_REPO := $(abspath ../tz)
 

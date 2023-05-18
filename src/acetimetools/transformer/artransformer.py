@@ -29,7 +29,7 @@ from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
 
 class ArduinoTransformer:
     """Process the ZonesMap and PoliciesMap for the zone_info.{h,cpp} and
-    zone_policies.{h,cpp} files required by the AceTime and AceTimePython
+    zone_policies.{h,cpp} files required by the AceTime and `acetimepy`
     libraries. Produces a new TransformerResult from get_data().
     """
 

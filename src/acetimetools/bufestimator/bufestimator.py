@@ -11,7 +11,7 @@ from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
 from acetimetools.data_types.at_types import BufSizeMap, CountAndYear
 from acetime.zone_processor import ZoneProcessor
-from acetime.zonedb_types import ZoneInfoMap
+from acetime.typing import ZoneInfoMap
 from .zone_info_inliner import ZoneInfoInliner
 
 

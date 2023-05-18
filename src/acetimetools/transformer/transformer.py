@@ -39,19 +39,18 @@ PoliciesToZones = Dict[str, List[str]]
 
 class Transformer:
     """
-    Cleanses and transforms the Zone, Rule and Link entries for processing by
-    various AceTime algorithms. The TransformerResult will be further
-    transformed by the transformer.ArduinoTransformer class to massage it into
-    an at_types.ZoneInfoDatabase data structure. The ZoneInfoDatabase is then
-    used to generate the AceTime C++ files, the AceTimePython files, and the
-    zonedb*.json JSON files.
+    Performs the majority of the transformations of the ZonesMap, PoliciesMap,
+    and LinksMap data structures (as produced by the Extractor), and converts
+    them into form that can be used consumed by the various `XXgenerator.py`
+    classes to produce the zonedb files needed by the downstream AceTime-type
+    libraries. The output of this class is a TransformerResult class which can
+    be further transformed by ArduinoTransformer, BufSizeEstimator, Commenter,
+    and GoTranformer classes.
 
     The Transformer was intended to be agnostic to a specific implementation of
-    the AceTime algorithms. The ArduinoTransformer was intended to transform the
-    abstract data structures into a specific data structure that is suitable to
-    be consumed by the AceTime library. It turned out to be easier for the
-    AceTimePython library to reuse the same data structure as AceTime, so the
-    ArduinoTransformer is used for the AceTimePython library as well.
+    the AceTime algorithms. Other transformers specific a particular library or
+    language (e.g. ArduinoTransformer, GoTransformer) perform additional
+    transformations.
     """
     def __init__(
         self,

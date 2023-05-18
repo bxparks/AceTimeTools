@@ -1,6 +1,7 @@
 # Changelog
 
 * Unreleased
+    * Rename `AceTimePython` library to `acetimepy`.
 * 1.6.3 (2023-03-26)
     * Extract RULES (in `era['rules']`) into separate fields.
         * Copy the policy name (RULE name) string into `era['policy_name']` if

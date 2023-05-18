@@ -14,11 +14,11 @@ from typing import Optional
 
 from acetimetools.data_types.at_types import ZonesMap
 from acetimetools.data_types.at_types import PoliciesMap
-from acetime.zonedb_types import ZoneRule
-from acetime.zonedb_types import ZonePolicy
-from acetime.zonedb_types import ZonePolicyMap
-from acetime.zonedb_types import ZoneEra
-from acetime.zonedb_types import ZoneInfoMap
+from acetime.typing import ZoneRule
+from acetime.typing import ZonePolicy
+from acetime.typing import ZonePolicyMap
+from acetime.typing import ZoneEra
+from acetime.typing import ZoneInfoMap
 
 
 class ZoneInfoInliner:
