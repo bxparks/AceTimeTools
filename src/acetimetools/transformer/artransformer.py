@@ -459,7 +459,7 @@ def _to_era_offset_and_delta(
     delta_seconds: int,
 ) -> EncodedOffsetAndDelta:
     """Convert offset_seconds and delta_seconds to an EncodedOffsetAndDelta
-    suitable for the AceTime or AceTimeC library.
+    suitable for the AceTime or acetimec library.
     """
     offset_code = offset_seconds // 900  # truncate to -infinty
     offset_remainder = (offset_seconds % 900) // 60  # always positive

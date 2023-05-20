@@ -2,7 +2,7 @@
 #
 # MIT License
 """
-Generate the zone_info and zone_policies files for the AceTimeC C library.
+Generate the zone_info and zone_policies files for the acetimec C library.
 Borrowed heavily from argenerator.py.
 """
 
@@ -21,7 +21,7 @@ from acetimetools.generator.argenerator import render_merged_comments_map
 
 
 class CGenerator:
-    """Generate zone_infos and zone_policies files for AceTimeC C lang library.
+    """Generate zone_infos and zone_policies files for acetimec C library.
     """
     ZONE_INFOS_H_FILE_NAME = 'zone_infos.h'
     ZONE_INFOS_C_FILE_NAME = 'zone_infos.c'

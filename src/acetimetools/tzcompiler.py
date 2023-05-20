@@ -35,7 +35,7 @@ Transformer Flags:
 
 * --scope {basic | extended)
     * Selects one of the 2 algorithms supported by AceTime.
-    * AceTimeC, acetimepy, and acetimego supports only 'extended'.
+    * acetimec, acetimepy, and acetimego supports only 'extended'.
 * `--generate_int16_years`
     * Output `from_year` and `to_year` as 16-bit integers instead of 8-bit
       "tiny" integers.
@@ -63,7 +63,7 @@ Generator Flags:
 
 * `--language` flag is a comma-separated list of generator file:
     * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
-    * c: Generate `zone_*.{h,cpp}` files for AceTimeC C lang library
+    * c: Generate `zone_*.{h,cpp}` files for acetimec C library
     * python: Generate `zone_*.py` files for acetimepy Python library
     * json: Generate `zonedb.json` file.
     * zonelist: Generate a raw list of zone names in 'zones.txt' file.

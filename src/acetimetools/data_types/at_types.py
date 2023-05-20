@@ -319,8 +319,8 @@ class TransformerResult:
     formats_map: IndexMap  # {format -> index}
     fragments_map: IndexMap  # {fragment -> index}
     compressed_names: Dict[str, str]  # {zoneName -> compressedName}
-    memory_map8: MemoryMap  # flash usage for AceTime, AceTimeC, 8 bits
-    memory_map32: MemoryMap  # flash usage for AceTime, AceTimeC, 32 bits
+    memory_map8: MemoryMap  # flash usage for AceTime, acetimec, 8 bits
+    memory_map32: MemoryMap  # flash usage for AceTime, acetimec, 32 bits
     # Data from GoTransformer
     go_letters_map: OffsetMap  # {letter -> byte_offset}
     go_formats_map: OffsetMap  # {format -> byte_offset}
