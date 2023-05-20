@@ -328,7 +328,7 @@ class TransformerResult:
     go_zone_and_link_index_map: IndexMap  # {zone -> index}
     go_policy_index_size_map: IndexSizeMap  # {policy -> (index, offset, size)}
     go_info_index_size_map: IndexSizeMap  # info -> (index, offset, size)
-    go_memory_map: MemoryMap  # memory usage for AceTimeGo
+    go_memory_map: MemoryMap  # memory usage for acetimego
 
 
 def add_comment(comments: CommentsMap, name: str, reason: str) -> None:

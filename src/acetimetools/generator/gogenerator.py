@@ -271,7 +271,7 @@ const ZonePoliciesData = {zone_policies_data_string}
 package {self.db_namespace}
 
 import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
+\t"github.com/bxparks/acetimego/zoneinfo"
 )
 // ---------------------------------------------------------------------------
 // ZoneRuleRecords is a concatenated array of zoneinfo.ZoneInfoRecord objects
@@ -561,7 +561,7 @@ const ZoneInfosData = {zone_infos_data_string}
 package {self.db_namespace}
 
 import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
+\t"github.com/bxparks/acetimego/zoneinfo"
 )
 
 // ---------------------------------------------------------------------------
@@ -791,7 +791,7 @@ var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
 package {self.db_namespace}
 
 import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
+\t"github.com/bxparks/acetimego/zoneinfo"
 )
 
 // ---------------------------------------------------------------------------
@@ -857,7 +857,7 @@ const (
 package {self.db_namespace}
 
 import (
-\t"github.com/bxparks/AceTimeGo/zoneinfo"
+\t"github.com/bxparks/acetimego/zoneinfo"
 )
 
 // ---------------------------------------------------------------------------
@@ -937,7 +937,7 @@ const (
 package {self.db_namespace}
 
 import (
-\t"github.com/bxparks/AceTimeGo/internal"
+\t"github.com/bxparks/acetimego/internal"
 \t"testing"
 )
 

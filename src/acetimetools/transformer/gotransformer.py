@@ -2,7 +2,7 @@
 #
 # MIT License
 """
-Generate the 'format' OffsetMap, and the 'letters' OffsetMap for the AceTimeGo
+Generate the 'format' OffsetMap, and the 'letters' OffsetMap for the acetimego
 library.
 """
 
@@ -101,7 +101,7 @@ class GoTransformer:
 
 def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
     """Collect all LETTER entries into the OffsetMap that contains the *byte*
-    offset into each letter. This will be used by the AceTimeGo library. The
+    offset into each letter. This will be used by the acetimego library. The
     final entry is a sentinel "~" (the last ASCII character) which should not
     exist in the TZDB.
     """

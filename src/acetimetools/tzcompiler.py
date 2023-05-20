@@ -35,7 +35,7 @@ Transformer Flags:
 
 * --scope {basic | extended)
     * Selects one of the 2 algorithms supported by AceTime.
-    * AceTimeC, acetimepy, and AceTimeGo supports only 'extended'.
+    * AceTimeC, acetimepy, and acetimego supports only 'extended'.
 * `--generate_int16_years`
     * Output `from_year` and `to_year` as 16-bit integers instead of 8-bit
       "tiny" integers.
@@ -140,7 +140,7 @@ def generate_zonedb(
 
     # Create the Python or Arduino files as requested
     if language == 'python':
-        logging.info('==== Creating Python zone_*.py files')
+        logging.info('==== Creating acetimepy zone_*.py files')
         generator = PythonGenerator(
             invocation=invocation,
             zidb=zidb,
@@ -148,7 +148,7 @@ def generate_zonedb(
         generator.generate_files(output_dir)
 
     elif language == 'arduino':
-        logging.info('==== Creating Arduino zone_*.{h,cpp} files')
+        logging.info('==== Creating AceTime zone_*.{h,cpp} files')
         generator = ArduinoGenerator(
             invocation=invocation,
             db_namespace=db_namespace,
@@ -159,7 +159,7 @@ def generate_zonedb(
         generator.generate_files(output_dir)
 
     elif language == 'c':
-        logging.info('==== Creating AceTimeC zone_*.{h,c} files')
+        logging.info('==== Creating acetimec zone_*.{h,c} files')
         generator = CGenerator(
             invocation=invocation,
             db_namespace=db_namespace,
@@ -171,7 +171,7 @@ def generate_zonedb(
         generator.generate_files(output_dir)
 
     elif language == 'go':
-        logging.info('==== Creating AceTimeGo zone_*.go files')
+        logging.info('==== Creating acetimego zone_*.go files')
         generator = GoGenerator(
             invocation=invocation,
             db_namespace=db_namespace,
