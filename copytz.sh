@@ -74,5 +74,4 @@ etcetera|\
 europe|\
 northamerica|\
 southamerica|\
-backzone|\
-systemv)
+)

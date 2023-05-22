@@ -76,8 +76,7 @@ etcetera|\
 europe|\
 northamerica|\
 southamerica|\
-backzone|\
-systemv))
+))
 }
 
 # Run the tzcompiler.py.
