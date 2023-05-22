@@ -1,11 +1,20 @@
 # Changelog
 
 * Unreleased
+* 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
+    * Rename `AceTimeGo` library to `acetimego`.
+    * Rename `AceTimeC` library to `acetimec`.
+    * Move `zinfo.py` to `acetimepy` library.
     * `pygenerator.py`
         * Always generate `eras` for Links, turning Links into "hard links".
         * Simplifies code that handles links in the `acetimepy` project,
           and matches the handling of links in the AceTime project.
+    * `validation_types.py`
+        * Split `test_data` array into `transitions` and `samples`.
+    * `copytz.sh`, `tzcompiler.sh`
+        * Remove unused `backzone`, and obsolete `systemv` which no longer
+          exists in the original TZDB.
 * 1.6.3 (2023-03-26)
     * Extract RULES (in `era['rules']`) into separate fields.
         * Copy the policy name (RULE name) string into `era['policy_name']` if
