@@ -211,7 +211,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 
-#include <zoneinfo/ZonePolicy.h>
+#include <zoneinfo/ZoneInfo.h>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -411,7 +411,7 @@ namespace {self.db_namespace} {{
 extern const char kTzDatabaseVersion[];
 
 // Metadata about the zonedb files.
-extern const internal::ZoneContext kZoneContext;
+extern const {self.scope}::ZoneContext kZoneContext;
 
 //---------------------------------------------------------------------------
 // Supported zones: {num_infos}
@@ -528,7 +528,7 @@ const char* const kLetters[] = {{
 {letters}
 }};
 
-const internal::ZoneContext kZoneContext = {{
+const {self.scope}::ZoneContext kZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
   {self.max_buf_size} /*maxTransitions*/,
