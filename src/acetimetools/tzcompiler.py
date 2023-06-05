@@ -154,6 +154,7 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_int16_years=generate_int16_years,
+            generate_hires=generate_hires,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -213,13 +214,17 @@ def main() -> None:
         '--input_dir', help='Location of the input directory', required=True)
 
     # Transformer flags.
+
+    # Size/resolution of the zoneinfo dataset.
     parser.add_argument(
         '--scope',
-        # basic: time zones for BasicZoneProcessor
-        # extended: time zones for ExtendedZoneProcessor
-        choices=['basic', 'extended'],
-        help='Scope of the generated zoneinfo database (basic|extended)',
+        # basic: BasicZoneProcessor, lores
+        # extended: ExtendedZoneProcessor, midres
+        # complete: ExtendedZoneProcessor, hires
+        choices=['basic', 'extended', 'complete'],
+        help='Scope of zoneinfo database (basic|extended|complete)',
         required=True)
+
     parser.add_argument(
         '--start_year',
         help='Start year of Zone Eras (default: 2000)',
@@ -416,8 +421,12 @@ def main() -> None:
         else:
             if args.scope == 'basic':
                 offset_granularity = 900
-            else:
+            elif args.scope == 'extended':
                 offset_granularity = 60
+            elif args.scope == 'complete':
+                offset_granularity = 1
+            else:
+                raise Exception(f'Unknown scope {args.scope}')
 
         if args.delta_granularity:
             delta_granularity = args.delta_granularity

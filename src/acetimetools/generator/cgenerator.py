@@ -18,6 +18,7 @@ from acetimetools.transformer.transformer import normalize_raw
 from acetimetools.generator.argenerator import compressed_name_to_c_string
 from acetimetools.generator.argenerator import render_comments_map
 from acetimetools.generator.argenerator import render_merged_comments_map
+from acetimetools.generator.argenerator import to_suffix_label
 
 
 class CGenerator:
@@ -278,7 +279,7 @@ extern "C" {{
             if self.generate_hires:
                 at_time_code = rule['at_time_seconds_code']
                 at_time_modifier = rule['at_time_seconds_modifier']
-                label = _to_suffix_label(rule['at_time_suffix'])
+                label = to_suffix_label(rule['at_time_suffix'])
                 remaining_seconds = at_seconds % 15
                 at_time_modifier_comment = \
                     f'{label} + seconds={remaining_seconds}'
@@ -286,7 +287,7 @@ extern "C" {{
             else:
                 at_time_code = rule['at_time_code']
                 at_time_modifier = rule['at_time_modifier']
-                label = _to_suffix_label(rule['at_time_suffix'])
+                label = to_suffix_label(rule['at_time_suffix'])
                 remaining_minutes = at_seconds % 900 // 60
                 at_time_modifier_comment = \
                     f'{label} + minute={remaining_minutes}'
@@ -665,14 +666,14 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         if self.generate_hires:
             until_time_code = era['until_time_seconds_code']
             until_time_modifier = era['until_time_seconds_modifier']
-            label = _to_suffix_label(era['until_time_suffix'])
+            label = to_suffix_label(era['until_time_suffix'])
             remaining_seconds = until_seconds % 15
             until_time_modifier_comment = \
                 f'{label} + seconds={remaining_seconds}'
         else:
             until_time_code = era['until_time_code']
             until_time_modifier = era['until_time_modifier']
-            label = _to_suffix_label(era['until_time_suffix'])
+            label = to_suffix_label(era['until_time_suffix'])
             remaining_minutes = until_seconds % 900 // 60
             until_time_modifier_comment = \
                 f'{label} + minute={remaining_minutes}'
@@ -840,13 +841,3 @@ const k{self.db_namespace}ZoneAndLinkRegistry[{num_zones_and_links}];
 
 #endif
 """
-
-
-def _to_suffix_label(suffix: str) -> str:
-    if suffix == 'w':
-        return 'kAtcSuffixW'
-    elif suffix == 's':
-        return 'kAtcSuffixS'
-    else:
-        return 'kAtcSuffixU'
-    return 'UNKNOWN'

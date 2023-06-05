@@ -34,6 +34,7 @@ class ArduinoGenerator:
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
+        generate_hires: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -49,6 +50,8 @@ class ArduinoGenerator:
                 db_namespace = 'zonedb'
             elif scope == 'extended':
                 db_namespace = 'zonedbx'
+            elif scope == 'complete':
+                db_namespace = 'zonedbc'
             else:
                 raise Exception(
                     f"db_namespace cannot be determined for scope '{scope}'"
@@ -60,6 +63,7 @@ class ArduinoGenerator:
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
         self.generate_int16_years = generate_int16_years
+        self.generate_hires = generate_hires
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
@@ -206,12 +210,14 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
         num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
+        include_header = "ZoneInfoHires.h" \
+            if self.generate_hires else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
 
-#include <zoneinfo/ZoneInfo.h>
+#include <zoneinfo/{include_header}>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -276,16 +282,27 @@ namespace {self.db_namespace} {{
         # Generate ZoneRules
         rule_items = ''
         for rule in rules:
-            at_time_code = rule['at_time_code']
-            at_time_modifier = rule['at_time_modifier']
-            at_time_modifier_comment = _get_time_modifier_comment(
-                time_seconds=rule['at_seconds_truncated'],
-                suffix=rule['at_time_suffix'],
-            )
-            delta_code = rule['delta_code_encoded']
-            delta_code_comment = _get_rule_delta_code_comment(
-                rule['delta_seconds_truncated']
-            )
+            at_seconds = rule['at_seconds_truncated']
+            if self.generate_hires:
+                at_time_code = rule['at_time_seconds_code']
+                at_time_modifier = rule['at_time_seconds_modifier']
+                label = to_suffix_label(rule['at_time_suffix'])
+                remaining_seconds = at_seconds % 15
+                at_time_modifier_comment = \
+                    f'{label} + seconds={remaining_seconds}'
+                delta_minutes = rule['delta_minutes']
+            else:
+                at_time_code = rule['at_time_code']
+                at_time_modifier = rule['at_time_modifier']
+                at_time_modifier_comment = _get_time_modifier_comment(
+                    time_seconds=rule['at_seconds_truncated'],
+                    suffix=rule['at_time_suffix'],
+                )
+                delta_code = rule['delta_code_encoded']
+                delta_code_comment = _get_rule_delta_code_comment(
+                    rule['delta_seconds_truncated']
+                )
+
             if self.generate_int16_years:
                 from_year = rule['from_year']
                 from_year_label = 'fromYear'
@@ -304,7 +321,23 @@ namespace {self.db_namespace} {{
             letter = rule['letter']
             letter_index = rule['letter_index']
 
-            rule_items += f"""\
+            if self.generate_hires:
+                item = f"""\
+  // {raw_line}
+  {{
+    {from_year} /*{from_year_label}*/,
+    {to_year} /*{to_year_label}*/,
+    {in_month} /*inMonth*/,
+    {on_day_of_week} /*onDayOfWeek*/,
+    {on_day_of_month} /*onDayOfMonth*/,
+    {at_time_modifier} /*atTimeModifier ({at_time_modifier_comment})*/,
+    {at_time_code} /*atTimeCode ({at_seconds}/15)*/,
+    {delta_minutes} /*deltaMinutes*/,
+    {letter_index} /*letterIndex ("{letter}")*/,
+  }},
+"""
+            else:
+                item = f"""\
   // {raw_line}
   {{
     {from_year} /*{from_year_label}*/,
@@ -318,6 +351,7 @@ namespace {self.db_namespace} {{
     {letter_index} /*letterIndex ("{letter}")*/,
   }},
 """
+            rule_items += item
 
         # Section header for a ZonePolicy
         num_rules = len(rules)
@@ -393,12 +427,14 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
         num_notable_infos = len(self.merged_notable_zones)
         num_removed_links = len(self.removed_links)
         num_notable_links = len(self.notable_links)
+        include_header = "ZoneInfoHires.h" \
+            if self.generate_hires else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
 
-#include <zoneinfo/ZoneInfo.h>
+#include <zoneinfo/{include_header}>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -611,12 +647,19 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
             policy_normalized_name = normalize_name(policy_name)
             zone_policy = f'&kZonePolicy{policy_normalized_name}'
 
-        offset_code = era['offset_code']
-        delta_code = era['delta_code_encoded']
-        delta_code_comment = _get_era_delta_code_comment(
-            offset_seconds=era['offset_seconds_truncated'],
-            delta_seconds=era['era_delta_seconds_truncated'],
-        )
+        offset_seconds = era['offset_seconds_truncated']
+        if self.generate_hires:
+            offset_code = era['offset_seconds_code']
+            offset_remainder = era['offset_seconds_remainder']
+            delta_minutes = era['delta_minutes']
+        else:
+            offset_code = era['offset_code']
+            delta_code = era['delta_code_encoded']
+            delta_code_comment = _get_era_delta_code_comment(
+                offset_seconds=era['offset_seconds_truncated'],
+                delta_seconds=era['era_delta_seconds_truncated'],
+            )
+
         if self.generate_int16_years:
             until_year = era['until_year']
             until_year_label = 'untilYear'
@@ -625,16 +668,44 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
             until_year_label = 'untilYearTiny'
         until_month = era['until_month']
         until_day = era['until_day']
-        until_time_code = era['until_time_code']
-        until_time_modifier = era['until_time_modifier']
-        until_time_modifier_comment = _get_time_modifier_comment(
-            time_seconds=era['until_seconds_truncated'],
-            suffix=era['until_time_suffix'],
-        )
+
+        until_seconds = era['until_seconds_truncated']
+        if self.generate_hires:
+            until_time_code = era['until_time_seconds_code']
+            until_time_modifier = era['until_time_seconds_modifier']
+            label = to_suffix_label(era['until_time_suffix'])
+            remaining_seconds = until_seconds % 15
+            until_time_modifier_comment = \
+                f'{label} + seconds={remaining_seconds}'
+        else:
+            until_time_code = era['until_time_code']
+            until_time_modifier = era['until_time_modifier']
+            until_time_modifier_comment = _get_time_modifier_comment(
+                time_seconds=era['until_seconds_truncated'],
+                suffix=era['until_time_suffix'],
+            )
+
         format = era['format_short']
         raw_line = normalize_raw(era['raw_line'])
 
-        era_item = f"""\
+        if self.generate_hires:
+            era_item = f"""\
+  // {raw_line}
+  {{
+    {zone_policy} /*zonePolicy*/,
+    "{format}" /*format*/,
+    {offset_code} /*offsetCode ({offset_seconds}/15)*/,
+    {offset_remainder} /*offsetRemainder ({offset_seconds}%15)*/,
+    {delta_minutes} /*deltaMinutes*/,
+    {until_year} /*{until_year_label}*/,
+    {until_month} /*untilMonth*/,
+    {until_day} /*untilDay*/,
+    {until_time_code} /*untilTimeCode ({until_seconds}/15)*/,
+    {until_time_modifier} /*untilTimeModifier ({until_time_modifier_comment})*/,
+  }},
+"""
+        else:
+            era_item = f"""\
   // {raw_line}
   {{
     {zone_policy} /*zonePolicy*/,
@@ -754,12 +825,14 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
     def generate_registry_h(self) -> str:
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
+        include_header = "ZoneInfoHires.h" \
+            if self.generate_hires else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
 #define ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
 
-#include <zoneinfo/ZoneInfo.h>
+#include <zoneinfo/{include_header}>
 
 namespace ace_time {{
 namespace {self.db_namespace} {{
@@ -910,3 +983,13 @@ def render_merged_comments_map(merged_comments: MergedCommentsMap) -> str:
                 comment += render_comments_map(reason, '  ')
         comment += "// }\n"
     return comment
+
+
+def to_suffix_label(suffix: str) -> str:
+    if suffix == 'w':
+        return 'kAtcSuffixW'
+    elif suffix == 's':
+        return 'kAtcSuffixS'
+    else:
+        return 'kAtcSuffixU'
+    return 'UNKNOWN'
