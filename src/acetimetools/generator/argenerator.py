@@ -196,8 +196,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
         num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
@@ -413,8 +412,7 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
         num_notable_infos = len(self.merged_notable_zones)
         num_removed_links = len(self.removed_links)
         num_notable_links = len(self.notable_links)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
@@ -811,8 +809,7 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
     def generate_registry_h(self) -> str:
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
