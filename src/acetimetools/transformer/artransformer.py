@@ -18,7 +18,6 @@ from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import MemoryMap
 from acetimetools.data_types.at_types import SizeofMap
-from acetimetools.data_types.at_types import EPOCH_YEAR_FOR_TINY
 from acetimetools.data_types.at_types import MAX_TO_YEAR
 from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
 from acetimetools.data_types.at_types import MIN_YEAR
@@ -33,7 +32,25 @@ class ArduinoTransformer:
     libraries. Produces a new TransformerResult from get_data().
     """
 
-    SIZEOF8: SizeofMap = {
+    # TODO: Add memory consumption of ZoneContext
+
+    SIZEOF_LOW8: SizeofMap = {
+        'rule': 9,
+        'policy': 3,
+        'era': 11,
+        'info': 13,
+        'pointer': 2,  # sizeof(void*)
+    }
+
+    SIZEOF_LOW32: SizeofMap = {
+        'rule': 12,  # 9 rounded to 4-byte alignment
+        'policy': 8,  # 5 rounded to 4-byte alignment
+        'era': 16,  # 15 rounded to 4-byte alignment
+        'info': 24,  # 21 rounded to 4-byte alignment
+        'pointer': 4,  # sizeof(void*)
+    }
+
+    SIZEOF_MID8: SizeofMap = {
         'rule': 11,
         'policy': 3,
         'era': 12,
@@ -41,21 +58,20 @@ class ArduinoTransformer:
         'pointer': 2,  # sizeof(void*)
     }
 
-    # High resolution version
+    SIZEOF_MID32: SizeofMap = {
+        'rule': 12,  # 11 rounded to 4-byte alignment
+        'policy': 8,  # 5 rounded to 4-byte alignment
+        'era': 16,  # 16 rounded to 4-byte alignment
+        'info': 24,  # 21 rounded to 4-byte alignment
+        'pointer': 4,  # sizeof(void*)
+    }
+
     SIZEOF_HIRES8: SizeofMap = {
         'rule': 12,
         'policy': 3,
         'era': 15,
         'info': 13,
         'pointer': 2,  # sizeof(void*)
-    }
-
-    SIZEOF32: SizeofMap = {
-        'rule': 12,  # 11 rounded to 4-byte alignment
-        'policy': 8,  # 5 rounded to 4-byte alignment
-        'era': 16,  # 16 rounded to 4-byte alignment
-        'info': 24,  # 21 rounded to 4-byte alignment
-        'pointer': 4,  # sizeof(void*)
     }
 
     SIZEOF_HIRES32: SizeofMap = {
@@ -66,9 +82,12 @@ class ArduinoTransformer:
         'pointer': 4,  # sizeof(void*)
     }
 
-    def __init__(self, scope: str, compress: bool) -> None:
-        self.compress = compress
+    def __init__(
+        self, scope: str, tiny_base_year: int, compress: bool
+    ) -> None:
         self.scope = scope
+        self.tiny_base_year = tiny_base_year
+        self.compress = compress
 
     def transform(self, tresult: TransformerResult) -> None:
         self.tresult = tresult
@@ -98,9 +117,12 @@ class ArduinoTransformer:
         if self.scope == 'complete':
             memory_map8 = self._generate_memory_map(self.SIZEOF_HIRES8)
             memory_map32 = self._generate_memory_map(self.SIZEOF_HIRES32)
-        else:
-            memory_map8 = self._generate_memory_map(self.SIZEOF8)
-            memory_map32 = self._generate_memory_map(self.SIZEOF32)
+        elif self.scope == 'extended':
+            memory_map8 = self._generate_memory_map(self.SIZEOF_MID8)
+            memory_map32 = self._generate_memory_map(self.SIZEOF_MID32)
+        elif self.scope == 'basic':
+            memory_map8 = self._generate_memory_map(self.SIZEOF_LOW8)
+            memory_map32 = self._generate_memory_map(self.SIZEOF_LOW32)
 
         tresult.zone_ids = zone_ids
         tresult.link_ids = link_ids
@@ -131,8 +153,8 @@ class ArduinoTransformer:
         """
         for policy_name, rules in policies_map.items():
             for rule in rules:
-                rule['from_year_tiny'] = _to_tiny_year(rule['from_year'])
-                rule['to_year_tiny'] = _to_tiny_year(rule['to_year'])
+                rule['from_year_tiny'] = self._to_tiny_year(rule['from_year'])
+                rule['to_year_tiny'] = self._to_tiny_year(rule['to_year'])
 
                 # Convert at_seconds to at_time_code and at_time_modifier
                 at_encoded = _to_encoded_at_or_until_time(
@@ -192,7 +214,8 @@ class ArduinoTransformer:
                 era['delta_minutes'] = offset_encoded.delta_minutes
 
                 # Generate the UNTIL fields needed by Arduino ZoneProcessors
-                era['until_year_tiny'] = _to_tiny_until_year(era['until_year'])
+                era['until_year_tiny'] = self._to_tiny_until_year(
+                    era['until_year'])
                 until_encoded = _to_encoded_at_or_until_time(
                     seconds=era['until_seconds_truncated'],
                     suffix=era['until_time_suffix'],
@@ -284,6 +307,28 @@ class ArduinoTransformer:
             'total': total_size,
         }
 
+    def _to_tiny_year(self, year: int) -> int:
+        """Convert 16-bit year into 8-bit year, taking into account special
+        values for MIN and MAX years. TODO: Add invalid year?
+        """
+        if year >= self.tiny_base_year + MAX_TO_YEAR_TINY:
+            return MAX_TO_YEAR_TINY
+        elif year <= self.tiny_base_year + MIN_YEAR_TINY:
+            return MIN_YEAR_TINY
+        else:
+            return year - self.tiny_base_year
+
+    def _to_tiny_until_year(self, year: int) -> int:
+        """Convert 16-bit UNTIL year into 8-bit UNTIL year, taking into account
+        special values for MIN and MAX years. TODO: Add invalid year?
+        """
+        if year >= self.tiny_base_year + MAX_UNTIL_YEAR_TINY:
+            return MAX_UNTIL_YEAR_TINY
+        elif year <= self.tiny_base_year + MIN_YEAR_TINY:
+            return MIN_YEAR_TINY
+        else:
+            return year - self.tiny_base_year
+
 
 def _collect_letter_strings(
     policies_map: PoliciesMap,
@@ -340,30 +385,6 @@ def _collect_format_strings(zones_map: ZonesMap) -> IndexMap:
         index += 1
 
     return short_formats_map
-
-
-def _to_tiny_year(year: int) -> int:
-    """Convert 16-bit year into 8-bit year, taking into account special
-    values for MIN and MAX years.
-    """
-    if year == MAX_TO_YEAR:
-        return MAX_TO_YEAR_TINY
-    elif year == MIN_YEAR:
-        return MIN_YEAR_TINY
-    else:
-        return year - EPOCH_YEAR_FOR_TINY
-
-
-def _to_tiny_until_year(year: int) -> int:
-    """Convert 16-bit UNTIL year into 8-bit UNTIL year, taking into account
-    special values for MIN and MAX years.
-    """
-    if year == MAX_UNTIL_YEAR:
-        return MAX_UNTIL_YEAR_TINY
-    elif year == MIN_YEAR:
-        return MIN_YEAR_TINY
-    else:
-        return year - EPOCH_YEAR_FOR_TINY
 
 
 class EncodedTime(NamedTuple):

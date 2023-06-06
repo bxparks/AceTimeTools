@@ -33,7 +33,8 @@ class ArduinoGenerator:
         invocation: str,
         db_namespace: str,
         compress: bool,
-        generate_int16_years: bool,
+        generate_tiny_years: bool,
+        tiny_base_year: int,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -49,7 +50,8 @@ class ArduinoGenerator:
         self.db_namespace = db_namespace
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
-        self.generate_int16_years = generate_int16_years
+        self.generate_tiny_years = generate_tiny_years
+        self.tiny_base_year = tiny_base_year
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
@@ -196,8 +198,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
         num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
@@ -289,16 +290,18 @@ namespace {self.db_namespace} {{
                     rule['delta_seconds_truncated']
                 )
 
-            if self.generate_int16_years:
+            if self.generate_tiny_years:
+                from_year = rule['from_year']
+                from_year_label = f'fromYearTiny ({from_year})'
+                from_year = rule['from_year_tiny']
+                to_year = rule['to_year']
+                to_year_label = f'toYearTiny ({to_year})'
+                to_year = rule['to_year_tiny']
+            else:
                 from_year = rule['from_year']
                 from_year_label = 'fromYear'
                 to_year = rule['to_year']
                 to_year_label = 'toYear'
-            else:
-                from_year = rule['from_year_tiny']
-                from_year_label = 'fromYearTiny'
-                to_year = rule['to_year_tiny']
-                to_year_label = 'toYearTiny'
 
             raw_line = normalize_raw(rule['raw_line'])
             in_month = rule['in_month']
@@ -413,8 +416,7 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
         num_notable_infos = len(self.merged_notable_zones)
         num_removed_links = len(self.removed_links)
         num_notable_links = len(self.notable_links)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
@@ -553,6 +555,7 @@ const char* const kLetters[] = {{
 const {self.scope}::ZoneContext kZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
+  {self.tiny_base_year} /*baseYear*/,
   {self.max_buf_size} /*maxTransitions*/,
   kTzDatabaseVersion /*tzVersion*/,
   {num_fragments} /*numFragments*/,
@@ -646,12 +649,12 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
                 delta_seconds=era['era_delta_seconds_truncated'],
             )
 
-        if self.generate_int16_years:
-            until_year = era['until_year']
-            until_year_label = 'untilYear'
-        else:
+        if self.generate_tiny_years:
             until_year = era['until_year_tiny']
             until_year_label = 'untilYearTiny'
+        else:
+            until_year = era['until_year']
+            until_year_label = 'untilYear'
         until_month = era['until_month']
         until_day = era['until_day']
 
@@ -811,8 +814,7 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
     def generate_registry_h(self) -> str:
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
-        include_header = "ZoneInfoHires.h" \
-            if self.scope == 'complete' else "ZoneInfo.h"
+        include_header = "infos.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H

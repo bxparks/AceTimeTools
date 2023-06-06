@@ -25,14 +25,6 @@ used by multiple packages.
 # Constants used by various modules.
 # -----------------------------------------------------------------------------
 
-# The epoch year used to generate 8-bit year fields when generate_int16_years is
-# False. yearTiny = year - EPOCH_YEAR_FOR_TINY. Setting this to 2100 allows us
-# to represent the years in the range of [1974,2225], with year_tiny=-128
-# representing an error condition, year_tiny=-127 representing -Infinity, 126
-# representing +Infinity for the TO field, and 127 representing +Infinity for
-# the UNTIL field. TODO: Maybe rename this to TINY_BASE_YEAR.
-EPOCH_YEAR_FOR_TINY: int = 2100
-
 # Indicate +Infinity UNTIL year (represented by empty field).
 MAX_UNTIL_YEAR: int = 32767
 
@@ -98,8 +90,8 @@ class ZoneRuleRaw(TypedDict, total=False):
     anchor: bool  # True if this is an Anchor rule
 
     # Derived from above by artransformer.py
-    from_year_tiny: int  # (from_year - EPOCH_YEAR_FOR_TINY)
-    to_year_tiny: int  # (to_year - EPOCH_YEAR_FOR_TINY)
+    from_year_tiny: int  # (from_year - tiny_base_year)
+    to_year_tiny: int  # (to_year - tiny_base_year)
     at_time_code: int  # at_time in units of 15-min
     at_time_minute: int  # at_time remainder minutes
     at_time_modifier: int  # suffix + at_time_minute
@@ -165,7 +157,7 @@ class ZoneEraRaw(TypedDict, total=False):
     offset_minute: int  # STD offset remainder minutes
     delta_code: int  # DST offset in units of 15-min
     delta_code_encoded: int  # delta_code + offset_minute, in 2 x 4-bits
-    until_year_tiny: int  # until_year - EPOCH_YEAR_FOR_TINY)
+    until_year_tiny: int  # until_year - tiny_base_year)
     until_time_code: int  # until_time in units of 15-min
     until_time_minute: int  # until_time remainder minutes
     until_time_modifier: int  # suffix + until_time_minute
