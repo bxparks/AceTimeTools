@@ -18,11 +18,8 @@ from acetimetools.data_types.at_types import IndexMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import MemoryMap
 from acetimetools.data_types.at_types import SizeofMap
-from acetimetools.data_types.at_types import MAX_TO_YEAR
 from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
-from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR_TINY
-from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
 
 
