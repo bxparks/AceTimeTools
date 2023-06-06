@@ -5,7 +5,13 @@
       complete`.
     * Simplify granularity flags, using `--scope` to determine the various
       granularity parameters.
-    * Remove `--generate_hires` flag. Remove `--generate_int16_years` flag.
+    * Remove `--generate_hires` flag. It is automatically determined by the
+      `--scope` flag.
+    * tiny years
+        * Remove `--generate_int16_years` flag.
+        * Rename internal `generate_int16_years` parameter with
+          `generate_tiny_years`.
+        * Replace `EPOCH_YEAR_FOR_TINY` constant with `--tiny_base_year flag`
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.

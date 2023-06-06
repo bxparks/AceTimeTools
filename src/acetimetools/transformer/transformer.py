@@ -22,7 +22,6 @@ from acetimetools.data_types.at_types import CommentsMap
 from acetimetools.data_types.at_types import TransformerResult
 from acetimetools.data_types.at_types import add_comment
 from acetimetools.data_types.at_types import merge_comments
-from acetimetools.data_types.at_types import EPOCH_YEAR_FOR_TINY
 from acetimetools.data_types.at_types import INVALID_YEAR
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR
@@ -62,6 +61,7 @@ class Transformer:
         delta_granularity: int,
         strict: bool,
         generate_tiny_years: bool,
+        tiny_base_year: int,
         include_list: Set[str],
     ):
         """
@@ -76,7 +76,8 @@ class Transformer:
             strict: throw out Zones or Rules which are not exactly on the time
                 boundary defined by granularity
             generate_tiny_years: generate int8 'year' fields as offset from
-                a base year, instead of the full int16 year
+                the tiny_base_year, instead of the full int16 year
+            tiny_base_year: base year of tiny year fields
             include_list: include list of zones and links, empty means 'all'
         """
         self.scope = scope
@@ -87,6 +88,7 @@ class Transformer:
         self.delta_granularity = delta_granularity
         self.strict = strict
         self.generate_tiny_years = generate_tiny_years
+        self.tiny_base_year = tiny_base_year
         self.include_list = include_list
 
         self.all_removed_zones: CommentsMap = {}
@@ -119,9 +121,9 @@ class Transformer:
 
         # Part 1: Some sanity checks, gathering, and include filtering.
         if self.generate_tiny_years:
-            if not is_year_tiny(self.start_year):
+            if not is_year_tiny(self.start_year, self.tiny_base_year):
                 raise Exception(f"Start year {self.start_year} not tiny")
-            if not is_year_tiny(self.until_year):
+            if not is_year_tiny(self.until_year, self.tiny_base_year):
                 raise Exception(f"Until year {self.until_year} not tiny")
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
@@ -951,9 +953,9 @@ class Transformer:
                 until_year = era['until_year']
                 if until_year == MAX_UNTIL_YEAR:
                     continue
-                if not is_year_tiny(until_year):
+                if not is_year_tiny(until_year, self.tiny_base_year):
                     raise Exception(f"{name}: UNTIL {until_year} not tiny")
-                until_year_tiny = until_year - EPOCH_YEAR_FOR_TINY
+                until_year_tiny = until_year - self.tiny_base_year
                 era['until_year_tiny'] = until_year_tiny
 
         return zones_map
@@ -1033,7 +1035,7 @@ class Transformer:
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
         """Remove policies which have FROM and TO fields do not fit in a tiny
-        year field (8-bit integer) with a base EPOCH_YEAR_FOR_TINY (2100).
+        year field (8-bits).
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
@@ -1042,13 +1044,13 @@ class Transformer:
             for rule in rules:
                 from_year = rule['from_year']
                 to_year = rule['to_year']
-                if not is_year_tiny(from_year):
+                if not is_year_tiny(from_year, self.tiny_base_year):
                     valid = False
                     add_comment(
                         removed_policies, name,
                         f"from_year ({from_year}) exceeds int8_t")
                     break
-                if not is_year_tiny(to_year):
+                if not is_year_tiny(to_year, self.tiny_base_year):
                     valid = False
                     add_comment(
                         removed_policies, name,
@@ -1465,11 +1467,11 @@ class Transformer:
             for rule in rules:
                 from_year = rule['from_year']
                 if from_year != MIN_YEAR and from_year != MAX_TO_YEAR:
-                    rule['from_year_tiny'] = from_year - EPOCH_YEAR_FOR_TINY
+                    rule['from_year_tiny'] = from_year - self.tiny_base_year
 
                 to_year = rule['to_year']
                 if to_year != MIN_YEAR and to_year != MAX_TO_YEAR:
-                    rule['to_year_tiny'] = to_year - EPOCH_YEAR_FOR_TINY
+                    rule['to_year_tiny'] = to_year - self.tiny_base_year
 
         return policies_map
 
@@ -1779,9 +1781,9 @@ def find_earliest_subsequent_rules(
     return candidates
 
 
-def is_year_tiny(year: int) -> bool:
+def is_year_tiny(year: int, tiny_base_year: int) -> bool:
     """Determine if year fits in an int8_t field."""
-    year_tiny = year - EPOCH_YEAR_FOR_TINY
+    year_tiny = year - tiny_base_year
     return (
         year == INVALID_YEAR
         or year == MIN_YEAR

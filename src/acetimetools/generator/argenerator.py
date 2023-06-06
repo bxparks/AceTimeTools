@@ -34,6 +34,7 @@ class ArduinoGenerator:
         db_namespace: str,
         compress: bool,
         generate_tiny_years: bool,
+        tiny_base_year: int,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -50,6 +51,7 @@ class ArduinoGenerator:
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
         self.generate_tiny_years = generate_tiny_years
+        self.tiny_base_year = tiny_base_year
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']

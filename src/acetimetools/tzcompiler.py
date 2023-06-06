@@ -37,6 +37,14 @@ Transformer Flags:
     * Truncate output so that the algorithm works for year >= start_year.
 * --until_year {until}
     * Truncate output so that the algorithm works for year < until_year.
+* --tiny_base_year {year}
+    * Base year for fields encoded as 8-bit offset from the base year.
+    * Setting this to 2100 allows us to represent the years in the range of
+      [1974,2225] with:
+        * -128 representing an error condition,
+        * -127 representing -Infinity,
+        * 126 representing +Infinity for the TO field, and
+        * 127 representing +Infinity for the UNTIL field.
 * --scope {basic | extended | complete)
     * Selects one of the 3 zonedb encoding formats
     * acetimec, acetimepy, and acetimego currently ignores this flag and
@@ -130,6 +138,7 @@ def generate_zonedb(
     db_namespace: str,
     compress: bool,
     generate_tiny_years: bool,
+    tiny_base_year: int,
     language: str,
     output_dir: str,
     json_file: str,
@@ -156,6 +165,7 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_tiny_years=generate_tiny_years,
+            tiny_base_year=tiny_base_year,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -167,6 +177,7 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_tiny_years=generate_tiny_years,
+            tiny_base_year=tiny_base_year,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -233,6 +244,12 @@ def main() -> None:
     parser.add_argument(
         '--until_year',
         help='Until year of Zone Eras (default: 2100)',
+        type=int,
+        default=2100)
+
+    parser.add_argument(
+        '--tiny_base_year',
+        help='Base year for tiny year fields (default: 2100)',
         type=int,
         default=2100)
 
@@ -445,6 +462,7 @@ def main() -> None:
         delta_granularity,
     )
     logging.info(f'Generate tiny years: {generate_tiny_years}')
+    logging.info(f'Tiny base year: {args.tiny_base_year}')
 
     # Extract the TZ files
     logging.info('======== Extracting TZ Data files')
@@ -503,6 +521,7 @@ def main() -> None:
         delta_granularity=delta_granularity,
         strict=args.strict,
         generate_tiny_years=generate_tiny_years,
+        tiny_base_year=args.tiny_base_year,
         include_list=include_list,
     )
     transformer.transform(tresult)
@@ -511,7 +530,8 @@ def main() -> None:
     # Generate the fields for the Arduino zoneinfo data.
     if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
-        arduino_transformer = ArduinoTransformer(args.scope, args.compress)
+        arduino_transformer = ArduinoTransformer(
+            args.scope, args.tiny_base_year, args.compress)
         arduino_transformer.transform(tresult)
         arduino_transformer.print_summary(tresult)
     else:
@@ -568,6 +588,7 @@ def main() -> None:
                 db_namespace=args.db_namespace,
                 compress=args.compress,
                 generate_tiny_years=generate_tiny_years,
+                tiny_base_year=args.tiny_base_year,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,
