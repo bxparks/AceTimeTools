@@ -29,9 +29,8 @@ class ArduinoTransformer:
     libraries. Produces a new TransformerResult from get_data().
     """
 
-    # TODO: Add memory consumption of ZoneContext
-
     SIZEOF_LOW8: SizeofMap = {
+        'context': 16,
         'rule': 9,
         'policy': 3,
         'era': 11,
@@ -40,6 +39,7 @@ class ArduinoTransformer:
     }
 
     SIZEOF_LOW32: SizeofMap = {
+        'context': 24,  # 22 rounded to 4-byte alignment
         'rule': 12,  # 9 rounded to 4-byte alignment
         'policy': 8,  # 5 rounded to 4-byte alignment
         'era': 16,  # 15 rounded to 4-byte alignment
@@ -48,6 +48,7 @@ class ArduinoTransformer:
     }
 
     SIZEOF_MID8: SizeofMap = {
+        'context': 16,
         'rule': 11,
         'policy': 3,
         'era': 12,
@@ -56,6 +57,7 @@ class ArduinoTransformer:
     }
 
     SIZEOF_MID32: SizeofMap = {
+        'context': 24,  # 22 rounded to 4-byte alignment
         'rule': 12,  # 11 rounded to 4-byte alignment
         'policy': 8,  # 5 rounded to 4-byte alignment
         'era': 16,  # 16 rounded to 4-byte alignment
@@ -64,6 +66,7 @@ class ArduinoTransformer:
     }
 
     SIZEOF_HIRES8: SizeofMap = {
+        'context': 16,
         'rule': 12,
         'policy': 3,
         'era': 15,
@@ -72,6 +75,7 @@ class ArduinoTransformer:
     }
 
     SIZEOF_HIRES32: SizeofMap = {
+        'context': 24,  # 22 rounded to 4-byte alignment
         'rule': 12,  # 12 rounded to 4-byte alignment
         'policy': 8,  # 5 rounded to 4-byte alignment
         'era': 20,  # 19 rounded to 4-byte alignment
@@ -228,6 +232,9 @@ class ArduinoTransformer:
                     until_encoded.time_seconds_modifier
 
     def _generate_memory_map(self, sizes: SizeofMap) -> MemoryMap:
+        # Context
+        context_size = sizes['context']
+
         num_zones = len(self.zones_map)
         num_links = len(self.links_map)
         num_policies = len(self.policies_map)
@@ -277,7 +284,8 @@ class ArduinoTransformer:
 
         # Total
         total_size = (
-            rule_size
+            context_size
+            + rule_size
             + policy_size
             + era_size
             + zone_size
@@ -290,6 +298,7 @@ class ArduinoTransformer:
         )
 
         return {
+            'context': context_size,
             'rules': rule_size,
             'policies': policy_size,
             'eras': era_size,

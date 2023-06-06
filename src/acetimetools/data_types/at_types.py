@@ -234,6 +234,7 @@ ZonesToPolicies = Dict[str, Collection[str]]
 
 # Memory consumption for various objects for different processor alignment.
 class SizeofMap(TypedDict):
+    context: int  # sizeof(ZoneContext)
     rule: int  # sizeof(ZoneRule)
     policy: int  # sizeof(ZonePolicy)
     era: int  # sizeof(ZoneEra)
@@ -243,6 +244,7 @@ class SizeofMap(TypedDict):
 
 # Memory size of each type of objects in zonedb
 class MemoryMap(TypedDict, total=False):
+    context: int
     rules: int
     policies: int
     eras: int
