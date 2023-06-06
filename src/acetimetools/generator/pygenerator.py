@@ -41,6 +41,7 @@ class PythonGenerator:
         wrapped_tzfiles = '\n#   '.join(zidb['tz_files'])
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
+
         self.tz_version = zidb['tz_version']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']

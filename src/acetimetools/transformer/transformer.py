@@ -66,7 +66,7 @@ class Transformer:
     ):
         """
         Args:
-            scope: scope of database (basic, or extended)
+            scope: scope of database (basic, extended, complete)
             start_year: include only years on or after start_year
             until_year: include only years valid before until_year
             until_at_granularity: truncate UNTIL, AT to this many seconds

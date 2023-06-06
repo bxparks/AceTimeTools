@@ -66,9 +66,9 @@ class ArduinoTransformer:
         'pointer': 4,  # sizeof(void*)
     }
 
-    def __init__(self, compress: bool, generate_hires: bool) -> None:
+    def __init__(self, scope: str, compress: bool) -> None:
         self.compress = compress
-        self.generate_hires = generate_hires
+        self.scope = scope
 
     def transform(self, tresult: TransformerResult) -> None:
         self.tresult = tresult
@@ -95,7 +95,7 @@ class ArduinoTransformer:
             self.fragments_map = {}
             self.compressed_names = {}
 
-        if self.generate_hires:
+        if self.scope == 'complete':
             memory_map8 = self._generate_memory_map(self.SIZEOF_HIRES8)
             memory_map32 = self._generate_memory_map(self.SIZEOF_HIRES32)
         else:

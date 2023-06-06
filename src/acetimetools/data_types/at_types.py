@@ -30,7 +30,7 @@ used by multiple packages.
 # to represent the years in the range of [1974,2225], with year_tiny=-128
 # representing an error condition, year_tiny=-127 representing -Infinity, 126
 # representing +Infinity for the TO field, and 127 representing +Infinity for
-# the UNTIL field.
+# the UNTIL field. TODO: Maybe rename this to TINY_BASE_YEAR.
 EPOCH_YEAR_FOR_TINY: int = 2100
 
 # Indicate +Infinity UNTIL year (represented by empty field).

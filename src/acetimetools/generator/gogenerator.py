@@ -50,9 +50,12 @@ class GoGenerator:
     ):
         wrapped_invocation = '\n//     --'.join(invocation.split(' --'))
         wrapped_tzfiles = '\n//   '.join(zidb['tz_files'])
+        if not db_namespace:
+            raise Exception("db_namespace must be defined")
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
         self.db_namespace = db_namespace
+
         self.tz_version = zidb['tz_version']
         self.start_year = zidb['start_year']
         self.until_year = zidb['until_year']

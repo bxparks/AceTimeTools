@@ -37,7 +37,6 @@ class CGenerator:
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
-        generate_hires: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -46,19 +45,17 @@ class CGenerator:
         wrapped_invocation = '\n//     --'.join(invocation.split(' --'))
         wrapped_tzfiles = '\n//   '.join(zidb['tz_files'])
 
-        # C does not namespaces, so use db_namespace as a prefix for all
+        # C does not use namespaces, so use db_namespace as a prefix for all
         # external identifiers. Normally, this will be "Atc", but for testing,
         # it can be "AtcTesting".
         if not db_namespace:
             raise Exception("db_namespace must be defined")
-
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
         self.db_namespace = db_namespace
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
         self.generate_int16_years = generate_int16_years
-        self.generate_hires = generate_hires
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
@@ -276,7 +273,7 @@ extern "C" {{
         rule_items = ''
         for rule in rules:
             at_seconds = rule['at_seconds_truncated']
-            if self.generate_hires:
+            if self.scope == 'complete':
                 at_time_code = rule['at_time_seconds_code']
                 at_time_modifier = rule['at_time_seconds_modifier']
                 label = to_suffix_label(rule['at_time_suffix'])
@@ -313,7 +310,7 @@ extern "C" {{
             letter = rule['letter']
             letter_index = rule['letter_index']
 
-            if self.generate_hires:
+            if self.scope == 'complete':
                 item = f"""\
   // {raw_line}
   {{
@@ -639,7 +636,7 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
                 f"&k{self.db_namespace}ZonePolicy{policy_normalized_name}"
 
         offset_seconds = era['offset_seconds_truncated']
-        if self.generate_hires:
+        if self.scope == 'complete':
             offset_code = era['offset_seconds_code']
             offset_remainder = era['offset_seconds_remainder']
             delta_minutes = era['delta_minutes']
@@ -663,7 +660,7 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         until_day = era['until_day']
 
         until_seconds = era['until_seconds_truncated']
-        if self.generate_hires:
+        if self.scope == 'complete':
             until_time_code = era['until_time_seconds_code']
             until_time_modifier = era['until_time_seconds_modifier']
             label = to_suffix_label(era['until_time_suffix'])
@@ -681,7 +678,7 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         format = era['format_short']
         raw_line = normalize_raw(era['raw_line'])
 
-        if self.generate_hires:
+        if self.scope == 'complete':
             era_item = f"""\
   // {raw_line}
   {{

@@ -33,19 +33,32 @@ Extractor Flags:
 
 Transformer Flags:
 
-* --scope {basic | extended)
-    * Selects one of the 2 algorithms supported by AceTime.
-    * acetimec, acetimepy, and acetimego supports only 'extended'.
-* `--generate_int16_years`
-    * Output `from_year` and `to_year` as 16-bit integers instead of 8-bit
-      "tiny" integers.
-    * Retain records which are outside of the 8-bit integers.
 * --start_year {start}
     * Truncate output so that the algorithm works for year >= start_year.
 * --until_year {until}
     * Truncate output so that the algorithm works for year < until_year.
-* --granularity {seconds}
-    * Convenience flag that overrides the other `--xxx_granularity` flags.
+* --scope {basic | extended | complete)
+    * Selects one of the 3 zonedb encoding formats
+    * acetimec, acetimepy, and acetimego currently ignores this flag and
+      defaults to 'complete'
+    * basic
+        * until_at_granularity: 60 seconds
+        * offset_granularity: 60 seconds
+        * delta_granularity: 900 seconds (15 minutes)
+        * generate_int16_years: true (TODO: change to false)
+        * (valid for timezones ~>= 1972)
+    * extended
+        * until_at_granularity: 60 seconds (1 minute)
+        * offset_granularity: 60 seconds (1 minute)
+        * delta_granularity: 900 seconds (15 minutes)
+        * generate_int16_years: true (TODO: change to false)
+        * (valid for timezones ~>= 1972)
+    * complete
+        * until_at_granularity: 1 second
+        * offset_granularity: 1 second
+        * delta_granularity: 60 seconds (1 minute)
+        * generate_int16_years: true
+        * (valid for timezones >= 1844, all TZDB)
 * --until_at_granularity {seconds}
     * Truncate Zone.UNTIL fields to this granularity.
 * --offset_granularity {seconds}
@@ -65,25 +78,15 @@ Generator Flags:
     * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
     * c: Generate `zone_*.{h,cpp}` files for acetimec C library
     * python: Generate `zone_*.py` files for acetimepy Python library
+    * go: Generate `zone_*.{go}` files for acetimego C library
     * json: Generate `zonedb.json` file.
     * zonelist: Generate a raw list of zone names in 'zones.txt' file.
 * `--output_dir {dir}`
     * The directory where various files should be created.
     * If empty, it means the same as $PWD.
-* ArduinoGenerator
-    * --db_namespace {db_namespace}
-        * Use the given identifier as the C++ namespace of the generated
-          classes.
-    * `--generate_int16_years`
-        * Generate 16-bit year fields instead of 8-bit.
-* CGenerator
-    * `--generate_int16_years`
-        * Generate 16-bit year fields instead of 8-bit.
-    * `--generate_hires`
-        * Generate one-second resolution UNTIL, AT, OFFSET (one-minute DELTA).
-* GoGenerator
-    * --db_namespace {db_namespace}
-        * Specifies the Go `package` name.
+* `--scope`
+    * Determines the format of the zonedb file.
+
 * JsonGenerator
     * --json_file {file}
         * Name of the JSON file (e.g. `zonedb.json`, `zonedbx.json`)
@@ -127,7 +130,6 @@ def generate_zonedb(
     db_namespace: str,
     compress: bool,
     generate_int16_years: bool,
-    generate_hires: bool,
     language: str,
     output_dir: str,
     json_file: str,
@@ -154,7 +156,6 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_int16_years=generate_int16_years,
-            generate_hires=generate_hires,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -166,7 +167,6 @@ def generate_zonedb(
             db_namespace=db_namespace,
             compress=compress,
             generate_int16_years=generate_int16_years,
-            generate_hires=generate_hires,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -299,11 +299,16 @@ def main() -> None:
         default='',
     )
 
-    # C++ namespace names for '--language arduino'. If not specified, it will
-    # automatically be set to 'zonedb' or 'zonedbx' depending on the 'scope'.
+    # Defines the namespace or package of the generated zonedb files for the
+    # given --language flag:
+    #
+    #   * arduino: defines the C++ namespace
+    #   * c: defines the prefix of the kAtc{db_namespace}ZoneXxx data structs
+    #   * python: not used
+    #   * go: defines the Go package name of the zonedb data structs
     parser.add_argument(
         '--db_namespace',
-        help='C++ namespace for the zonedb files (default: zonedb or zonedbx)',
+        help='Namespace or package of the zonedb files (Required)',
     )
 
     # Whether to compress the zone and link names
@@ -353,21 +358,6 @@ def main() -> None:
         action='store_true',
     )
 
-    # Generate full int16_t years instead int8_t years which are offsets from
-    # the year EPOCH_YEAR_FOR_TINY.
-    parser.add_argument(
-        '--generate_int16_years',
-        help='Generate int16_t years instead of int8_t years',
-        action='store_true',
-    )
-
-    # Generate high resolution AT, UNTIL, OFFSET and DSTOFF fields.
-    parser.add_argument(
-        '--generate_hires',
-        help='Generate high resolution AT, UNTIL, OFFSET, and DSTOFF',
-        action='store_true',
-    )
-
     # File name containing list of zones and links to include.
     parser.add_argument(
         '--include_list',
@@ -405,33 +395,37 @@ def main() -> None:
     # Read the zone list filter file.
     include_list = read_include_list(args.include_list)
 
-    # Define scope-dependent granularity if not overridden by flag
-    if args.granularity:
-        until_at_granularity = args.granularity
-        offset_granularity = args.granularity
-        delta_granularity = args.granularity
+    # Define default parameters from the '--scope' flag.
+    if args.scope == 'basic':
+        until_at_granularity = 60
+        offset_granularity = 60
+        delta_granularity = 900
+        generate_int16_years = True
+        if args.start_year < 1980:
+            raise Exception(
+                f"Invalid StartYear {args.start_year} for scope 'basic'")
+    elif args.scope == 'extended':
+        until_at_granularity = 60
+        offset_granularity = 60
+        delta_granularity = 900
+        generate_int16_years = True
+        if args.start_year < 1973:
+            raise Exception(
+                f"Invalid StartYear {args.start_year} for scope 'extended'")
+    elif args.scope == 'complete':
+        until_at_granularity = 1
+        offset_granularity = 1
+        delta_granularity = 60
+        generate_int16_years = True
     else:
-        if args.until_at_granularity:
-            until_at_granularity = args.until_at_granularity
-        else:
-            until_at_granularity = 60
+        raise Exception(f'Unknown scope {args.scope}')
 
-        if args.offset_granularity:
-            offset_granularity = args.offset_granularity
-        else:
-            if args.scope == 'basic':
-                offset_granularity = 900
-            elif args.scope == 'extended':
-                offset_granularity = 60
-            elif args.scope == 'complete':
-                offset_granularity = 1
-            else:
-                raise Exception(f'Unknown scope {args.scope}')
-
-        if args.delta_granularity:
-            delta_granularity = args.delta_granularity
-        else:
-            delta_granularity = 900
+    if args.until_at_granularity:
+        until_at_granularity = args.until_at_granularity
+    if args.offset_granularity:
+        offset_granularity = args.offset_granularity
+    if args.delta_granularity:
+        delta_granularity = args.delta_granularity
 
     logging.info('======== TZ Compiler settings')
     logging.info(f'Scope: {args.scope}')
@@ -450,6 +444,7 @@ def main() -> None:
         'Granularity for RULES (rulesDelta) and SAVE (delta): %d',
         delta_granularity,
     )
+    logging.info(f'Generate int16 years: {generate_int16_years}')
 
     # Extract the TZ files
     logging.info('======== Extracting TZ Data files')
@@ -507,7 +502,7 @@ def main() -> None:
         offset_granularity=offset_granularity,
         delta_granularity=delta_granularity,
         strict=args.strict,
-        generate_int16_years=args.generate_int16_years,
+        generate_int16_years=generate_int16_years,
         include_list=include_list,
     )
     transformer.transform(tresult)
@@ -516,8 +511,7 @@ def main() -> None:
     # Generate the fields for the Arduino zoneinfo data.
     if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
-        arduino_transformer = ArduinoTransformer(
-            args.compress, args.generate_hires)
+        arduino_transformer = ArduinoTransformer(args.scope, args.compress)
         arduino_transformer.transform(tresult)
         arduino_transformer.print_summary(tresult)
     else:
@@ -573,8 +567,7 @@ def main() -> None:
                 invocation=invocation,
                 db_namespace=args.db_namespace,
                 compress=args.compress,
-                generate_int16_years=args.generate_int16_years,
-                generate_hires=args.generate_hires,
+                generate_int16_years=generate_int16_years,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,

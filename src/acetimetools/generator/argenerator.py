@@ -34,7 +34,6 @@ class ArduinoGenerator:
         db_namespace: str,
         compress: bool,
         generate_int16_years: bool,
-        generate_hires: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -42,28 +41,15 @@ class ArduinoGenerator:
         # warnings about "multi-line comment [-Wcomment]".
         wrapped_invocation = '\n//     --'.join(invocation.split(' --'))
         wrapped_tzfiles = '\n//   '.join(zidb['tz_files'])
-
-        # Determine zonedb C++ namespace
-        scope = zidb['scope']
-        if not db_namespace:
-            if scope == 'basic':
-                db_namespace = 'zonedb'
-            elif scope == 'extended':
-                db_namespace = 'zonedbx'
-            elif scope == 'complete':
-                db_namespace = 'zonedbc'
-            else:
-                raise Exception(
-                    f"db_namespace cannot be determined for scope '{scope}'"
-                )
-
         self.invocation = wrapped_invocation
         self.tz_files = wrapped_tzfiles
+
+        if not db_namespace:
+            raise Exception("db_namespace must be defined")
         self.db_namespace = db_namespace
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
         self.generate_int16_years = generate_int16_years
-        self.generate_hires = generate_hires
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
@@ -211,7 +197,7 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
         include_header = "ZoneInfoHires.h" \
-            if self.generate_hires else "ZoneInfo.h"
+            if self.scope == 'complete' else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_POLICIES_H
@@ -283,7 +269,7 @@ namespace {self.db_namespace} {{
         rule_items = ''
         for rule in rules:
             at_seconds = rule['at_seconds_truncated']
-            if self.generate_hires:
+            if self.scope == 'complete':
                 at_time_code = rule['at_time_seconds_code']
                 at_time_modifier = rule['at_time_seconds_modifier']
                 label = to_suffix_label(rule['at_time_suffix'])
@@ -321,7 +307,7 @@ namespace {self.db_namespace} {{
             letter = rule['letter']
             letter_index = rule['letter_index']
 
-            if self.generate_hires:
+            if self.scope == 'complete':
                 item = f"""\
   // {raw_line}
   {{
@@ -428,7 +414,7 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
         num_removed_links = len(self.removed_links)
         num_notable_links = len(self.notable_links)
         include_header = "ZoneInfoHires.h" \
-            if self.generate_hires else "ZoneInfo.h"
+            if self.scope == 'complete' else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_INFOS_H
@@ -648,7 +634,7 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
             zone_policy = f'&kZonePolicy{policy_normalized_name}'
 
         offset_seconds = era['offset_seconds_truncated']
-        if self.generate_hires:
+        if self.scope == 'complete':
             offset_code = era['offset_seconds_code']
             offset_remainder = era['offset_seconds_remainder']
             delta_minutes = era['delta_minutes']
@@ -670,7 +656,7 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         until_day = era['until_day']
 
         until_seconds = era['until_seconds_truncated']
-        if self.generate_hires:
+        if self.scope == 'complete':
             until_time_code = era['until_time_seconds_code']
             until_time_modifier = era['until_time_seconds_modifier']
             label = to_suffix_label(era['until_time_suffix'])
@@ -688,7 +674,7 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         format = era['format_short']
         raw_line = normalize_raw(era['raw_line'])
 
-        if self.generate_hires:
+        if self.scope == 'complete':
             era_item = f"""\
   // {raw_line}
   {{
@@ -826,7 +812,7 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
         num_zones = len(self.zones_map)
         num_zones_and_links = len(self.zones_and_links)
         include_header = "ZoneInfoHires.h" \
-            if self.generate_hires else "ZoneInfo.h"
+            if self.scope == 'complete' else "ZoneInfo.h"
 
         return self._generate_header() + f"""\
 #ifndef ACE_TIME_{self.db_header_namespace}_ZONE_REGISTRY_H
