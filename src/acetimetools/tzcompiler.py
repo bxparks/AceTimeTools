@@ -45,19 +45,19 @@ Transformer Flags:
         * until_at_granularity: 60 seconds
         * offset_granularity: 60 seconds
         * delta_granularity: 900 seconds (15 minutes)
-        * generate_int16_years: true (TODO: change to false)
+        * generate_tiny_years: false (TODO: change to true)
         * (valid for timezones ~>= 1972)
     * extended
         * until_at_granularity: 60 seconds (1 minute)
         * offset_granularity: 60 seconds (1 minute)
         * delta_granularity: 900 seconds (15 minutes)
-        * generate_int16_years: true (TODO: change to false)
+        * generate_tiny_years: false (TODO: change to true?)
         * (valid for timezones ~>= 1972)
     * complete
         * until_at_granularity: 1 second
         * offset_granularity: 1 second
         * delta_granularity: 60 seconds (1 minute)
-        * generate_int16_years: true
+        * generate_tiny_years: false
         * (valid for timezones >= 1844, all TZDB)
 * --until_at_granularity {seconds}
     * Truncate Zone.UNTIL fields to this granularity.
@@ -129,7 +129,7 @@ def generate_zonedb(
     invocation: str,
     db_namespace: str,
     compress: bool,
-    generate_int16_years: bool,
+    generate_tiny_years: bool,
     language: str,
     output_dir: str,
     json_file: str,
@@ -155,7 +155,7 @@ def generate_zonedb(
             invocation=invocation,
             db_namespace=db_namespace,
             compress=compress,
-            generate_int16_years=generate_int16_years,
+            generate_tiny_years=generate_tiny_years,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -166,7 +166,7 @@ def generate_zonedb(
             invocation=invocation,
             db_namespace=db_namespace,
             compress=compress,
-            generate_int16_years=generate_int16_years,
+            generate_tiny_years=generate_tiny_years,
             zidb=zidb,
         )
         generator.generate_files(output_dir)
@@ -400,7 +400,7 @@ def main() -> None:
         until_at_granularity = 60
         offset_granularity = 60
         delta_granularity = 900
-        generate_int16_years = True
+        generate_tiny_years = False
         if args.start_year < 1980:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'basic'")
@@ -408,7 +408,7 @@ def main() -> None:
         until_at_granularity = 60
         offset_granularity = 60
         delta_granularity = 900
-        generate_int16_years = True
+        generate_tiny_years = False
         if args.start_year < 1973:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'extended'")
@@ -416,7 +416,7 @@ def main() -> None:
         until_at_granularity = 1
         offset_granularity = 1
         delta_granularity = 60
-        generate_int16_years = True
+        generate_tiny_years = False
     else:
         raise Exception(f'Unknown scope {args.scope}')
 
@@ -444,7 +444,7 @@ def main() -> None:
         'Granularity for RULES (rulesDelta) and SAVE (delta): %d',
         delta_granularity,
     )
-    logging.info(f'Generate int16 years: {generate_int16_years}')
+    logging.info(f'Generate tiny years: {generate_tiny_years}')
 
     # Extract the TZ files
     logging.info('======== Extracting TZ Data files')
@@ -502,7 +502,7 @@ def main() -> None:
         offset_granularity=offset_granularity,
         delta_granularity=delta_granularity,
         strict=args.strict,
-        generate_int16_years=generate_int16_years,
+        generate_tiny_years=generate_tiny_years,
         include_list=include_list,
     )
     transformer.transform(tresult)
@@ -567,7 +567,7 @@ def main() -> None:
                 invocation=invocation,
                 db_namespace=args.db_namespace,
                 compress=args.compress,
-                generate_int16_years=generate_int16_years,
+                generate_tiny_years=generate_tiny_years,
                 language=language,
                 output_dir=args.output_dir,
                 zidb=zidb,

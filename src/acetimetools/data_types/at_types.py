@@ -25,12 +25,12 @@ used by multiple packages.
 # Constants used by various modules.
 # -----------------------------------------------------------------------------
 
-# The epoch year used to generate 8-bit year fields when generate_int16_years is
-# False. yearTiny = year - EPOCH_YEAR_FOR_TINY. Setting this to 2100 allows us
+# The epoch year used to generate 8-bit year fields when generate_tiny_years is
+# True: yearTiny = year - EPOCH_YEAR_FOR_TINY. Setting this to 2100 allows us
 # to represent the years in the range of [1974,2225], with year_tiny=-128
 # representing an error condition, year_tiny=-127 representing -Infinity, 126
 # representing +Infinity for the TO field, and 127 representing +Infinity for
-# the UNTIL field. TODO: Maybe rename this to TINY_BASE_YEAR.
+# the UNTIL field. TODO: Move this into a configurable flag.
 EPOCH_YEAR_FOR_TINY: int = 2100
 
 # Indicate +Infinity UNTIL year (represented by empty field).

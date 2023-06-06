@@ -61,7 +61,7 @@ class Transformer:
         offset_granularity: int,
         delta_granularity: int,
         strict: bool,
-        generate_int16_years: bool,
+        generate_tiny_years: bool,
         include_list: Set[str],
     ):
         """
@@ -75,8 +75,8 @@ class Transformer:
                 (era_delta_seconds) to this many seconds
             strict: throw out Zones or Rules which are not exactly on the time
                 boundary defined by granularity
-            generate_int16_years: generate 'year' fields for an int16_t type,
-                instead of the older int8_t type
+            generate_tiny_years: generate int8 'year' fields as offset from
+                a base year, instead of the full int16 year
             include_list: include list of zones and links, empty means 'all'
         """
         self.scope = scope
@@ -86,7 +86,7 @@ class Transformer:
         self.offset_granularity = offset_granularity
         self.delta_granularity = delta_granularity
         self.strict = strict
-        self.generate_int16_years = generate_int16_years
+        self.generate_tiny_years = generate_tiny_years
         self.include_list = include_list
 
         self.all_removed_zones: CommentsMap = {}
@@ -118,7 +118,7 @@ class Transformer:
         )
 
         # Part 1: Some sanity checks, gathering, and include filtering.
-        if not self.generate_int16_years:
+        if self.generate_tiny_years:
             if not is_year_tiny(self.start_year):
                 raise Exception(f"Start year {self.start_year} not tiny")
             if not is_year_tiny(self.until_year):
@@ -146,7 +146,7 @@ class Transformer:
             zones_map)
         zones_map = self._remove_zones_with_non_monotonic_until(zones_map)
         zones_map = self._create_short_format_strings(zones_map)
-        if not self.generate_int16_years:
+        if self.generate_tiny_years:
             zones_map = self._create_tiny_until_years(zones_map)
 
         # Part 3: Transformations requiring both zones_map and policies_map.
@@ -155,7 +155,7 @@ class Transformer:
 
         # Part 4: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
-        if not self.generate_int16_years:
+        if self.generate_tiny_years:
             policies_map = self._remove_rules_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_multiple_transitions_in_month(
@@ -173,7 +173,7 @@ class Transformer:
                 policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_long_dst_letter(policies_map)
-        if not self.generate_int16_years:
+        if self.generate_tiny_years:
             policies_map = self._create_tiny_from_to_years(policies_map)
 
         # Part 5: Remove unused zones and links.

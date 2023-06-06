@@ -36,7 +36,7 @@ class CGenerator:
         invocation: str,
         db_namespace: str,
         compress: bool,
-        generate_int16_years: bool,
+        generate_tiny_years: bool,
         zidb: ZoneInfoDatabase,
     ):
         # If I add a backslash (\) at the end of each line (which is needed if I
@@ -55,7 +55,7 @@ class CGenerator:
         self.db_namespace = db_namespace
         self.db_header_namespace = db_namespace.upper()
         self.compress = compress
-        self.generate_int16_years = generate_int16_years
+        self.generate_tiny_years = generate_tiny_years
 
         self.tz_version = zidb['tz_version']
         self.scope = zidb['scope']
@@ -292,16 +292,16 @@ extern "C" {{
                 delta_minutes = rule['delta_minutes']
                 delta_code_comment = f"(delta_minutes={delta_minutes})/15 + 4"
 
-            if self.generate_int16_years:
-                from_year = rule['from_year']
-                from_year_label = 'from_year'
-                to_year = rule['to_year']
-                to_year_label = 'to_year'
-            else:
+            if self.generate_tiny_years:
                 from_year = rule['from_year_tiny']
                 from_year_label = 'from_year_tiny'
                 to_year = rule['to_year_tiny']
                 to_year_label = 'to_year_tiny'
+            else:
+                from_year = rule['from_year']
+                from_year_label = 'from_year'
+                to_year = rule['to_year']
+                to_year_label = 'to_year'
 
             raw_line = normalize_raw(rule['raw_line'])
             in_month = rule['in_month']
@@ -650,12 +650,12 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
                 f"((delta_minutes={delta_minutes})/15 + 4)"
             )
 
-        if self.generate_int16_years:
-            until_year = era['until_year']
-            until_year_label = 'until_year'
-        else:
+        if self.generate_tiny_years:
             until_year = era['until_year_tiny']
             until_year_label = 'until_year_tiny'
+        else:
+            until_year = era['until_year']
+            until_year_label = 'until_year'
         until_month = era['until_month']
         until_day = era['until_day']
 
