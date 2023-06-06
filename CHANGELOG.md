@@ -1,6 +1,11 @@
 # Changelog
 
 * Unreleased
+    * Support high-res `zonedbc` data files for AceTime library using `--scope
+      complete`.
+    * Simplify granularity flags, using `--scope` to determine the various
+      granularity parameters.
+    * Remove `--generate_hires` flag. Remove `--generate_int16_years` flag.
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.
