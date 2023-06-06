@@ -7,11 +7,13 @@
       granularity parameters.
     * Remove `--generate_hires` flag. It is automatically determined by the
       `--scope` flag.
-    * tiny years
+    * tiny years (i.e. low res mode for basic zonedb)
         * Remove `--generate_int16_years` flag.
         * Rename internal `generate_int16_years` parameter with
           `generate_tiny_years`.
         * Replace `EPOCH_YEAR_FOR_TINY` constant with `--tiny_base_year flag`
+        * Change `--scope basic` to use lowres zoneinfo data structures, using
+          tiny year fields.
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.

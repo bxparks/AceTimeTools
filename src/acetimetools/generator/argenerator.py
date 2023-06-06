@@ -291,10 +291,12 @@ namespace {self.db_namespace} {{
                 )
 
             if self.generate_tiny_years:
+                from_year = rule['from_year']
+                from_year_label = f'fromYearTiny ({from_year})'
                 from_year = rule['from_year_tiny']
-                from_year_label = 'fromYearTiny'
+                to_year = rule['to_year']
+                to_year_label = f'toYearTiny ({to_year})'
                 to_year = rule['to_year_tiny']
-                to_year_label = 'toYearTiny'
             else:
                 from_year = rule['from_year']
                 from_year_label = 'fromYear'
@@ -553,6 +555,7 @@ const char* const kLetters[] = {{
 const {self.scope}::ZoneContext kZoneContext = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
+  {self.tiny_base_year} /*baseYear*/,
   {self.max_buf_size} /*maxTransitions*/,
   kTzDatabaseVersion /*tzVersion*/,
   {num_fragments} /*numFragments*/,

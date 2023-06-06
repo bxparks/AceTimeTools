@@ -417,7 +417,7 @@ def main() -> None:
         until_at_granularity = 60
         offset_granularity = 60
         delta_granularity = 900
-        generate_tiny_years = False
+        generate_tiny_years = True
         if args.start_year < 1980:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'basic'")

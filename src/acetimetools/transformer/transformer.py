@@ -24,6 +24,7 @@ from acetimetools.data_types.at_types import add_comment
 from acetimetools.data_types.at_types import merge_comments
 from acetimetools.data_types.at_types import INVALID_YEAR
 from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
+from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
 from acetimetools.data_types.at_types import MIN_YEAR
 from acetimetools.data_types.at_types import MIN_YEAR_TINY
 from acetimetools.data_types.at_types import MAX_TO_YEAR
@@ -157,8 +158,8 @@ class Transformer:
 
         # Part 4: Transform the policies_map
         policies_map = self._remove_rules_unused(policies_map)
-        if self.generate_tiny_years:
-            policies_map = self._remove_rules_not_tiny(policies_map)
+        # if self.generate_tiny_years:
+        #     policies_map = self._remove_rules_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_rules_multiple_transitions_in_month(
                 policies_map)
@@ -951,12 +952,14 @@ class Transformer:
         for name, eras in zones_map.items():
             for era in eras:
                 until_year = era['until_year']
-                if until_year == MAX_UNTIL_YEAR:
-                    continue
                 if not is_year_tiny(until_year, self.tiny_base_year):
                     raise Exception(f"{name}: UNTIL {until_year} not tiny")
-                until_year_tiny = until_year - self.tiny_base_year
-                era['until_year_tiny'] = until_year_tiny
+                if until_year == MAX_UNTIL_YEAR:
+                    until_year_tiny = MAX_UNTIL_YEAR_TINY
+                    era['until_year_tiny'] = until_year_tiny
+                else:
+                    until_year_tiny = until_year - self.tiny_base_year
+                    era['until_year_tiny'] = until_year_tiny
 
         return zones_map
 
