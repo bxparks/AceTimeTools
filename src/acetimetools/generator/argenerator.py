@@ -153,7 +153,7 @@ class ArduinoGenerator:
 //   Infos: {num_zones_and_links}
 //
 // Memory (8-bits):
-//   Rules: {self.memory_map8['context']}
+//   Context: {self.memory_map8['context']}
 //   Rules: {self.memory_map8['rules']}
 //   Policies: {self.memory_map8['policies']}
 //   Eras: {self.memory_map8['eras']}
@@ -168,7 +168,7 @@ class ArduinoGenerator:
 //   TOTAL: {self.memory_map8['total']}
 //
 // Memory (32-bits):
-//   Rules: {self.memory_map32['context']}
+//   Context: {self.memory_map32['context']}
 //   Rules: {self.memory_map32['rules']}
 //   Policies: {self.memory_map32['policies']}
 //   Eras: {self.memory_map32['eras']}
