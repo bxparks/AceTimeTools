@@ -543,10 +543,10 @@ namespace ace_time {{
 namespace {self.db_namespace} {{
 
 //---------------------------------------------------------------------------
-// ZoneContext (should not be in PROGMEM)
+// ZoneContext
 //---------------------------------------------------------------------------
 
-const char kTzDatabaseVersion[] = "{self.tz_version}";
+const char kTzDatabaseVersion[] {progmem} = "{self.tz_version}";
 
 const char* const kFragments[] = {{
 {fragments}
