@@ -532,6 +532,8 @@ extern const {self.scope}::ZoneContext kZoneContext;
         num_infos = len(self.zones_map)
         num_links = len(self.links_map)
 
+        progmem = 'ACE_TIME_PROGMEM'
+
         return self._generate_header() + f"""\
 #include <zoneinfo/compat.h>
 #include "zone_policies.h"
@@ -554,7 +556,7 @@ const char* const kLetters[] = {{
 {letters}
 }};
 
-const {self.scope}::ZoneContext kZoneContext = {{
+const {self.scope}::ZoneContext kZoneContext {progmem} = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
   {self.tiny_base_year} /*baseYear*/,
