@@ -14,6 +14,8 @@
         * Replace `EPOCH_YEAR_FOR_TINY` constant with `--tiny_base_year flag`
         * Change `--scope basic` to use lowres zoneinfo data structures, using
           tiny year fields.
+    * argenerator.py
+        * Move `ZoneContext`, `letters[]` and `fragments[]` into PROGMEM.
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.

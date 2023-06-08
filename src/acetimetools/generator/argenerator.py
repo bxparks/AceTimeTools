@@ -501,6 +501,8 @@ extern const {self.scope}::ZoneContext kZoneContext;
 """
 
     def generate_infos_cpp(self) -> str:
+        progmem = 'ACE_TIME_PROGMEM'
+
         # Generate the list of zone infos
         num_eras = 0
         info_items = ''
@@ -517,15 +519,25 @@ extern const {self.scope}::ZoneContext kZoneContext;
 
         # Generate array of fragments.
         num_fragments = len(self.fragments_map) + 1
-        fragments = '/*\\x00*/ nullptr,\n'  # '\x00' reference cannot exist
+        fragment_strings = ''
+        fragment_pointers = '  nullptr, // \'\\x00\' cannot exist\n'
         for fragment, index in self.fragments_map.items():
-            fragments += f'/*\\x{index:02x}*/ "{fragment}",\n'
+            fragment_strings += (
+                f'static const char kFragment{index}[] {progmem} = '
+                f'"{fragment}";\n'
+            )
+            fragment_pointers += (
+                f'  kFragment{index}, // \'\\x{index:02x}\' "{fragment}"\n'
+            )
 
         # Generate array of letters.
         num_letters = len(self.letters_map)
-        letters = ''
+        letter_strings = ''
+        letter_pointers = ''
         for letter, index in self.letters_map.items():
-            letters += f'/*{index}*/ "{letter}",\n'
+            letter_strings += \
+                f'static const char kLetter{index}[] {progmem} = "{letter}";\n'
+            letter_pointers += f'  kLetter{index}, // "{letter}"\n'
 
         # Estimate size of entire ZoneInfo database, factoring in deduping
         # of strings
@@ -541,20 +553,22 @@ namespace ace_time {{
 namespace {self.db_namespace} {{
 
 //---------------------------------------------------------------------------
-// ZoneContext (should not be in PROGMEM)
+// ZoneContext
 //---------------------------------------------------------------------------
 
-const char kTzDatabaseVersion[] = "{self.tz_version}";
+const char kTzDatabaseVersion[] {progmem} = "{self.tz_version}";
 
-const char* const kFragments[] = {{
-{fragments}
+{fragment_strings}
+const char* const kFragments[] {progmem} = {{
+{fragment_pointers}
 }};
 
-const char* const kLetters[] = {{
-{letters}
+{letter_strings}
+const char* const kLetters[] {progmem} = {{
+{letter_pointers}
 }};
 
-const {self.scope}::ZoneContext kZoneContext = {{
+const {self.scope}::ZoneContext kZoneContext {progmem} = {{
   {self.start_year} /*startYear*/,
   {self.until_year} /*untilYear*/,
   {self.tiny_base_year} /*baseYear*/,
