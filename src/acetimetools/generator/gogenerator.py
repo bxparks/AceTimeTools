@@ -11,14 +11,14 @@ from typing import Iterable
 from typing import List
 from typing import Tuple
 
-from acetimetools.data_types.at_types import ZoneEraRaw
-from acetimetools.data_types.at_types import ZoneRuleRaw
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import MergedCommentsMap
-from acetimetools.data_types.at_types import ZoneInfoDatabase
-from acetimetools.data_types.at_types import IndexSizeMap
+from acetimetools.datatypes.attyping import ZoneEraRaw
+from acetimetools.datatypes.attyping import ZoneRuleRaw
+from acetimetools.datatypes.attyping import ZonesMap
+from acetimetools.datatypes.attyping import PoliciesMap
+from acetimetools.datatypes.attyping import CommentsMap
+from acetimetools.datatypes.attyping import MergedCommentsMap
+from acetimetools.datatypes.attyping import ZoneInfoDatabase
+from acetimetools.datatypes.attyping import IndexSizeMap
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
 from acetimetools.generator.byteutils import convert_to_go_string

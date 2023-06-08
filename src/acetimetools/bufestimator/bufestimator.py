@@ -7,9 +7,9 @@ from typing import NamedTuple
 import logging
 from collections import OrderedDict
 
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import ZonesMap, PoliciesMap
-from acetimetools.data_types.at_types import BufSizeMap, CountAndYear
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import ZonesMap, PoliciesMap
+from acetimetools.datatypes.attyping import BufSizeMap, CountAndYear
 from acetime.zone_processor import ZoneProcessor
 from acetime.typing import ZoneInfoMap
 from .zone_info_inliner import ZoneInfoInliner

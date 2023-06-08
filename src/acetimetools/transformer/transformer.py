@@ -13,22 +13,22 @@ from typing import Set
 from typing import Tuple
 from typing_extensions import TypedDict
 
-from acetimetools.data_types.at_types import ZoneRuleRaw
-from acetimetools.data_types.at_types import ZoneEraRaw
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import LinksMap
-from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import add_comment
-from acetimetools.data_types.at_types import merge_comments
-from acetimetools.data_types.at_types import INVALID_YEAR
-from acetimetools.data_types.at_types import MAX_UNTIL_YEAR
-from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
-from acetimetools.data_types.at_types import MIN_YEAR
-from acetimetools.data_types.at_types import MIN_YEAR_TINY
-from acetimetools.data_types.at_types import MAX_TO_YEAR
-from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
+from acetimetools.datatypes.attyping import ZoneRuleRaw
+from acetimetools.datatypes.attyping import ZoneEraRaw
+from acetimetools.datatypes.attyping import ZonesMap
+from acetimetools.datatypes.attyping import PoliciesMap
+from acetimetools.datatypes.attyping import LinksMap
+from acetimetools.datatypes.attyping import CommentsMap
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import add_comment
+from acetimetools.datatypes.attyping import merge_comments
+from acetimetools.datatypes.attyping import INVALID_YEAR
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
+from acetimetools.datatypes.attyping import MIN_YEAR
+from acetimetools.datatypes.attyping import MIN_YEAR_TINY
+from acetimetools.datatypes.attyping import MAX_TO_YEAR
+from acetimetools.datatypes.attyping import MAX_TO_YEAR_TINY
 
 INVALID_SECONDS = 999999  # 277h46m69s
 
@@ -356,13 +356,8 @@ class Transformer:
     def _remove_zone_eras_too_new(self, zones_map: ZonesMap) -> ZonesMap:
         """Remove zone eras which are too new, i.e. after self.until_year.
         We need at least one year after the last valid year (i.e. until_year),
-        so we need zone eras valid to at least until_year.
-
-        TODO: If a zone era is removed because it is too far in the future, it
-        is no longer guaranteed that the last zone era ends with MAX_UNTIL_YEAR.
-        If the ZoneProcessor code is called with a year greater than
-        self.until_year, it may cause a loop to crash. I think this means that
-        we should not run this transformation.
+        so we need zone eras valid to at least until_year. The final era entry
+        will be readjusted to MAX_UNTIL_YEAR by _extend_zone_eras_until().
         """
         results: ZonesMap = {}
         notable_zones: CommentsMap = {}

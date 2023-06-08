@@ -110,9 +110,9 @@ import sys
 from typing import Set
 from typing_extensions import Protocol
 
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import ZoneInfoDatabase
-from acetimetools.data_types.at_types import create_zone_info_database
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import ZoneInfoDatabase
+from acetimetools.datatypes.attyping import create_zone_info_database
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer

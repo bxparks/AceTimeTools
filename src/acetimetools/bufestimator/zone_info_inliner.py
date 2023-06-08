@@ -12,8 +12,8 @@ from typing import List
 from typing import Tuple
 from typing import Optional
 
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
+from acetimetools.datatypes.attyping import ZonesMap
+from acetimetools.datatypes.attyping import PoliciesMap
 from acetime.typing import ZoneRule
 from acetime.typing import ZonePolicy
 from acetime.typing import ZonePolicyMap

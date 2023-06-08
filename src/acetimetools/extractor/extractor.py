@@ -70,7 +70,7 @@ from typing import Tuple
 import logging
 import os
 
-from acetimetools.data_types.at_types import (
+from acetimetools.datatypes.attyping import (
     ZoneRuleRaw,
     ZoneEraRaw,
     PoliciesMap,

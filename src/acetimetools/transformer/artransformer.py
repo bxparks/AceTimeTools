@@ -10,17 +10,17 @@ from typing import Tuple
 from collections import OrderedDict, Counter
 import itertools
 import logging
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import LinksMap
-from acetimetools.data_types.at_types import LettersPerPolicy
-from acetimetools.data_types.at_types import IndexMap
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import MemoryMap
-from acetimetools.data_types.at_types import SizeofMap
-from acetimetools.data_types.at_types import MAX_TO_YEAR_TINY
-from acetimetools.data_types.at_types import MIN_YEAR_TINY
-from acetimetools.data_types.at_types import MAX_UNTIL_YEAR_TINY
+from acetimetools.datatypes.attyping import ZonesMap
+from acetimetools.datatypes.attyping import PoliciesMap
+from acetimetools.datatypes.attyping import LinksMap
+from acetimetools.datatypes.attyping import LettersPerPolicy
+from acetimetools.datatypes.attyping import IndexMap
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import MemoryMap
+from acetimetools.datatypes.attyping import SizeofMap
+from acetimetools.datatypes.attyping import MAX_TO_YEAR_TINY
+from acetimetools.datatypes.attyping import MIN_YEAR_TINY
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
 
 
 class ArduinoTransformer:

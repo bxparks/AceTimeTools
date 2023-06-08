@@ -26,7 +26,7 @@ from typing import cast
 from typing_extensions import Protocol
 from typing_extensions import TypedDict
 
-from acetimetools.data_types.at_types import CountAndYear
+from acetimetools.datatypes.attyping import CountAndYear
 from .common import MIN_YEAR
 from .common import SECONDS_SINCE_UNIX_EPOCH
 from .common import seconds_to_hms

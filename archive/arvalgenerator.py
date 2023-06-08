@@ -10,7 +10,7 @@ import logging
 import os
 import pytz
 from typing import List
-from data_types.at_types import EPOCH_YEAR
+from datatypes.attyping import EPOCH_YEAR
 from transformer.transformer import div_to_zero
 from transformer.transformer import normalize_name
 from tdgenerator import TestItem

@@ -8,7 +8,7 @@ import os
 import logging
 import json
 
-from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.datatypes.attyping import ZoneInfoDatabase
 
 
 # Serializer for Set(). See

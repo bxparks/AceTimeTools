@@ -5,7 +5,7 @@
 import logging
 import os
 
-from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.datatypes.attyping import ZoneInfoDatabase
 
 
 class ZoneListGenerator:

@@ -84,7 +84,7 @@ transformers              |               zone_processor
   +------>                |
   |                       v
   |             create_zone_info_database()
-data_types                |
+typing                    |
   |                       v
   |                ZoneInfoDatabase
   |                 /     |     \

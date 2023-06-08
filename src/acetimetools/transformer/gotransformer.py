@@ -14,14 +14,14 @@ from typing import Tuple
 import logging
 from collections import OrderedDict
 
-from acetimetools.data_types.at_types import IndexMap
-from acetimetools.data_types.at_types import IndexSizeMap
-from acetimetools.data_types.at_types import LinksMap
-from acetimetools.data_types.at_types import MemoryMap
-from acetimetools.data_types.at_types import OffsetMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import ZonesMap
+from acetimetools.datatypes.attyping import IndexMap
+from acetimetools.datatypes.attyping import IndexSizeMap
+from acetimetools.datatypes.attyping import LinksMap
+from acetimetools.datatypes.attyping import MemoryMap
+from acetimetools.datatypes.attyping import OffsetMap
+from acetimetools.datatypes.attyping import PoliciesMap
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import ZonesMap
 from acetimetools.transformer.artransformer import _to_suffix_code
 
 

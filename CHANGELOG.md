@@ -16,6 +16,9 @@
           tiny year fields.
     * argenerator.py
         * Move `ZoneContext`, `letters[]` and `fragments[]` into PROGMEM.
+    * Rename `data_types` to `datatypes` for readability
+        * Rename `at_types.py` to `attyping.py`
+        * Rename `validation_types.py` to `valtyping.py`
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.

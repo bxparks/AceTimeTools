@@ -9,11 +9,11 @@ import os
 import logging
 from typing import List
 
-from acetimetools.data_types.at_types import ZoneRuleRaw
-from acetimetools.data_types.at_types import ZoneEraRaw
-from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import MergedCommentsMap
-from acetimetools.data_types.at_types import ZoneInfoDatabase
+from acetimetools.datatypes.attyping import ZoneRuleRaw
+from acetimetools.datatypes.attyping import ZoneEraRaw
+from acetimetools.datatypes.attyping import CommentsMap
+from acetimetools.datatypes.attyping import MergedCommentsMap
+from acetimetools.datatypes.attyping import ZoneInfoDatabase
 from acetimetools.transformer.transformer import normalize_name
 from acetimetools.transformer.transformer import normalize_raw
 

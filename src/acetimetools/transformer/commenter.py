@@ -9,12 +9,12 @@ from typing import Set
 from typing import Union
 from typing import cast
 
-from acetimetools.data_types.at_types import CommentsMap
-from acetimetools.data_types.at_types import MergedCommentsMap
-from acetimetools.data_types.at_types import PoliciesMap
-from acetimetools.data_types.at_types import TransformerResult
-from acetimetools.data_types.at_types import ZonesMap
-from acetimetools.data_types.at_types import ZonesToPolicies
+from acetimetools.datatypes.attyping import CommentsMap
+from acetimetools.datatypes.attyping import MergedCommentsMap
+from acetimetools.datatypes.attyping import PoliciesMap
+from acetimetools.datatypes.attyping import TransformerResult
+from acetimetools.datatypes.attyping import ZonesMap
+from acetimetools.datatypes.attyping import ZonesToPolicies
 
 
 class Commenter:
