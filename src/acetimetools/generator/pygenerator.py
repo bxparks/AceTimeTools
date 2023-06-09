@@ -166,7 +166,8 @@ from ..typing import (
     ) -> Tuple[int, str]:
         num_rules = 0
         policy_items = ''
-        for name, rules in sorted(policies_map.items()):
+        for name, policy in sorted(policies_map.items()):
+            rules = policy['rules']
             policy_items += self._generate_policy_item(name, rules)
             num_rules += len(rules)
         return (num_rules, policy_items)
@@ -295,7 +296,8 @@ UNTIL_YEAR = {self.until_year}
     def _generate_info_items(self, zones_map: ZonesMap) -> Tuple[int, str]:
         info_items = ''
         num_eras = 0
-        for name, eras in sorted(self.zones_map.items()):
+        for name, info in sorted(self.zones_map.items()):
+            eras = info['eras']
             info_items += self._generate_info_item(name, eras)
             num_eras += len(eras)
         return (num_eras, info_items)

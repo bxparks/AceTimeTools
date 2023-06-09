@@ -86,7 +86,7 @@ class ZoneRuleRaw(TypedDict, total=False):
     at_seconds_truncated: int  # at_seconds truncated to granularity
     delta_seconds: int  # offset from Standard time in seconds
     delta_seconds_truncated: int  # delta_seconds truncated to granularity
-    used: bool  # whether or not the rule is used by a zone
+    truncated: int  # -1, 0, 1 to indicate rule is outside the zonedb interval
     anchor: bool  # True if this is an Anchor rule
 
     # Derived from above by artransformer.py
@@ -179,13 +179,29 @@ class ZoneEraRaw(TypedDict, total=False):
     go_until_seconds_modifier: int
 
 
-# Map of policyName -> ZoneRuleRaw[]. Created by extractor.py. Updated by
-# transformer.py.
-PoliciesMap = Dict[str, List[ZoneRuleRaw]]
+class ZonePolicyRaw(TypedDict, total=False):
+    """Represents a policy, composed of list of rules."""
+    rules: List[ZoneRuleRaw]
+    lower_truncated: bool  # rule truncated before start_year
+    upper_truncated: bool  # rule truncated on or after until_year
 
-# Map of zoneName -> ZoneEraRaw[]. Created by extractor.py. Updated by
+
+class ZoneInfoRaw(TypedDict, total=False):
+    """Represents a single zoneinfo record after parsing and processing the
+    TZDB raw data files.
+    """
+    eras: List[ZoneEraRaw]
+    lower_truncated: bool  # era truncated before start_year
+    upper_truncated: bool  # era truncated on or after until_year
+
+
+# Map of policyName -> ZonePolicy. Created by extractor.py. Updated by
 # transformer.py.
-ZonesMap = Dict[str, List[ZoneEraRaw]]
+PoliciesMap = Dict[str, ZonePolicyRaw]
+
+# Map of zoneName -> ZoneInfo. Created by extractor.py. Updated by
+# transformer.py.
+ZonesMap = Dict[str, ZoneInfoRaw]
 
 # Map of linkName -> zoneName. Created by extractor.py. Updated by
 # transformer.py.
@@ -455,9 +471,13 @@ def create_zone_info_database(
         'num_zones': len(tresult.zones_map),
         'num_policies': len(tresult.policies_map),
         'num_links': len(tresult.links_map),
-        'num_eras': sum([len(eras) for _, eras in tresult.zones_map.items()]),
+        'num_eras': sum([
+            len(info['eras'])
+            for _, info in tresult.zones_map.items()
+        ]),
         'num_rules': sum([
-            len(rules) for _, rules in tresult.policies_map.items()
+            len(policy['rules'])
+            for _, policy in tresult.policies_map.items()
         ]),
         'zones_map': tresult.zones_map,
         'policies_map': tresult.policies_map,

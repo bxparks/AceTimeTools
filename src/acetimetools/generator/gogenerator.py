@@ -302,7 +302,8 @@ var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
     def _generate_rules_string(self, policies_map: PoliciesMap) -> str:
         zone_rules_string = ''
         rule_index = 0
-        for policy_name, rules in sorted(policies_map.items()):
+        for policy_name, policy in sorted(policies_map.items()):
+            rules = policy['rules']
             zone_rules_string += self._generate_rule_items_string(
                 policy_name, rule_index, rules)
             rule_index += len(rules)
@@ -374,7 +375,8 @@ var ZonePolicyRecords = []zoneinfo.ZonePolicyRecord{{
         chunk_size = 12
         data = bytearray()
         count = 0
-        for policy_name, rules in sorted(policies_map.items()):
+        for policy_name, policy in sorted(policies_map.items()):
+            rules = policy['rules']
             count += len(rules)
             for rule in rules:
                 self._generate_rule_data(data, rule)
@@ -594,7 +596,8 @@ var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
     def _generate_eras_string(self, zones_map: ZonesMap) -> str:
         zone_eras_string = ''
         era_index = 0
-        for zone_name, eras in sorted(self.zones_map.items()):
+        for zone_name, info in sorted(self.zones_map.items()):
+            eras = info['eras']
             zone_eras_string += self._generate_era_items_string(
                 zone_name, era_index, eras, self.policy_index_size_map)
             era_index += len(eras)
@@ -674,7 +677,8 @@ var ZoneInfoRecords = []zoneinfo.ZoneInfoRecord{{
         count = 0
         chunk_size = 14
         data = bytearray()
-        for zone_name, eras in sorted(self.zones_map.items()):
+        for zone_name, info in sorted(self.zones_map.items()):
+            eras = info['eras']
             count += len(eras)
             for era in eras:
                 self._generate_era_data(data, era)

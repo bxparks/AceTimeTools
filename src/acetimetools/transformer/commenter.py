@@ -52,8 +52,8 @@ def _gather_zones_to_policies(
     by that zone.
     """
     zones_to_policies: ZonesToPolicies = {}
-    for zone_name, eras in zones_map.items():
-        for era in eras:
+    for zone_name, info in zones_map.items():
+        for era in info['eras']:
             policy_name = era['policy_name']
             if policy_name:
                 policies = cast(

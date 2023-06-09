@@ -190,7 +190,7 @@ class Extractor:
                 try:
                     rule_entry: ZoneRuleRaw = _process_rule_line(line)
                     if rule_entry:
-                        _add_item(self.policies_map, name, rule_entry)
+                        _add_policies_map(self.policies_map, name, rule_entry)
                     else:
                         self.ignored_rule_lines += 1
                 except Exception as e:
@@ -206,7 +206,7 @@ class Extractor:
                 try:
                     zone_era: ZoneEraRaw = _process_zone_line(line)
                     if zone_era:
-                        _add_item(self.zones_map, name, zone_era)
+                        _add_zones_map(self.zones_map, name, zone_era)
                     else:
                         self.ignored_zone_lines += 1
                 except Exception as e:
@@ -224,15 +224,15 @@ class Extractor:
 
     def print_summary(self) -> None:
         rule_entry_count = 0
-        for name, rules in self.policies_map.items():
+        for name, policy in self.policies_map.items():
             rule: ZoneRuleRaw
-            for rule in rules:
+            for rule in policy['rules']:
                 rule_entry_count += 1
 
         zone_entry_count = 0
-        for name, eras in self.zones_map.items():
+        for name, info in self.zones_map.items():
             era: ZoneEraRaw
-            for era in eras:
+            for era in info['eras']:
                 zone_entry_count += 1
 
         logging.info(
@@ -300,6 +300,32 @@ def _add_item(table: Dict[str, List[Any]], name: str, line: Any) -> None:
         array = []
         table[name] = array
     array.append(line)
+
+
+def _add_zones_map(zones_map: ZonesMap, name: str, era: ZoneEraRaw) -> None:
+    info = zones_map.get(name)
+    if not info:
+        info = {
+            'eras': [],
+            'upper_truncated': False,
+            'lower_truncated': False,
+        }
+        zones_map[name] = info
+    info['eras'].append(era)
+
+
+def _add_policies_map(
+    policies_map: PoliciesMap, name: str, rule: ZoneRuleRaw
+) -> None:
+    policy = policies_map.get(name)
+    if not policy:
+        policy = {
+            'rules': [],
+            'upper_truncated': False,
+            'lower_truncated': False,
+        }
+        policies_map[name] = policy
+    policy['rules'].append(rule)
 
 
 MONTH_TO_MONTH_INDEX: Dict[str, int] = {

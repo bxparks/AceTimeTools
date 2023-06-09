@@ -160,6 +160,7 @@ class CGenerator:
 //   Rules: {self.num_rules}
 //
 // Memory (8-bits):
+//   Context: {self.memory_map8['context']}
 //   Rules: {self.memory_map8['rules']}
 //   Policies: {self.memory_map8['policies']}
 //   Eras: {self.memory_map8['eras']}
@@ -174,6 +175,7 @@ class CGenerator:
 //   TOTAL: {self.memory_map8['total']}
 //
 // Memory (32-bits):
+//   Context: {self.memory_map32['context']}
 //   Rules: {self.memory_map32['rules']}
 //   Policies: {self.memory_map32['policies']}
 //   Eras: {self.memory_map32['eras']}
@@ -193,7 +195,7 @@ class CGenerator:
 
     def generate_policies_h(self) -> str:
         policy_items = ''
-        for policy_name, rules in sorted(self.policies_map.items()):
+        for policy_name, _ in sorted(self.policies_map.items()):
             policy_normalized_name = normalize_name(policy_name)
             policy_items += f"""\
 extern const AtcZonePolicy \
@@ -202,8 +204,6 @@ k{self.db_namespace}ZonePolicy{policy_normalized_name};
 
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
-        num_policies = len(self.policies_map)
-        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
 
@@ -218,8 +218,7 @@ extern "C" {{
 #endif
 
 //---------------------------------------------------------------------------
-// Supported policies: {num_policies}
-// Supported rules: {num_rules}
+// Supported policies: {self.num_policies}
 //---------------------------------------------------------------------------
 
 {policy_items}
@@ -248,19 +247,19 @@ extern "C" {{
     def generate_policies_c(self) -> str:
         policy_items = ''
         num_rules = 0
-        for name, rules in sorted(self.policies_map.items()):
+        for name, policy in sorted(self.policies_map.items()):
+            rules = policy['rules']
             num_rules += len(rules)
             policy_item = self._generate_policy_item(name, rules)
             policy_items += policy_item
-
-        num_policies = len(self.policies_map)
+        assert num_rules == self.num_rules
 
         return self.generate_header() + f"""\
 #include "zone_policies.h"
 
 //---------------------------------------------------------------------------
-// Policies: {num_policies}
-// Rules: {num_rules}
+// Policies: {self.num_policies}
+// Rules: {self.num_rules}
 //---------------------------------------------------------------------------
 
 {policy_items}
@@ -377,7 +376,7 @@ const AtcZonePolicy k{self.db_namespace}ZonePolicy{policy_normalized_name} \
         zone_items = ''
         zone_ids = ''
         zone_buf_sizes = ''
-        for zone_name, eras in sorted(self.zones_map.items()):
+        for zone_name, _ in sorted(self.zones_map.items()):
             zone_normalized_name = normalize_name(zone_name)
             zone_items += f"""\
 extern const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name}; \
@@ -418,9 +417,6 @@ extern const AtcZoneInfo k{self.db_namespace}Zone{link_normalized_name}; \
         removed_link_items = render_comments_map(self.removed_links)
         notable_link_items = render_comments_map(self.notable_links)
 
-        num_infos = len(self.zones_map)
-        num_links = len(self.links_map)
-        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
         num_removed_infos = len(self.removed_zones)
         num_notable_infos = len(self.notable_zones)
         num_removed_links = len(self.removed_links)
@@ -444,8 +440,8 @@ extern "C" {{
 extern const AtcZoneContext k{self.db_namespace}ZoneContext;
 
 //---------------------------------------------------------------------------
-// Supported zones: {num_infos}
-// Supported eras: {num_eras}
+// Supported zones: {self.num_zones}
+// Supported eras: {self.num_eras}
 //---------------------------------------------------------------------------
 
 {zone_items}
@@ -455,7 +451,7 @@ extern const AtcZoneContext k{self.db_namespace}ZoneContext;
 {zone_ids}
 
 //---------------------------------------------------------------------------
-// Supported links: {num_links}
+// Supported links: {self.num_links}
 //---------------------------------------------------------------------------
 
 {link_items}
@@ -511,7 +507,8 @@ extern const AtcZoneContext k{self.db_namespace}ZoneContext;
         # Generate the list of zone infos
         num_eras = 0
         info_items = ''
-        for zone_name, eras in sorted(self.zones_map.items()):
+        for zone_name, info in sorted(self.zones_map.items()):
+            eras = info['eras']
             info_item = self._generate_info_item(zone_name, eras)
             info_items += info_item
             num_eras += len(eras)
@@ -542,7 +539,7 @@ extern const AtcZoneContext k{self.db_namespace}ZoneContext;
 #include "zone_infos.h"
 
 //---------------------------------------------------------------------------
-// ZoneContext (should not be in PROGMEM)
+// ZoneContext
 //---------------------------------------------------------------------------
 
 static const char kAtcTzDatabaseVersion[] = "{self.tz_version}";
@@ -730,7 +727,7 @@ const AtcZoneInfo k{self.db_namespace}Zone{zone_normalized_name} {progmem} = {{
         link_normalized_name = normalize_name(link_name)
         link_id = self.link_ids[link_name]
         zone_normalized_name = normalize_name(zone_name)
-        num_eras = len(self.zones_map[zone_name])
+        num_eras = len(self.zones_map[zone_name]['eras'])
         progmem = ''
 
         return f"""\

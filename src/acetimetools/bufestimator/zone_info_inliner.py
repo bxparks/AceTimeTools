@@ -47,7 +47,8 @@ class ZoneInfoInliner:
         return (self.zone_infos, self.zone_policies)
 
     def _generate_policies(self) -> None:
-        for name, rules in self.policies_map.items():
+        for name, policy in self.policies_map.items():
+            rules = policy['rules']
             policy_rules: List[ZoneRule] = []
             for rule in rules:
                 # yapf: disable
@@ -70,7 +71,8 @@ class ZoneInfoInliner:
             }
 
     def _generate_infos(self) -> None:
-        for zone_name, eras in self.zones_map.items():
+        for zone_name, info in self.zones_map.items():
+            eras = info['eras']
             zone_eras: List[ZoneEra] = []
             for era in eras:
                 policy_name = era['policy_name']

@@ -107,8 +107,8 @@ def _collect_letter_strings(policies_map: PoliciesMap) -> OffsetMap:
     """
     all_letters: Set[str] = set()
     all_letters.add('')  # TODO: delete? letter '-' is normalized to ''
-    for policy_name, rules in policies_map.items():
-        for rule in rules:
+    for policy_name, policy in policies_map.items():
+        for rule in policy['rules']:
             all_letters.add(rule['letter'])
 
     # Create a map of letter to byte_offset.
@@ -130,8 +130,8 @@ def _collect_format_strings(zones_map: ZonesMap) -> OffsetMap:
     """
     formats: Set[str] = set()
     formats.add('')  # TODO: delete?
-    for zone_name, eras in zones_map.items():
-        for era in eras:
+    for zone_name, info in zones_map.items():
+        for era in info['eras']:
             format = era['format']
             format = format.replace('%s', '%')
             formats.add(format)
@@ -200,7 +200,8 @@ def _generate_policy_index_size_map(
     index_map[""] = (0, 0, 0)  # add sentinel for "Null Policy"
     policy_index += 1
 
-    for policy_name, rules in sorted(policies_map.items()):
+    for policy_name, policy in sorted(policies_map.items()):
+        rules = policy['rules']
         index_map[policy_name] = (policy_index, rules_index, len(rules))
         rules_index += len(rules)
         policy_index += 1
@@ -217,7 +218,8 @@ def _generate_info_index_size_map(
     info_index = 0
     eras_index = 0
     index_map: IndexSizeMap = {}
-    for zone_name, eras in sorted(zones_map.items()):
+    for zone_name, info in sorted(zones_map.items()):
+        eras = info['eras']
         index_map[zone_name] = (info_index, eras_index, len(eras))
         eras_index += len(eras)
         info_index += 1
@@ -225,8 +227,8 @@ def _generate_info_index_size_map(
 
 
 def _generate_zone_era_time_codes(zones_map: ZonesMap) -> None:
-    for name, eras in sorted(zones_map.items()):
-        for era in eras:
+    for name, info in sorted(zones_map.items()):
+        for era in info['eras']:
             # OffsetSeconds
             offset_seconds = era['offset_seconds_truncated']
             era['go_offset_seconds_code'] = offset_seconds // 15
@@ -254,8 +256,8 @@ def _generate_zone_era_time_codes(zones_map: ZonesMap) -> None:
 
 
 def _generate_zone_rule_time_codes(policies_map: PoliciesMap) -> None:
-    for name, rules in policies_map.items():
-        for rule in rules:
+    for name, policy in policies_map.items():
+        for rule in policy['rules']:
             # DeltaMinutes
             delta_seconds = rule['delta_seconds_truncated']
             if delta_seconds % 60 != 0:
@@ -286,9 +288,15 @@ def _generate_memory_map(
     letters_map: OffsetMap,
 ) -> MemoryMap:
 
-    num_rules = sum([len(rules) for _, rules in policies_map.items()])
+    num_rules = sum([
+        len(policy['rules'])
+        for _, policy in policies_map.items()
+    ])
     num_policies = len(policies_map)
-    num_eras = sum([len(eras) for _, eras in zones_map.items()])
+    num_eras = sum([
+        len(info['eras'])
+        for _, info in zones_map.items()
+    ])
     num_zones = len(zones_map)
     num_links = len(links_map)
 

@@ -147,10 +147,10 @@ class ArduinoGenerator:
 // Max Buffer Size: {self.max_buf_size}
 //
 // Records:
-//   Rules: {self.num_rules}
-//   Policies: {self.num_policies}
-//   Eras: {self.num_eras}
 //   Infos: {num_zones_and_links}
+//   Eras: {self.num_eras}
+//   Policies: {self.num_policies}
+//   Rules: {self.num_rules}
 //
 // Memory (8-bits):
 //   Context: {self.memory_map8['context']}
@@ -196,8 +196,6 @@ extern const {self.scope}::ZonePolicy kZonePolicy{policy_normalized_name};
 
         removed_policy_items = render_comments_map(self.removed_policies)
         notable_policy_items = render_comments_map(self.notable_policies)
-        num_policies = len(self.policies_map)
-        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
         num_removed_policies = len(self.removed_policies)
         num_notable_policies = len(self.notable_policies)
         include_header = "infos.h"
@@ -212,8 +210,7 @@ namespace ace_time {{
 namespace {self.db_namespace} {{
 
 //---------------------------------------------------------------------------
-// Supported policies: {num_policies}
-// Supported rules: {num_rules}
+// Supported policies: {self.num_policies}
 //---------------------------------------------------------------------------
 
 {policy_items}
@@ -239,7 +236,8 @@ namespace {self.db_namespace} {{
     def generate_policies_cpp(self) -> str:
         policy_items = ''
         num_rules = 0
-        for name, rules in sorted(self.policies_map.items()):
+        for name, policy in sorted(self.policies_map.items()):
+            rules = policy['rules']
             num_rules += len(rules)
             policy_item = self._generate_policy_item(name, rules)
             policy_items += policy_item
@@ -411,9 +409,6 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
         removed_link_items = render_comments_map(self.removed_links)
         notable_link_items = render_comments_map(self.notable_links)
 
-        num_infos = len(self.zones_map)
-        num_links = len(self.links_map)
-        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
         num_removed_infos = len(self.removed_zones)
         num_notable_infos = len(self.merged_notable_zones)
         num_removed_links = len(self.removed_links)
@@ -440,8 +435,7 @@ extern const char kTzDatabaseVersion[];
 extern const {self.scope}::ZoneContext kZoneContext;
 
 //---------------------------------------------------------------------------
-// Supported zones: {num_infos}
-// Supported eras: {num_eras}
+// Supported zones: {self.num_zones}
 //---------------------------------------------------------------------------
 
 {zone_items}
@@ -451,7 +445,7 @@ extern const {self.scope}::ZoneContext kZoneContext;
 {zone_ids}
 
 //---------------------------------------------------------------------------
-// Supported links: {num_links}
+// Supported links: {self.num_links}
 //---------------------------------------------------------------------------
 
 {link_items}
@@ -506,10 +500,12 @@ extern const {self.scope}::ZoneContext kZoneContext;
         # Generate the list of zone infos
         num_eras = 0
         info_items = ''
-        for zone_name, eras in sorted(self.zones_map.items()):
+        for zone_name, info in sorted(self.zones_map.items()):
+            eras = info['eras']
             info_item = self._generate_info_item(zone_name, eras)
             info_items += info_item
             num_eras += len(eras)
+        assert num_eras == self.num_eras
 
         # Generate links references.
         link_items = ''
@@ -538,11 +534,6 @@ extern const {self.scope}::ZoneContext kZoneContext;
             letter_strings += \
                 f'static const char kLetter{index}[] {progmem} = "{letter}";\n'
             letter_pointers += f'  kLetter{index}, // "{letter}"\n'
-
-        # Estimate size of entire ZoneInfo database, factoring in deduping
-        # of strings
-        num_infos = len(self.zones_map)
-        num_links = len(self.links_map)
 
         return self._generate_header() + f"""\
 #include <zoneinfo/compat.h>
@@ -581,14 +572,14 @@ const {self.scope}::ZoneContext kZoneContext {progmem} = {{
 }};
 
 //---------------------------------------------------------------------------
-// Zones: {num_infos}
+// Zones: {self.num_zones}
 // Eras: {num_eras}
 //---------------------------------------------------------------------------
 
 {info_items}
 
 //---------------------------------------------------------------------------
-// Links: {num_links}
+// Links: {self.num_links}
 //---------------------------------------------------------------------------
 
 {link_items}
@@ -741,7 +732,7 @@ const {self.scope}::ZoneInfo kZone{zone_normalized_name} {progmem} = {{
         link_normalized_name = normalize_name(link_name)
         link_id = self.link_ids[link_name]
         zone_normalized_name = normalize_name(zone_name)
-        num_eras = len(self.zones_map[zone_name])
+        num_eras = len(self.zones_map[zone_name]['eras'])
         progmem = 'ACE_TIME_PROGMEM'
 
         return f"""\
@@ -829,7 +820,9 @@ kZoneAndLinkRegistry[{num_zones_and_links}] {progmem} = {{
 
     def generate_registry_h(self) -> str:
         num_zones = len(self.zones_map)
+        assert num_zones == self.num_zones
         num_zones_and_links = len(self.zones_and_links)
+        assert num_zones_and_links == self.num_zones + self.num_links
         include_header = "infos.h"
 
         return self._generate_header() + f"""\

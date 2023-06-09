@@ -152,7 +152,8 @@ class ArduinoTransformer:
         """Convert various ZoneRule fields into values that are consumed by the
         ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
         """
-        for policy_name, rules in policies_map.items():
+        for policy_name, policy in policies_map.items():
+            rules = policy['rules']
             for rule in rules:
                 rule['from_year_tiny'] = self._to_tiny_year(rule['from_year'])
                 rule['to_year_tiny'] = self._to_tiny_year(rule['to_year'])
@@ -195,7 +196,8 @@ class ArduinoTransformer:
         """Convert various ZoneRule fields into values that are consumed by the
         ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
         """
-        for zone_name, eras in zones_map.items():
+        for zone_name, info in zones_map.items():
+            eras = info['eras']
             for era in eras:
                 delta_seconds = era['era_delta_seconds_truncated']
 
@@ -241,12 +243,18 @@ class ArduinoTransformer:
         num_zones_and_links = num_zones + num_links
 
         # Policies
-        num_rules = sum([len(rules) for _, rules in self.policies_map.items()])
+        num_rules = sum([
+            len(policy['rules'])
+            for _, policy in self.policies_map.items()
+        ])
         rule_size = sizes['rule'] * num_rules
         policy_size = sizes['policy'] * num_policies
 
         # Zones
-        num_eras = sum([len(eras) for _, eras in self.zones_map.items()])
+        num_eras = sum([
+            len(info['eras'])
+            for _, info in self.zones_map.items()
+        ])
         era_size = sizes['era'] * num_eras
         zone_size = sizes['info'] * num_zones
 
@@ -348,7 +356,8 @@ def _collect_letter_strings(
     letters_per_policy: LettersPerPolicy = OrderedDict()
     all_letters: Set[str] = set()
     all_letters.add('')  # TODO: delete? letter '-' is normalized to ''
-    for policy_name, rules in sorted(policies_map.items()):
+    for policy_name, policy in sorted(policies_map.items()):
+        rules = policy['rules']
         policy_letters: Set[str] = set()
         policy_letters.add('')  # TODO: delete? letter '-' is normalized to ''
         for rule in rules:
@@ -378,7 +387,8 @@ def _collect_letter_strings(
 def _collect_format_strings(zones_map: ZonesMap) -> IndexMap:
     """Collect the 'formats' field and return a map of indexes."""
     short_formats: Set[str] = set()
-    for zone_name, eras in zones_map.items():
+    for zone_name, info in zones_map.items():
+        eras = info['eras']
         for era in eras:
             format = era['format']
             short_format = format.replace('%s', '%')
