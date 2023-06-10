@@ -157,27 +157,28 @@ class Transformer:
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
 
         # Part 4: Transform the policies_map
-        policies_map = self._remove_rules_unused(policies_map)
+        policies_map = self._remove_rules_too_old_or_new(policies_map)
         # if self.generate_tiny_years:
-        #     policies_map = self._remove_rules_not_tiny(policies_map)
+        #     policies_map = self._remove_policies_not_tiny(policies_map)
         if self.scope == 'basic':
-            policies_map = self._remove_rules_multiple_transitions_in_month(
+            policies_map = self._remove_policies_multiple_transitions_in_month(
                 policies_map)
         policies_map = self._create_rules_with_expanded_at_time(
             policies_map, policies_to_zones)
-        policies_map = self._remove_rules_invalid_at_time_suffix(policies_map)
-        policies_map = self._create_rules_with_expanded_delta_offset(
+        policies_map = self._remove_policies_invalid_at_time_suffix(
+            policies_map)
+        policies_map = self._update_rules_with_expanded_delta_offset(
             policies_map)
         policies_map = self._create_rules_with_on_day_expansion(policies_map)
         policies_map = self._create_rules_with_anchor_transition(policies_map)
-        policies_map = self._normalize_letters(policies_map)
+        policies_map = self._normalize_rule_letters(policies_map)
         if self.scope == 'basic':
-            policies_map = self._remove_rules_with_border_transitions(
+            policies_map = self._remove_policies_with_border_transitions(
                 policies_map)
         if self.scope == 'basic':
-            policies_map = self._remove_rules_long_dst_letter(policies_map)
+            policies_map = self._remove_policies_long_dst_letter(policies_map)
         if self.generate_tiny_years:
-            policies_map = self._create_tiny_from_to_years(policies_map)
+            policies_map = self._update_rules_tiny_from_to_years(policies_map)
 
         # Part 5: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
@@ -988,7 +989,9 @@ class Transformer:
     # Part 4: Transform the policies_map
     # --------------------------------------------------------------------
 
-    def _remove_rules_unused(self, policies_map: PoliciesMap) -> PoliciesMap:
+    def _remove_rules_too_old_or_new(
+        self, policies_map: PoliciesMap
+    ) -> PoliciesMap:
         """Remove RULE entries which are too old or too new."""
         start_year = self.start_year - 1
         until_year = self.until_year + 1
@@ -1037,12 +1040,12 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _remove_rules_not_tiny(
+    def _remove_policies_not_tiny(
         self,
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields do not fit in a tiny
-        year field (8-bits).
+        """Remove policies which have FROM and TO fields that do not fit in a
+        tiny year field (8-bits).
         """
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
@@ -1074,7 +1077,7 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _remove_rules_multiple_transitions_in_month(
+    def _remove_policies_multiple_transitions_in_month(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
         """Some Zone policies have Rules which specify multiple DST transitions
@@ -1204,14 +1207,14 @@ class Transformer:
         merge_comments(self.all_notable_policies, notable_policies)
         return results
 
-    def _remove_rules_invalid_at_time_suffix(
+    def _remove_policies_invalid_at_time_suffix(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
-        """Remove rules whose at_time contains an unsupported suffix. Current
-        supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are identifical
-        to 'u' and they do not currently appear in any TZ file, so let's catch
-        them because it could indicate a bug somewhere in our parser or
-        somewhere else.
+        """Remove policies whose AT field contains an unsupported suffix.
+        Current supported suffix is 'w', 's' and 'u'. The 'g' and 'z' are
+        identifical to 'u' and they do not currently appear in any TZ file, so
+        let's catch them because it could indicate a bug somewhere in our parser
+        or somewhere else.
         """
         supported_suffices = ['w', 's', 'u']
         results: PoliciesMap = {}
@@ -1237,7 +1240,7 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _create_rules_with_expanded_delta_offset(
+    def _update_rules_with_expanded_delta_offset(
         self,
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
@@ -1386,7 +1389,7 @@ class Transformer:
                 rules.insert(0, anchor_rule)
         return policies_map
 
-    def _normalize_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
+    def _normalize_rule_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
         """Convert '-' into ''"""
         notable_policies: CommentsMap = {}
         for name, policy in policies_map.items():
@@ -1404,7 +1407,7 @@ class Transformer:
         merge_comments(self.all_notable_policies, notable_policies)
         return policies_map
 
-    def _remove_rules_with_border_transitions(
+    def _remove_policies_with_border_transitions(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
         """Remove rules where the transition occurs on the first day of the
@@ -1439,7 +1442,7 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _remove_rules_long_dst_letter(
+    def _remove_policies_long_dst_letter(
         self,
         policies_map: PoliciesMap,
     ) -> PoliciesMap:
@@ -1469,7 +1472,7 @@ class Transformer:
     # TODO: This does not quite work because there are rules whose
     # [from_year,start_year] straddles the self.start_year. The from_year
     # needs to be extended back to -Infinity.
-    def _create_tiny_from_to_years(
+    def _update_rules_tiny_from_to_years(
         self, policies_map: PoliciesMap
     ) -> PoliciesMap:
         for name, policy in policies_map.items():
