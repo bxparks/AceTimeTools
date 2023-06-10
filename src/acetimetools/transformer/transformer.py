@@ -171,6 +171,7 @@ class Transformer:
             policies_map)
         policies_map = self._create_rules_with_on_day_expansion(policies_map)
         policies_map = self._create_rules_with_anchor_transition(policies_map)
+        policies_map = self._verify_rules_have_anchors(policies_map)
         policies_map = self._normalize_rule_letters(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_policies_with_border_transitions(
@@ -1387,6 +1388,18 @@ class Transformer:
             else:
                 anchor_rule = _get_anchor_rule(rules)
                 rules.insert(0, anchor_rule)
+        return policies_map
+
+    def _verify_rules_have_anchors(
+        self, policies_map: PoliciesMap,
+    ) -> PoliciesMap:
+        for name, policy in policies_map.items():
+            rules = policy['rules']
+            if len(rules) == 0:
+                raise Exception(f"Policy {name} has no rules")
+            rule = rules[0]
+            if rule['from_year'] != MIN_YEAR:
+                raise Exception(f"Policy {name} has no MIN_YEAR anchor rule")
         return policies_map
 
     def _normalize_rule_letters(self, policies_map: PoliciesMap) -> PoliciesMap:
