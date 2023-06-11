@@ -120,7 +120,7 @@ class Transformer:
             len(links_map),
         )
 
-        # Part 1: Some sanity checks, gathering, and include filtering.
+        # Part 1: Perform sanity checks, and gather some global parameters.
         if self.generate_tiny_years:
             if not is_year_tiny(self.start_year, self.tiny_base_year):
                 raise Exception(f"Start year {self.start_year} not tiny")
@@ -128,12 +128,15 @@ class Transformer:
                 raise Exception(f"Until year {self.until_year} not tiny")
         _detect_links_to_links(links_map)
         _detect_hash_collisions(zones_map=zones_map, links_map=links_map)
+        _detect_zones_and_links_with_similar_names(zones_map, links_map)
         original_min_year, original_max_year = \
             _detect_tzdb_years(zones_map, policies_map)
+
+        # Part 2: Filter zones and links through the include list.
         links_map = self._filter_include_links(links_map, self.include_list)
         zones_map = self._filter_include_zones(zones_map, self.include_list)
 
-        # Part 2: Transform the zones_map.
+        # Part 3: Transform the zones_map.
         zones_map = self._remove_zone_eras_too_old(zones_map)
         zones_map = self._remove_zone_eras_too_new(zones_map)
         zones_map = self._extend_zone_eras_until(zones_map)
@@ -152,11 +155,11 @@ class Transformer:
         if self.generate_tiny_years:
             zones_map = self._create_tiny_until_years(zones_map)
 
-        # Part 3: Transformations requiring both zones_map and policies_map.
+        # Part 4: Transformations requiring both zones_map and policies_map.
         policies_map = self._remove_unused_policies(zones_map, policies_map)
         policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
 
-        # Part 4: Transform the policies_map
+        # Part 5: Transform the policies_map
         policies_map = self._remove_rules_too_old_or_new(policies_map)
         # if self.generate_tiny_years:
         #     policies_map = self._remove_policies_not_tiny(policies_map)
@@ -181,13 +184,9 @@ class Transformer:
         if self.generate_tiny_years:
             policies_map = self._update_rules_tiny_from_to_years(policies_map)
 
-        # Part 5: Remove unused zones and links.
+        # Part 6: Remove unused zones and links.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
-
-        # Part 6: Detect zones and links whose normalized names conflict.
-        zones_map, links_map = self._detect_zones_and_links_with_similar_names(
-            zones_map, links_map)
 
         # Part 7: Replace the original maps with the transformed ones.
         tresult.policies_map = policies_map
@@ -320,7 +319,7 @@ class Transformer:
         return results
 
     # --------------------------------------------------------------------
-    # Part 2: Transform the zones_map.
+    # Part 3: Transform the zones_map.
     # --------------------------------------------------------------------
 
     def _remove_zone_eras_too_old(self, zones_map: ZonesMap) -> ZonesMap:
@@ -964,7 +963,7 @@ class Transformer:
         return zones_map
 
     # --------------------------------------------------------------------
-    # Part 3: Transformations requiring both zones_map and policies_map.
+    # Part 4: Transformations requiring both zones_map and policies_map.
     # --------------------------------------------------------------------
 
     def _remove_unused_policies(
@@ -987,7 +986,7 @@ class Transformer:
         return results
 
     # --------------------------------------------------------------------
-    # Part 4: Transform the policies_map
+    # Part 5: Transform the policies_map
     # --------------------------------------------------------------------
 
     def _remove_rules_too_old_or_new(
@@ -1501,7 +1500,7 @@ class Transformer:
         return policies_map
 
     # --------------------------------------------------------------------
-    # Part 5: Remove unused zones and links.
+    # Part 6: Remove unused zones and links.
     # --------------------------------------------------------------------
 
     def _remove_zones_without_rules(
@@ -1553,46 +1552,6 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
-
-    # --------------------------------------------------------------------
-    # Part 6: Detect zones and links whose normalized names conflict.
-    # --------------------------------------------------------------------
-
-    def _detect_zones_and_links_with_similar_names(
-        self,
-        zones_map: ZonesMap,
-        links_map: LinksMap,
-    ) -> Tuple[ZonesMap, LinksMap]:
-        """If there were 2 zones names like "Etc/GMT-0" and "Etc/GMT_0", both
-        would normalize to "Etc/GMT_0", producing a symbol "kZoneEtc_GMT_0. Make
-        this a fatal error so that we can fix it instead of removing one of the
-        zones or links and continuing.
-        """
-        normalized_names: Dict[str, str] = {}  # normalized_name, name
-        result_zones: ZonesMap = {}
-        result_links: LinksMap = {}
-
-        # Check for duplicate zone names.
-        for zone_name, info in zones_map.items():
-            nname = normalize_name(zone_name)
-            if normalized_names.get(nname):
-                raise Exception(
-                    f"Duplicate normalized zone name: {zone_name} -> {nname}"
-                )
-            normalized_names[nname] = zone_name
-            result_zones[zone_name] = info
-
-        # Check for duplicate links.
-        for link_name, zone_name in links_map.items():
-            nname = normalize_name(link_name)
-            if normalized_names.get(nname):
-                raise Exception(
-                    f"Duplicate normalized link name: {link_name} -> {nname}"
-                )
-            normalized_names[nname] = link_name
-            result_links[link_name] = zone_name
-
-        return result_zones, result_links
 
     # --------------------------------------------------------------------
     # Part 8: Add additional results
@@ -2052,6 +2011,40 @@ def _detect_links_to_links(links_map: LinksMap) -> None:
                 f"Unsupported Link to Link: {link_name} -> {target_name}"
             )
     logging.info('Detected no links-to-links')
+
+
+def _detect_zones_and_links_with_similar_names(
+    zones_map: ZonesMap,
+    links_map: LinksMap,
+) -> None:
+    """If there were 2 zones names like "Etc/GMT-0" and "Etc/GMT_0", both
+    would normalize to "Etc/GMT_0", producing a symbol "kZoneEtc_GMT_0. Make
+    this a fatal error so that we can fix it instead of removing one of the
+    zones or links and continuing.
+    """
+    normalized_names: Dict[str, str] = {}  # normalized_name, name
+    result_zones: ZonesMap = {}
+    result_links: LinksMap = {}
+
+    # Check for duplicate zone names.
+    for zone_name, info in zones_map.items():
+        nname = normalize_name(zone_name)
+        if normalized_names.get(nname):
+            raise Exception(
+                f"Duplicate normalized zone name: {zone_name} -> {nname}"
+            )
+        normalized_names[nname] = zone_name
+        result_zones[zone_name] = info
+
+    # Check for duplicate links.
+    for link_name, zone_name in links_map.items():
+        nname = normalize_name(link_name)
+        if normalized_names.get(nname):
+            raise Exception(
+                f"Duplicate normalized link name: {link_name} -> {nname}"
+            )
+        normalized_names[nname] = link_name
+        result_links[link_name] = zone_name
 
 
 def _detect_tzdb_years(
