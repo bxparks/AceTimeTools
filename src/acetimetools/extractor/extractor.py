@@ -307,8 +307,8 @@ def _add_zones_map(zones_map: ZonesMap, name: str, era: ZoneEraRaw) -> None:
     if not info:
         info = {
             'eras': [],
-            'upper_truncated': False,
-            'lower_truncated': False,
+            'upper_era_truncated': False,
+            'lower_era_truncated': False,
         }
         zones_map[name] = info
     info['eras'].append(era)
@@ -321,8 +321,8 @@ def _add_policies_map(
     if not policy:
         policy = {
             'rules': [],
-            'upper_truncated': False,
-            'lower_truncated': False,
+            'upper_rule_truncated': False,
+            'lower_rule_truncated': False,
         }
         policies_map[name] = policy
     policy['rules'].append(rule)

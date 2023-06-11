@@ -182,8 +182,8 @@ class ZoneEraRaw(TypedDict, total=False):
 class ZonePolicyRaw(TypedDict, total=False):
     """Represents a policy, composed of list of rules."""
     rules: List[ZoneRuleRaw]
-    lower_truncated: bool  # rule truncated before start_year
-    upper_truncated: bool  # rule truncated on or after until_year
+    lower_rule_truncated: bool  # rule truncated before start_year
+    upper_rule_truncated: bool  # rule truncated on or after until_year
 
 
 class ZoneInfoRaw(TypedDict, total=False):
@@ -191,8 +191,8 @@ class ZoneInfoRaw(TypedDict, total=False):
     TZDB raw data files.
     """
     eras: List[ZoneEraRaw]
-    lower_truncated: bool  # era truncated before start_year
-    upper_truncated: bool  # era truncated on or after until_year
+    lower_era_truncated: bool  # era truncated before start_year
+    upper_era_truncated: bool  # era truncated on or after until_year
 
 
 # Map of policyName -> ZonePolicy. Created by extractor.py. Updated by

@@ -344,7 +344,7 @@ class Transformer:
                 results[name] = info
             elif removed_count < len(eras):
                 info['eras'] = keep_eras
-                info['lower_truncated'] = True
+                info['lower_era_truncated'] = True
                 results[name] = info
             else:
                 add_comment(
@@ -382,7 +382,7 @@ class Transformer:
                 results[name] = info
             elif removed_count < len(eras):
                 info['eras'] = keep_eras
-                info['upper_truncated'] = True
+                info['upper_era_truncated'] = True
                 results[name] = info
                 add_comment(
                     notable_zones, name,
@@ -1028,8 +1028,8 @@ class Transformer:
                 results[name] = policy
             elif removed_count < len(rules):
                 policy['rules'] = used_rules
-                policy['lower_truncated'] = lower_truncated
-                policy['upper_truncated'] = upper_truncated
+                policy['lower_rule_truncated'] = lower_truncated
+                policy['upper_rule_truncated'] = upper_truncated
                 results[name] = policy
             else:
                 add_comment(
