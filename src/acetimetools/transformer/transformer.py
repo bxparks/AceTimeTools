@@ -188,12 +188,22 @@ class Transformer:
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
 
-        # Part 7: Replace the original maps with the transformed ones.
+        # Part 7: Update lower_zone_truncated, and upper_zone_truncated.
+        zones_map = self._update_truncation_status(zones_map, policies_map)
+        lower_truncated = any([
+            info['lower_zone_truncated']
+            for _, info in zones_map.items()
+        ])
+        upper_truncated = any([
+            info['upper_zone_truncated']
+            for _, info in zones_map.items()
+        ])
+
+        # Part 8: Replace the original maps with the transformed ones, and
+        # add additional results.
         tresult.policies_map = policies_map
         tresult.zones_map = zones_map
         tresult.links_map = links_map
-
-        # Part 8: Add additional results
         tresult.zone_ids = self._generate_zone_ids(zones_map)
         tresult.link_ids = self._generate_link_ids(links_map)
         tresult.removed_zones = self.all_removed_zones
@@ -207,6 +217,8 @@ class Transformer:
         tresult.original_max_year = original_max_year
         tresult.generated_min_year, tresult.generated_max_year = \
             _detect_tzdb_years(zones_map, policies_map)
+        tresult.lower_truncated = lower_truncated
+        tresult.upper_truncated = upper_truncated
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -1552,6 +1564,40 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    # --------------------------------------------------------------------
+    # Part 7: Update truncation status of zones.
+    # --------------------------------------------------------------------
+
+    def _update_truncation_status(
+        self,
+        zones_map: ZonesMap,
+        policies_map: PoliciesMap,
+    ) -> ZonesMap:
+        """Determine the truncation status of zone. The 'lower' or 'upper'
+        bounds of the zone is considered truncated if ANY of the eras or rules
+        were truncated.
+        """
+        for zone_name, info in zones_map.items():
+            lower_zone_truncated = False
+            upper_zone_truncated = False
+            if info['lower_era_truncated']:
+                lower_zone_truncated = True
+            if info['upper_era_truncated']:
+                upper_zone_truncated = True
+            for era in info['eras']:
+                policy_name = era['policy_name']
+                if policy_name:
+                    policy = policies_map[policy_name]
+                    if policy['lower_rule_truncated']:
+                        lower_zone_truncated = True
+                    if policy['upper_rule_truncated']:
+                        upper_zone_truncated = True
+
+            info['lower_zone_truncated'] = lower_zone_truncated
+            info['upper_zone_truncated'] = upper_zone_truncated
+
+        return zones_map
 
     # --------------------------------------------------------------------
     # Part 8: Add additional results

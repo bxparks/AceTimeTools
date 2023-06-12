@@ -193,6 +193,8 @@ class ZoneInfoRaw(TypedDict, total=False):
     eras: List[ZoneEraRaw]
     lower_era_truncated: bool  # era truncated before start_year
     upper_era_truncated: bool  # era truncated on or after until_year
+    lower_zone_truncated: bool  # zone truncated before start_year
+    upper_zone_truncated: bool  # zone truncated on or after until_year
 
 
 # Map of policyName -> ZonePolicy. Created by extractor.py. Updated by
@@ -314,10 +316,13 @@ class TransformerResult:
     notable_links: CommentsMap  # {linkName -> reasons[]}
     zones_to_policies: ZonesToPolicies  # {zoneName -> policyName[]}
     merged_notable_zones: MergedCommentsMap  # {zoneName -> MergedCommentsMap]}
+    # zoneinfo accuracy parameters, year range, truncation
     original_min_year: int  # min year in original TZDB
     original_max_year: int  # max year in original TZDB
     generated_min_year: int  # min year in generated zonedb
     generated_max_year: int  # max year in generated zonedb
+    lower_truncated: bool  # if ANY zone truncated at the lower years
+    upper_truncated: bool  # if ANY zone truncated at the upper years
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap  # {zoneName -> CountAndYear}
     max_buf_size: int  # max buf size over all zones and years
@@ -409,6 +414,8 @@ class ZoneInfoDatabase(TypedDict):
     original_max_year: int
     generated_min_year: int
     generated_max_year: int
+    lower_truncated: bool  # if ANY zone truncated at the lower years
+    upper_truncated: bool  # if ANY zone truncated at the upper years
 
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap
@@ -498,6 +505,8 @@ def create_zone_info_database(
         'original_max_year': tresult.original_max_year,
         'generated_min_year': tresult.generated_min_year,
         'generated_max_year': tresult.generated_max_year,
+        'lower_truncated': tresult.lower_truncated,
+        'upper_truncated': tresult.upper_truncated,
 
         # Commenter
         'zones_to_policies': tresult.zones_to_policies,

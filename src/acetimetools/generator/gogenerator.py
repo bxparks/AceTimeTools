@@ -74,13 +74,18 @@ class GoGenerator:
         self.merged_notable_zones = zidb['merged_notable_zones']
         self.notable_links = zidb['notable_links']
         self.notable_policies = zidb['notable_policies']
+        #
         self.original_min_year = zidb['original_min_year']
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.lower_truncated = zidb['lower_truncated']
+        self.upper_truncated = zidb['upper_truncated']
+        #
         self.estimator_min_year = zidb['estimator_min_year']
         self.estimator_max_year = zidb['estimator_max_year']
         self.max_buf_size = zidb['max_buf_size']
+        #
         self.zone_ids = zidb['zone_ids']
         self.link_ids = zidb['link_ids']
         self.letters_map = zidb['go_letters_map']
@@ -150,6 +155,8 @@ class GoGenerator:
 //
 // Original Years:  [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
+// Lower/Upper Truncated: [{self.lower_truncated}, {self.upper_truncated}]
+//
 // Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
 // Max Buffer Size: {self.max_buf_size}
 //

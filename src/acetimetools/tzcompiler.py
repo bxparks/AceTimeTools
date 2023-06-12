@@ -488,6 +488,8 @@ def main() -> None:
         original_max_year=0,
         generated_min_year=0,
         generated_max_year=0,
+        lower_truncated=False,
+        upper_truncated=False,
         buf_sizes={},
         max_buf_size=0,
         estimator_min_year=0,

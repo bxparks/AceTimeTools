@@ -64,6 +64,8 @@ class PythonGenerator:
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
+        self.lower_truncated = zidb['lower_truncated']
+        self.upper_truncated = zidb['upper_truncated']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -113,6 +115,7 @@ class PythonGenerator:
 #
 # Original Years:  [{self.original_min_year},{self.original_max_year}]
 # Generated Years: [{self.generated_min_year},{self.generated_max_year}]
+# Lower/Upper Truncated: [{self.lower_truncated}, {self.upper_truncated}]
 #
 # Records:
 #   Infos: {num_zones_and_links}
