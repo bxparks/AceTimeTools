@@ -179,8 +179,6 @@ class Transformer:
         if self.scope == 'basic':
             policies_map = self._remove_policies_with_border_transitions(
                 policies_map)
-        if self.scope == 'basic':
-            policies_map = self._remove_policies_long_dst_letter(policies_map)
         if self.generate_tiny_years:
             policies_map = self._update_rules_tiny_from_to_years(policies_map)
 
@@ -1462,33 +1460,6 @@ class Transformer:
 
         self._print_comments_map(
             'Removed %s policies with border Transitions', removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _remove_policies_long_dst_letter(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Return a new map which filters out rules with long DST letter.
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, policy in policies_map.items():
-            valid = True
-            for rule in policy['rules']:
-                letter = rule['letter']
-                if len(letter) > 1:
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"LETTER '{letter}' too long")
-                    break
-            if valid:
-                results[name] = policy
-
-        self._print_comments_map(
-            'Removed %s policies with long DST letter', removed_policies,
         )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
