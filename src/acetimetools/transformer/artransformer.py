@@ -18,9 +18,6 @@ from acetimetools.datatypes.attyping import IndexMap
 from acetimetools.datatypes.attyping import TransformerResult
 from acetimetools.datatypes.attyping import MemoryMap
 from acetimetools.datatypes.attyping import SizeofMap
-from acetimetools.datatypes.attyping import MAX_TO_YEAR_TINY
-from acetimetools.datatypes.attyping import MIN_YEAR_TINY
-from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
 
 
 class ArduinoTransformer:
@@ -86,12 +83,10 @@ class ArduinoTransformer:
     def __init__(
         self,
         scope: str,
-        tiny_base_year: int,
         compress: bool,
         time_code_format: str,
     ) -> None:
         self.scope = scope
-        self.tiny_base_year = tiny_base_year
         self.compress = compress
         self.time_code_format = time_code_format
 
@@ -161,9 +156,6 @@ class ArduinoTransformer:
         for policy_name, policy in policies_map.items():
             rules = policy['rules']
             for rule in rules:
-                rule['from_year_tiny'] = self._to_tiny_year(rule['from_year'])
-                rule['to_year_tiny'] = self._to_tiny_year(rule['to_year'])
-
                 seconds = rule['at_seconds_truncated']
                 suffix = rule['at_time_suffix']
                 if self.time_code_format == 'low':
@@ -326,9 +318,6 @@ class ArduinoTransformer:
         for zone_name, info in zones_map.items():
             eras = info['eras']
             for era in eras:
-                era['until_year_tiny'] = self._to_tiny_until_year(
-                    era['until_year'])
-
                 seconds = era['until_seconds_truncated']
                 suffix = era['until_time_suffix']
                 if self.time_code_format == 'low':
@@ -435,28 +424,6 @@ class ArduinoTransformer:
             'letters': letter_size,
             'total': total_size,
         }
-
-    def _to_tiny_year(self, year: int) -> int:
-        """Convert 16-bit year into 8-bit year, taking into account special
-        values for MIN and MAX years. TODO: Add invalid year?
-        """
-        if year >= self.tiny_base_year + MAX_TO_YEAR_TINY:
-            return MAX_TO_YEAR_TINY
-        elif year <= self.tiny_base_year + MIN_YEAR_TINY:
-            return MIN_YEAR_TINY
-        else:
-            return year - self.tiny_base_year
-
-    def _to_tiny_until_year(self, year: int) -> int:
-        """Convert 16-bit UNTIL year into 8-bit UNTIL year, taking into account
-        special values for MIN and MAX years. TODO: Add invalid year?
-        """
-        if year >= self.tiny_base_year + MAX_UNTIL_YEAR_TINY:
-            return MAX_UNTIL_YEAR_TINY
-        elif year <= self.tiny_base_year + MIN_YEAR_TINY:
-            return MIN_YEAR_TINY
-        else:
-            return year - self.tiny_base_year
 
 
 def _collect_letter_strings(

@@ -23,6 +23,7 @@ from acetimetools.datatypes.attyping import TransformerResult
 from acetimetools.datatypes.attyping import add_comment
 from acetimetools.datatypes.attyping import merge_comments
 from acetimetools.datatypes.attyping import INVALID_YEAR
+from acetimetools.datatypes.attyping import INVALID_YEAR_TINY
 from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR
 from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
 from acetimetools.datatypes.attyping import MIN_YEAR
@@ -133,8 +134,10 @@ class Transformer:
             _detect_tzdb_years(zones_map, policies_map)
 
         # Part 2: Filter zones and links through the include list.
-        links_map = self._filter_include_links(links_map, self.include_list)
         zones_map = self._filter_include_zones(zones_map, self.include_list)
+        links_map = self._filter_include_links(links_map, self.include_list)
+        expected_zones_count = len(zones_map)
+        expected_links_count = len(links_map)
 
         # Part 3: Transform the zones_map.
         zones_map = self._remove_zone_eras_too_old(zones_map)
@@ -161,8 +164,6 @@ class Transformer:
 
         # Part 5: Transform the policies_map
         policies_map = self._remove_rules_too_old_or_new(policies_map)
-        # if self.generate_tiny_years:
-        #     policies_map = self._remove_policies_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_policies_multiple_transitions_in_month(
                 policies_map)
@@ -182,9 +183,13 @@ class Transformer:
         if self.generate_tiny_years:
             policies_map = self._update_rules_tiny_from_to_years(policies_map)
 
-        # Part 6: Remove unused zones and links.
+        # Part 6: Remove unused zones and links, and verify some invariants.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
+        self._verify_zones_until_year(zones_map)
+        self._verify_policies_from_year(policies_map)
+        self._verify_zones_and_links_count(
+            zones_map, links_map, expected_zones_count, expected_links_count)
 
         # Part 7: Update lower_zone_truncated, and upper_zone_truncated.
         zones_map = self._update_truncation_status(zones_map, policies_map)
@@ -950,14 +955,11 @@ class Transformer:
         for name, info in zones_map.items():
             for era in info['eras']:
                 until_year = era['until_year']
-                if not is_year_tiny(until_year, self.tiny_base_year):
+                until_year_tiny = to_tiny_until_year(
+                    until_year, self.tiny_base_year)
+                if until_year_tiny == INVALID_YEAR_TINY:
                     raise Exception(f"{name}: UNTIL {until_year} not tiny")
-                if until_year == MAX_UNTIL_YEAR:
-                    until_year_tiny = MAX_UNTIL_YEAR_TINY
-                    era['until_year_tiny'] = until_year_tiny
-                else:
-                    until_year_tiny = until_year - self.tiny_base_year
-                    era['until_year_tiny'] = until_year_tiny
+                era['until_year_tiny'] = until_year_tiny
 
         return zones_map
 
@@ -1036,43 +1038,6 @@ class Transformer:
                 )
 
         self._print_comments_map('Removed %s policies', removed_policies)
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
-    def _remove_policies_not_tiny(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields that do not fit in a
-        tiny year field (8-bits).
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, policy in policies_map.items():
-            valid = True
-            for rule in policy['rules']:
-                from_year = rule['from_year']
-                to_year = rule['to_year']
-                # TODO: categorize lower or upper truncation of Rule
-                if not is_year_tiny(from_year, self.tiny_base_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"from_year ({from_year}) exceeds int8_t")
-                    break
-                if not is_year_tiny(to_year, self.tiny_base_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"to_year ({to_year}) exceeds int8_t")
-                    break
-            if valid:
-                results[name] = policy
-
-        self._print_comments_map(
-            'Removed %s policies with FROM or TO out of bounds',
-            removed_policies,
-        )
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
@@ -1453,26 +1418,31 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    # TODO: This does not quite work because there are rules whose
-    # [from_year,start_year] straddles the self.start_year. The from_year
-    # needs to be extended back to -Infinity.
     def _update_rules_tiny_from_to_years(
         self, policies_map: PoliciesMap
     ) -> PoliciesMap:
         for name, policy in policies_map.items():
             for rule in policy['rules']:
                 from_year = rule['from_year']
-                if from_year != MIN_YEAR and from_year != MAX_TO_YEAR:
-                    rule['from_year_tiny'] = from_year - self.tiny_base_year
+                from_year_tiny = to_tiny_from_to_year(
+                    from_year, self.tiny_base_year)
+                if from_year_tiny == INVALID_YEAR_TINY:
+                    raise Exception(
+                        f"{name}: from_year={from_year} not tiny")
+                rule['from_year_tiny'] = from_year_tiny
 
                 to_year = rule['to_year']
-                if to_year != MIN_YEAR and to_year != MAX_TO_YEAR:
-                    rule['to_year_tiny'] = to_year - self.tiny_base_year
+                to_year_tiny = to_tiny_from_to_year(
+                    to_year, self.tiny_base_year)
+                if to_year_tiny == INVALID_YEAR_TINY:
+                    raise Exception(
+                        f"{name}: to_year={to_year} not tiny")
+                rule['to_year_tiny'] = to_year_tiny
 
         return policies_map
 
     # --------------------------------------------------------------------
-    # Part 6: Remove unused zones and links.
+    # Part 6: Remove unused zones and links, and verify some invariants.
     # --------------------------------------------------------------------
 
     def _remove_zones_without_rules(
@@ -1524,6 +1494,66 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    def _verify_zones_until_year(self, zones_map: ZonesMap) -> None:
+        """Verify every zone has a ZoneEra that ends at +Infinity."""
+        for zone_name, info in zones_map.items():
+            eras = info['eras']
+            last = eras[-1]
+
+            until_year = last['until_year']
+            if until_year != MAX_UNTIL_YEAR:
+                raise Exception(
+                    f"{zone_name}: ZoneEra.until_year ends at "
+                    f"{until_year} but should be MAX_UNTIL_YEAR"
+                )
+            if self.generate_tiny_years:
+                until_year_tiny = last['until_year_tiny']
+                if until_year_tiny != MAX_UNTIL_YEAR_TINY:
+                    raise Exception(
+                        f"{zone_name}: ZoneEra.until_year_tiny ends at "
+                        f"{until_year} but should be MAX_UNTIL_YEAR_TINY"
+                    )
+
+    def _verify_policies_from_year(self, policies_map: PoliciesMap) -> None:
+        for policy_name, policy in policies_map.items():
+            rules = policy['rules']
+            first = rules[0]
+
+            from_year = first['from_year']
+            if from_year != MIN_YEAR:
+                raise Exception(
+                    f"{policy_name}: Zonerule.from_year starts at"
+                    f"{from_year} but should be MIN_YEAR"
+                )
+            if self.generate_tiny_years:
+                from_year_tiny = first['from_year_tiny']
+                if from_year_tiny != MIN_YEAR_TINY:
+                    raise Exception(
+                        f"{policy_name}: Zonerule.from_year_tiny starts at"
+                        f"{from_year_tiny} but should be MIN_YEAR_TINY"
+                    )
+
+    def _verify_zones_and_links_count(
+        self,
+        zones_map: ZonesMap,
+        links_map: LinksMap,
+        expected_zones_count: int,
+        expected_links_count: int,
+    ) -> None:
+        if self.scope == 'extended' or self.scope == 'complete':
+            if len(zones_map) != expected_zones_count:
+                raise Exception(
+                    f"Expected {expected_zones_count} Zones but "
+                    f"got {len(zones_map)}")
+            if len(links_map) != expected_links_count:
+                raise Exception(
+                    f"Expected {expected_links_count} Links but "
+                    f"got {len(links_map)}")
+        elif self.scope == 'basic':
+            # scope == 'basic' is expected to remove Zones which don't
+            # work with the BasicZoneProcessor algorithm.
+            pass
 
     # --------------------------------------------------------------------
     # Part 7: Update truncation status of zones.
@@ -1782,7 +1812,7 @@ def find_earliest_subsequent_rules(
 
 
 def is_year_tiny(year: int, tiny_base_year: int) -> bool:
-    """Determine if year fits in an int8_t field."""
+    """Determine if year fits in an int8_t tiny year field."""
     year_tiny = year - tiny_base_year
     return (
         year == INVALID_YEAR
@@ -1791,6 +1821,47 @@ def is_year_tiny(year: int, tiny_base_year: int) -> bool:
         or year == MAX_UNTIL_YEAR
         or (MIN_YEAR_TINY < year_tiny and year_tiny < MAX_TO_YEAR_TINY)
     )
+
+
+def to_tiny_from_to_year(year: int, tiny_base_year: int) -> int:
+    """Convert FROM and TO years of ZoneRule records to tiny year using the base
+    year. The tiny year is saturated to MIN_YEAR_TINY or MAX_TO_YEAR_TINY if
+    year is below or above those limits. Returns INVALID_YEAR_TINY if year is
+    INVALID_YEAR.
+    """
+    if year == INVALID_YEAR:
+        return INVALID_YEAR_TINY
+    if year == MIN_YEAR:
+        return MIN_YEAR_TINY
+    if year == MAX_TO_YEAR:
+        return MAX_TO_YEAR_TINY
+
+    year_tiny = year - tiny_base_year
+    if year_tiny <= MIN_YEAR_TINY:
+        return MIN_YEAR_TINY
+    if year_tiny >= MAX_TO_YEAR_TINY:
+        return MAX_TO_YEAR_TINY
+    return year_tiny
+
+
+def to_tiny_until_year(year: int, tiny_base_year: int) -> int:
+    """Convert UNTIL years of ZoneEra records to tiny year using the base
+    year. The tiny year is saturated to MAX_UNTIL_YEAR if greater than that
+    limit. Returns INVALID_YEAR_TINY if year is INVALID_YEAR.
+    """
+    if year == INVALID_YEAR:
+        return INVALID_YEAR_TINY
+    if year == MIN_YEAR:
+        return MIN_YEAR_TINY
+    if year == MAX_UNTIL_YEAR:
+        return MAX_UNTIL_YEAR_TINY
+
+    year_tiny = year - tiny_base_year
+    if year_tiny <= MIN_YEAR_TINY:
+        return MIN_YEAR_TINY
+    if year_tiny >= MAX_UNTIL_YEAR_TINY:
+        return MAX_UNTIL_YEAR_TINY
+    return year_tiny
 
 
 def calc_day_of_month(
