@@ -181,9 +181,11 @@ class Transformer:
         if self.generate_tiny_years:
             policies_map = self._update_rules_tiny_from_to_years(policies_map)
 
-        # Part 6: Remove unused zones and links.
+        # Part 6: Remove unused zones and links, and verify some invariants.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
+        zones_map = self._verify_zones_until_year(zones_map)
+        policies_map = self._verify_policies_from_year(policies_map)
 
         # Part 7: Update lower_zone_truncated, and upper_zone_truncated.
         zones_map = self._update_truncation_status(zones_map, policies_map)
@@ -1436,7 +1438,7 @@ class Transformer:
         return policies_map
 
     # --------------------------------------------------------------------
-    # Part 6: Remove unused zones and links.
+    # Part 6: Remove unused zones and links, and verify some invariants.
     # --------------------------------------------------------------------
 
     def _remove_zones_without_rules(
@@ -1488,6 +1490,49 @@ class Transformer:
         )
         merge_comments(self.all_removed_links, removed_links)
         return results
+
+    def _verify_zones_until_year(self, zones_map: ZonesMap) -> ZonesMap:
+        """Verify every zone has a ZoneEra that ends at +Infinity."""
+        for zone_name, info in zones_map.items():
+            eras = info['eras']
+            last = eras[-1]
+
+            until_year = last['until_year']
+            if until_year != MAX_UNTIL_YEAR:
+                raise Exception(
+                    f"{zone_name}: ZoneEra.until_year ends at "
+                    f"{until_year} but should be MAX_UNTIL_YEAR"
+                )
+            if self.generate_tiny_years:
+                until_year_tiny = last['until_year_tiny']
+                if until_year_tiny != MAX_UNTIL_YEAR_TINY:
+                    raise Exception(
+                        f"{zone_name}: ZoneEra.until_year_tiny ends at "
+                        f"{until_year} but should be MAX_UNTIL_YEAR_TINY"
+                    )
+        return zones_map
+
+    def _verify_policies_from_year(
+        self, policies_map: PoliciesMap
+    ) -> PoliciesMap:
+        for policy_name, policy in policies_map.items():
+            rules = policy['rules']
+            first = rules[0]
+
+            from_year = first['from_year']
+            if from_year != MIN_YEAR:
+                raise Exception(
+                    f"{policy_name}: Zonerule.from_year starts at"
+                    f"{from_year} but should be MIN_YEAR"
+                )
+            if self.generate_tiny_years:
+                from_year_tiny = first['from_year_tiny']
+                if from_year_tiny != MIN_YEAR_TINY:
+                    raise Exception(
+                        f"{policy_name}: Zonerule.from_year_tiny starts at"
+                        f"{from_year_tiny} but should be MIN_YEAR_TINY"
+                    )
+        return policies_map
 
     # --------------------------------------------------------------------
     # Part 7: Update truncation status of zones.
