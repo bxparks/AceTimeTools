@@ -84,11 +84,16 @@ class ArduinoTransformer:
     }
 
     def __init__(
-        self, scope: str, tiny_base_year: int, compress: bool
+        self,
+        scope: str,
+        tiny_base_year: int,
+        compress: bool,
+        time_code_format: str,
     ) -> None:
         self.scope = scope
         self.tiny_base_year = tiny_base_year
         self.compress = compress
+        self.time_code_format = time_code_format
 
     def transform(self, tresult: TransformerResult) -> None:
         self.tresult = tresult
@@ -102,9 +107,15 @@ class ArduinoTransformer:
         self.letters_per_policy, self.letters_map = _collect_letter_strings(
             self.policies_map)
         self.formats_map = _collect_format_strings(self.zones_map)
-        self._process_rules(
+
+        self._process_rules_from_to_at(self.policies_map)
+        self._process_rules_letter(
             self.policies_map, self.letters_map, self.letters_per_policy)
-        self._process_eras(self.zones_map)
+        self._process_rules_delta(self.policies_map)
+
+        self._process_eras_stdoff_delta(self.zones_map)
+        self._process_eras_until(self.zones_map)
+
         if self.compress:
             self.fragments_map = _generate_fragments(
                 self.zones_map, self.links_map)
@@ -143,14 +154,9 @@ class ArduinoTransformer:
             f"; {len(tresult.links_map)} Links"
         )
 
-    def _process_rules(
-        self,
-        policies_map: PoliciesMap,
-        letters_map: IndexMap,
-        letters_per_policy: LettersPerPolicy,
-    ) -> None:
-        """Convert various ZoneRule fields into values that are consumed by the
-        ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
+    def _process_rules_from_to_at(self, policies_map: PoliciesMap) -> None:
+        """Convert the FROM, TO, and AT fields of ZoneRuleRaw into values that
+        are consumed by the ZonePolicy classes of the Arduino AceTime library.
         """
         for policy_name, policy in policies_map.items():
             rules = policy['rules']
@@ -158,27 +164,37 @@ class ArduinoTransformer:
                 rule['from_year_tiny'] = self._to_tiny_year(rule['from_year'])
                 rule['to_year_tiny'] = self._to_tiny_year(rule['to_year'])
 
-                # Convert at_seconds to at_time_code and at_time_modifier
-                at_encoded = _to_encoded_at_or_until_time(
-                    seconds=rule['at_seconds_truncated'],
-                    suffix=rule['at_time_suffix'],
-                )
-                rule['at_time_code'] = at_encoded.time_code
-                rule['at_time_minute'] = at_encoded.time_remainder
-                rule['at_time_modifier'] = at_encoded.time_modifier
-                rule['at_time_seconds_code'] = at_encoded.time_seconds_code
-                rule['at_time_seconds_remainder'] = \
-                    at_encoded.time_seconds_remainder
-                rule['at_time_seconds_modifier'] = \
-                    at_encoded.time_seconds_modifier
+                seconds = rule['at_seconds_truncated']
+                suffix = rule['at_time_suffix']
+                if self.time_code_format == 'low':
+                    if seconds % 60 != 0:
+                        raise Exception(
+                            f'seconds={seconds} is '
+                            'not a multiple of 0:01 minute')
+                    encoded = _to_encoded_time_minutes(
+                        seconds=seconds, suffix=suffix)
+                    rule['at_time_code'] = encoded.code
+                    rule['at_time_minute'] = encoded.remainder
+                    rule['at_time_modifier'] = encoded.modifier
+                elif self.time_code_format == 'high':
+                    encoded = _to_encoded_time_seconds(
+                        seconds=seconds, suffix=suffix)
+                    rule['at_time_seconds_code'] = encoded.code
+                    rule['at_time_seconds_remainder'] = encoded.remainder
+                    rule['at_time_seconds_modifier'] = encoded.modifier
 
-                # These will always be integers because transformer.py
-                # truncated them to 900 seconds appropriately.
-                delta_encoded = _to_rule_delta(rule['delta_seconds_truncated'])
-                rule['delta_code'] = delta_encoded.delta_code
-                rule['delta_code_encoded'] = delta_encoded.delta_code_encoded
-                rule['delta_minutes'] = delta_encoded.delta_minutes
-
+    def _process_rules_letter(
+        self,
+        policies_map: PoliciesMap,
+        letters_map: IndexMap,
+        letters_per_policy: LettersPerPolicy,
+    ) -> None:
+        """Convert the LETTER fields of ZoneRuleRaw into values that are
+        consumed by the ZonePolicy classes of the Arduino AceTime library.
+        """
+        for policy_name, policy in policies_map.items():
+            rules = policy['rules']
+            for rule in rules:
                 # Get letter indexes, per policy and global
                 letter = rule['letter']
                 rule['letter_index'] = _to_letter_index(
@@ -192,46 +208,145 @@ class ArduinoTransformer:
                     indexed_letters=indexed_letters,
                 )
 
-    def _process_eras(self, zones_map: ZonesMap) -> None:
-        """Convert various ZoneRule fields into values that are consumed by the
-        ZoneInfo and ZonePolicy classes of the Arduino AceTime library.
+    def _process_rules_delta(self, policies_map: PoliciesMap) -> None:
+        """Convert the delta_seconds extracted from the SAVE field of a RULE
+        entry.
+
+        There are 2 time code formats supported by the AceTime library, through
+        the classes defined in the ZoneInfo{Low,Mid,High}.h header files:
+        * 'low'
+            * delta_code: unit of 15-minutes
+            * delta_code_encoded: delta_code shifted by 4, so that the 15-minute
+              increments from [-1:00,2:45] can be represented in a 4-bit
+              unsigned integer [0,15].
+        * 'high.
+            * delta_minutes: unit of 1-minute
+        """
+        for policy_name, policy in policies_map.items():
+            rules = policy['rules']
+            for rule in rules:
+                delta_seconds = rule['delta_seconds_truncated']
+                if self.time_code_format == 'low':
+                    if delta_seconds % 900 != 0:
+                        raise Exception(
+                            f'delta_seconds={delta_seconds} is '
+                            'not a multiple of 0:15 minutes')
+                    delta_code = delta_seconds // 900
+                    delta_code_encoded = delta_code + 4
+                    # Make sure this fits in 4-bits.
+                    if delta_code_encoded < 0 or delta_code_encoded > 15:
+                        raise Exception(
+                            f'delta_code={delta_code} does not fit in 4-bits')
+                    rule['delta_code'] = delta_code
+                    rule['delta_code_encoded'] = delta_code_encoded
+                elif self.time_code_format == 'high':
+                    if delta_seconds % 60 != 0:
+                        raise Exception(
+                            f'delta_seconds={delta_seconds} is '
+                            'not a multiple of 0:01 minutes')
+                    rule['delta_minutes'] = delta_seconds // 60
+
+    def _process_eras_stdoff_delta(self, zones_map: ZonesMap) -> None:
+        """Convert the STDOFF and RULES/DSTOFF fields of ZoneEraRaw into values
+        that are consumed by the ZoneInfo classes of the Arduino AceTime
+        library.
+
+        There are 2 time code formats supported by the AceTime library, through
+        the classes defined in the ZoneInfo{Low,Mid,High}.h header files:
+        * 'low'
+            * offset_code: unit of 15-minutes
+            * offset_minute: remainder minutes
+            * delta_code: unit of 15 mintes
+        * 'high.
+            * offset_seconds_code: unit of 15 seconds
+            * offset_seconds_remainder: remainder seconds
+            * delta_minutes: minutes
         """
         for zone_name, info in zones_map.items():
             eras = info['eras']
             for era in eras:
+                offset_seconds = era['offset_seconds_truncated']
                 delta_seconds = era['era_delta_seconds_truncated']
 
-                # Generate the STDOFF and DST delta offset codes.
-                offset_encoded = _to_era_offset_and_delta(
-                    offset_seconds=era['offset_seconds_truncated'],
-                    delta_seconds=delta_seconds,
-                )
-                era['offset_code'] = offset_encoded.offset_code
-                era['offset_minute'] = offset_encoded.offset_remainder
-                era['delta_code'] = offset_encoded.delta_code
-                era['delta_code_encoded'] = offset_encoded.delta_code_encoded
+                if self.time_code_format == 'low':
+                    if offset_seconds % 60 != 0:
+                        raise Exception(
+                            f'offset_seconds={offset_seconds} is '
+                            'not a multiple of 0:01 minute')
+                    if delta_seconds % 900 != 0:
+                        raise Exception(
+                            f'delta_seconds={delta_seconds} is '
+                            'not a multiple of 0:15 minutes')
+                    offset_code = offset_seconds // 900
+                    offset_minute = (offset_seconds % 900) // 60
+                    delta_code = delta_seconds // 900
+                    delta_code_shifted = delta_code + 4  # always positive
+                    if delta_code_shifted < 0 or delta_code_shifted > 15:
+                        raise Exception(
+                            f'delta_code={delta_code} does not fit in 4-bits')
+                    delta_code_encoded = (
+                        (offset_minute << 4)
+                        + delta_code_shifted)
+                    era['offset_code'] = offset_code
+                    era['offset_minute'] = offset_minute
+                    era['delta_code'] = delta_code
+                    era['delta_code_encoded'] = delta_code_encoded
+                elif self.time_code_format == 'high':
+                    offset_seconds_code = offset_seconds // 15
+                    offset_seconds_remainder = offset_seconds % 15
+                    era['offset_seconds_code'] = offset_seconds_code
+                    era['offset_seconds_remainder'] = offset_seconds_remainder
 
-                era['offset_seconds_code'] = offset_encoded.offset_seconds_code
-                era['offset_seconds_remainder'] = \
-                    offset_encoded.offset_seconds_remainder
-                era['delta_minutes'] = offset_encoded.delta_minutes
+                    if delta_seconds % 60 != 0:
+                        raise Exception(
+                            f'delta_seconds={delta_seconds} is '
+                            'not a multiple of 0:01 minute')
+                    delta_minutes = delta_seconds // 60
+                    if delta_minutes < -128 or delta_minutes > 127:
+                        raise Exception(
+                            f'delta_minutes={delta_minutes} '
+                            'does not fit in 1 byte')
+                    era['delta_minutes'] = delta_minutes
 
-                # Generate the UNTIL fields needed by Arduino ZoneProcessors
+    def _process_eras_until(self, zones_map: ZonesMap) -> None:
+        """Convert the UNTIL field of ZoneEraRaw into values that are consumed
+        by the ZoneInfo classes of the Arduino AceTime library.
+
+        There are 2 time code formats supported by the AceTime library, through
+        the classes defined in the ZoneInfo{Low,Mid,High}.h header files:
+        * 'low'
+            * time_code: unit of 15-minutes
+            * time_minute: remainder minutes
+            * time_modifier: suffix ('w', 's', 'u')
+        * 'high.
+            * time_seconds_code: unit of 15-seconds
+            * time_seconds_remainder: remainder seconds
+            * time_seconds_modifier: suffix ('w', 's', 'u')
+        """
+        for zone_name, info in zones_map.items():
+            eras = info['eras']
+            for era in eras:
                 era['until_year_tiny'] = self._to_tiny_until_year(
                     era['until_year'])
-                until_encoded = _to_encoded_at_or_until_time(
-                    seconds=era['until_seconds_truncated'],
-                    suffix=era['until_time_suffix'],
-                )
-                era['until_time_code'] = until_encoded.time_code
-                era['until_time_minute'] = until_encoded.time_remainder
-                era['until_time_modifier'] = until_encoded.time_modifier
-                era['until_time_seconds_code'] = \
-                    until_encoded.time_seconds_code
-                era['until_time_seconds_remainder'] = \
-                    until_encoded.time_seconds_remainder
-                era['until_time_seconds_modifier'] = \
-                    until_encoded.time_seconds_modifier
+
+                seconds = era['until_seconds_truncated']
+                suffix = era['until_time_suffix']
+                if self.time_code_format == 'low':
+                    if seconds % 60 != 0:
+                        raise Exception(
+                            f'seconds={seconds} is '
+                            'not a multiple of 0:01 minute')
+                    encoded = _to_encoded_time_minutes(
+                        seconds=seconds, suffix=suffix)
+                    era['until_time_code'] = encoded.code
+                    era['until_time_minute'] = encoded.remainder
+                    era['until_time_modifier'] = encoded.modifier
+                elif self.time_code_format == 'high':
+                    encoded = _to_encoded_time_seconds(
+                        seconds=seconds, suffix=suffix)
+                    era['until_time_seconds_code'] = encoded.code
+                    era['until_time_seconds_remainder'] = encoded.remainder
+                    era['until_time_seconds_modifier'] = encoded.modifier
 
     def _generate_memory_map(self, sizes: SizeofMap) -> MemoryMap:
         # Context
@@ -407,39 +522,31 @@ class EncodedTime(NamedTuple):
     """Break apart the AT or UNTIL time with its suffix (e.g. 02:00w) into the
     components.
     """
-    suffix_code: int  # integer version of 'w', 's', 'u' (0x00, 0x10, 0x20)
-
-    # one-minute resolution
-    time_code: int  # AT or UNTIL time, in 15 minute units
-    time_remainder: int  # remainder minutes [0-14]
-    time_modifier: int  # suffix_code | time_remainder
-
-    # one-second resolution
-    time_seconds_code: int  # AT or UNTIL time in 15-second units
-    time_seconds_remainder: int  # remainder seconds [0-14]
-    time_seconds_modifier: int  # suffix_code | time_seconds_remainder
+    code: int  # AT or UNTIL time, 15-minute or 15-second units
+    remainder: int  # remainder minutes or seconds [0-14]
+    modifier: int  # suffix_code | time_remainder
 
 
-def _to_encoded_at_or_until_time(seconds: int, suffix: str) -> EncodedTime:
+def _to_encoded_time_minutes(seconds: int, suffix: str) -> EncodedTime:
     suffix_code = _to_suffix_code(suffix)
-
-    time_code = seconds // 900
-    time_remainder = seconds % 900 // 60
+    time_code = seconds // 900  # 15-minute units
+    time_remainder = seconds % 900 // 60  # remainder minutes
     time_modifier = time_remainder + suffix_code
-
-    time_seconds_code = seconds // 15
-    time_seconds_remainder = seconds % 15
-    time_seconds_modifier = time_seconds_remainder + suffix_code
-
     return EncodedTime(
-        suffix_code=suffix_code,
-        time_code=time_code,
-        time_remainder=time_remainder,
-        time_modifier=time_modifier,
-        time_seconds_code=time_seconds_code,
-        time_seconds_remainder=time_seconds_remainder,
-        time_seconds_modifier=time_seconds_modifier,
-    )
+        code=time_code,
+        remainder=time_remainder,
+        modifier=time_modifier)
+
+
+def _to_encoded_time_seconds(seconds: int, suffix: str) -> EncodedTime:
+    suffix_code = _to_suffix_code(suffix)
+    time_code = seconds // 15  # 15-second units
+    time_remainder = seconds % 15  # remainder seconds
+    time_modifier = time_remainder + suffix_code
+    return EncodedTime(
+        code=time_code,
+        remainder=time_remainder,
+        modifier=time_modifier)
 
 
 def _to_suffix_code(suffix: str) -> int:
@@ -452,73 +559,6 @@ def _to_suffix_code(suffix: str) -> int:
         return 0x20
     else:
         raise Exception(f'Unknown suffix {suffix}')
-
-
-class EncodedRuleDelta(NamedTuple):
-    delta_code: int  # delta offset in units of 15-min
-    delta_code_encoded: int  # delta_code + 4 (1h)
-    delta_minutes: int  # in minutes
-
-
-def _to_rule_delta(delta_seconds: int) -> EncodedRuleDelta:
-    """Convert the delta_seconds extracted from the SAVE column of a RULE entry
-    to an EncodedRuleDelta. The transformer.py ensures that all entries are in
-    multiples of 15-minutes, so we don't need to worry about remainder minutes.
-    """
-    delta_code = delta_seconds // 900
-    delta_code_encoded = delta_code + 4
-    # Make sure this fits in 4-bits. TODO: Move to the calling function.
-    if delta_code_encoded < 0 or delta_code_encoded > 15:
-        raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
-    delta_minutes = delta_seconds // 60
-    return EncodedRuleDelta(
-        delta_code=delta_code,
-        delta_code_encoded=delta_code_encoded,
-        delta_minutes=delta_minutes,
-    )
-
-
-class EncodedOffsetAndDelta(NamedTuple):
-    # 1-minute resolution
-    offset_code: int  # STDOFF in 15-minute units
-    offset_remainder: int  # STDOFF remainder minutes [0-14]
-    delta_code: int  # delta (DSTOFF) in 15-minute units
-    delta_code_encoded: int  # offset_remainder<<4 | (delta_code + 4)
-
-    # 1-second resolution
-    offset_seconds_code: int  # STDOFF in 15-second units
-    offset_seconds_remainder: int  # STDOFF remainder seconds [0-14]
-    delta_minutes: int  # DSTOFF in minutes
-
-
-def _to_era_offset_and_delta(
-    offset_seconds: int,
-    delta_seconds: int,
-) -> EncodedOffsetAndDelta:
-    """Convert offset_seconds and delta_seconds to an EncodedOffsetAndDelta
-    suitable for the AceTime or acetimec library.
-    """
-    offset_code = offset_seconds // 900  # truncate to -infinty
-    offset_remainder = (offset_seconds % 900) // 60  # always positive
-    delta_code = delta_seconds // 900
-    delta_code_shifted = delta_code + 4  # always positive
-    if delta_code_shifted < 0 or delta_code_shifted > 15:
-        raise Exception(f'delta_code={delta_code} does not fit in 4-bits')
-    delta_code_encoded = (offset_remainder << 4) + (delta_code_shifted)
-
-    offset_seconds_code = offset_seconds // 15  # 15-second increments
-    offset_seconds_remainder = offset_seconds % 15
-    delta_minutes = delta_seconds // 60
-
-    return EncodedOffsetAndDelta(
-        offset_code=offset_code,
-        offset_remainder=offset_remainder,
-        delta_code=delta_code,
-        delta_code_encoded=delta_code_encoded,
-        offset_seconds_code=offset_seconds_code,
-        offset_seconds_remainder=offset_seconds_remainder,
-        delta_minutes=delta_minutes,
-    )
 
 
 def _to_letter_index(

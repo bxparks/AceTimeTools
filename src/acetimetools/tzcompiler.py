@@ -50,22 +50,25 @@ Transformer Flags:
     * acetimec, acetimepy, and acetimego currently ignores this flag and
       defaults to 'complete'
     * basic
-        * until_at_granularity: 60 seconds
-        * offset_granularity: 60 seconds
+        * until_at_granularity: 60 seconds (1 minute)
+        * offset_granularity: 60 seconds (1 minute)
         * delta_granularity: 900 seconds (15 minutes)
-        * generate_tiny_years: false (TODO: change to true)
-        * (valid for timezones ~>= 1972)
+        * generate_tiny_years: True
+        * time_code_format: 'low'
+        * (valid for subset of timezones >= ~2000)
     * extended
         * until_at_granularity: 60 seconds (1 minute)
         * offset_granularity: 60 seconds (1 minute)
         * delta_granularity: 900 seconds (15 minutes)
-        * generate_tiny_years: false (TODO: change to true?)
-        * (valid for timezones ~>= 1972)
+        * generate_tiny_years: False (TODO: change to True?)
+        * time_code_format: 'low'
+        * (valid for all timezones >= ~1972)
     * complete
         * until_at_granularity: 1 second
         * offset_granularity: 1 second
         * delta_granularity: 60 seconds (1 minute)
-        * generate_tiny_years: false
+        * generate_tiny_years: False
+        * time_code_format: 'high'
         * (valid for timezones >= 1844, all TZDB)
 * --until_at_granularity {seconds}
     * Truncate Zone.UNTIL fields to this granularity.
@@ -74,7 +77,7 @@ Transformer Flags:
 * --delta_granularity {seconds}
     * Truncate Zone.DSTOFF (aka Zone.RULES) and Rule.SAVE to this granularity.
 * --strict, --nostrict
-    * Remove entries outside of the selected granularity.
+    * Remove zones outside of the selected granularity. (default True)
 * `--include_list {file}`
     * Filter the zones to include only those in this include list.
 * --compress, --nocompress
@@ -418,6 +421,7 @@ def main() -> None:
         offset_granularity = 60
         delta_granularity = 900
         generate_tiny_years = True
+        time_code_format = 'low'
         if args.start_year < 1980:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'basic'")
@@ -426,6 +430,7 @@ def main() -> None:
         offset_granularity = 60
         delta_granularity = 900
         generate_tiny_years = False
+        time_code_format = 'low'
         if args.start_year < 1973:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'extended'")
@@ -433,6 +438,7 @@ def main() -> None:
         until_at_granularity = 1
         offset_granularity = 1
         delta_granularity = 60
+        time_code_format = 'high'
         generate_tiny_years = False
     else:
         raise Exception(f'Unknown scope {args.scope}')
@@ -533,7 +539,10 @@ def main() -> None:
     if 'arduino' in languages or 'c' in languages:
         logging.info('======== Transforming to Arduino Zones and Rules')
         arduino_transformer = ArduinoTransformer(
-            args.scope, args.tiny_base_year, args.compress)
+            args.scope,
+            args.tiny_base_year,
+            args.compress,
+            time_code_format)
         arduino_transformer.transform(tresult)
         arduino_transformer.print_summary(tresult)
     else:

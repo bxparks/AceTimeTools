@@ -862,17 +862,6 @@ class Transformer:
                                 f"RULES '{rules_string}' "
                                 "not multiple of :01 min")
 
-                    # Check that rules_delta fits inside 4-bits, because that's
-                    # how it is stored in the Arduino zonedb files.
-                    # TODO: Move this to artransformer.py
-                    rules_delta_code = era_delta_seconds_truncated // 900
-                    if rules_delta_code < -4 or rules_delta_code > 11:
-                        valid = False
-                        add_comment(
-                            removed_zones, name,
-                            f"RULES '{rules_string}' too large for 4-bits")
-                        break
-
                     # Populate the derived fieds, leaving 'rules' unchanged for
                     # reference.
                     era['era_delta_seconds'] = era_delta_seconds

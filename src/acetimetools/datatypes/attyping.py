@@ -156,7 +156,7 @@ class ZoneEraRaw(TypedDict, total=False):
     offset_code: int  # STD offset in units of 15-min
     offset_minute: int  # STD offset remainder minutes
     delta_code: int  # DST offset in units of 15-min
-    delta_code_encoded: int  # delta_code + offset_minute, in 2 x 4-bits
+    delta_code_encoded: int  # (offset_minute << 4 + delta_code)
     until_year_tiny: int  # until_year - tiny_base_year)
     until_time_code: int  # until_time in units of 15-min
     until_time_minute: int  # until_time remainder minutes
