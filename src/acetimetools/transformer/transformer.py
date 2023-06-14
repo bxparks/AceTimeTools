@@ -160,7 +160,7 @@ class Transformer:
 
         # Part 4: Transformations requiring both zones_map and policies_map.
         policies_map = self._remove_unused_policies(zones_map, policies_map)
-        policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
+        policies_to_zones = _create_policies_to_zones(zones_map)
 
         # Part 5: Transform the policies_map
         policies_map = self._remove_rules_too_old_or_new(policies_map)
@@ -973,7 +973,7 @@ class Transformer:
         results: PoliciesMap = {}
         removed_policies: CommentsMap = {}
 
-        policies_to_zones = _create_policies_to_zones(zones_map, policies_map)
+        policies_to_zones = _create_policies_to_zones(zones_map)
         for policy_name, policy in policies_map.items():
             if policy_name in policies_to_zones:
                 results[policy_name] = policy
@@ -1978,10 +1978,7 @@ def add_string(strings: 'OrderedDict[str, int]', name: str) -> int:
     return index  # index will never be None
 
 
-def _create_policies_to_zones(
-    zones_map: ZonesMap,
-    policies_map: PoliciesMap,  # TODO: remove, not used
-) -> PoliciesToZones:
+def _create_policies_to_zones(zones_map: ZonesMap) -> PoliciesToZones:
     """Normally Zones point to Rules. This method causes the reverse to happen,
     making Rules know about Zones, by creating a map of {policy_name ->
     zone_full_name[]}. This allows us to determine which zones that may be
