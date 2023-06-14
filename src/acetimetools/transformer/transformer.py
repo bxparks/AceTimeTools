@@ -134,8 +134,10 @@ class Transformer:
             _detect_tzdb_years(zones_map, policies_map)
 
         # Part 2: Filter zones and links through the include list.
-        links_map = self._filter_include_links(links_map, self.include_list)
         zones_map = self._filter_include_zones(zones_map, self.include_list)
+        links_map = self._filter_include_links(links_map, self.include_list)
+        expected_zones_count = len(zones_map)
+        expected_links_count = len(links_map)
 
         # Part 3: Transform the zones_map.
         zones_map = self._remove_zone_eras_too_old(zones_map)
@@ -184,8 +186,10 @@ class Transformer:
         # Part 6: Remove unused zones and links, and verify some invariants.
         zones_map = self._remove_zones_without_rules(zones_map, policies_map)
         links_map = self._remove_links_to_missing_zones(links_map, zones_map)
-        zones_map = self._verify_zones_until_year(zones_map)
-        policies_map = self._verify_policies_from_year(policies_map)
+        self._verify_zones_until_year(zones_map)
+        self._verify_policies_from_year(policies_map)
+        self._verify_zones_and_links_count(
+            zones_map, links_map, expected_zones_count, expected_links_count)
 
         # Part 7: Update lower_zone_truncated, and upper_zone_truncated.
         zones_map = self._update_truncation_status(zones_map, policies_map)
@@ -1491,7 +1495,7 @@ class Transformer:
         merge_comments(self.all_removed_links, removed_links)
         return results
 
-    def _verify_zones_until_year(self, zones_map: ZonesMap) -> ZonesMap:
+    def _verify_zones_until_year(self, zones_map: ZonesMap) -> None:
         """Verify every zone has a ZoneEra that ends at +Infinity."""
         for zone_name, info in zones_map.items():
             eras = info['eras']
@@ -1510,11 +1514,8 @@ class Transformer:
                         f"{zone_name}: ZoneEra.until_year_tiny ends at "
                         f"{until_year} but should be MAX_UNTIL_YEAR_TINY"
                     )
-        return zones_map
 
-    def _verify_policies_from_year(
-        self, policies_map: PoliciesMap
-    ) -> PoliciesMap:
+    def _verify_policies_from_year(self, policies_map: PoliciesMap) -> None:
         for policy_name, policy in policies_map.items():
             rules = policy['rules']
             first = rules[0]
@@ -1532,7 +1533,27 @@ class Transformer:
                         f"{policy_name}: Zonerule.from_year_tiny starts at"
                         f"{from_year_tiny} but should be MIN_YEAR_TINY"
                     )
-        return policies_map
+
+    def _verify_zones_and_links_count(
+        self,
+        zones_map: ZonesMap,
+        links_map: LinksMap,
+        expected_zones_count: int,
+        expected_links_count: int,
+    ) -> None:
+        if self.scope == 'extended' or self.scope == 'complete':
+            if len(zones_map) != expected_zones_count:
+                raise Exception(
+                    f"Expected {expected_zones_count} Zones but "
+                    f"got {len(zones_map)}")
+            if len(links_map) != expected_links_count:
+                raise Exception(
+                    f"Expected {expected_links_count} Links but "
+                    f"got {len(links_map)}")
+        elif self.scope == 'basic':
+            # scope == 'basic' is expected to remove Zones which don't
+            # work with the BasicZoneProcessor algorithm.
+            pass
 
     # --------------------------------------------------------------------
     # Part 7: Update truncation status of zones.
