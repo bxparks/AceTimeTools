@@ -162,8 +162,6 @@ class Transformer:
 
         # Part 5: Transform the policies_map
         policies_map = self._remove_rules_too_old_or_new(policies_map)
-        # if self.generate_tiny_years:
-        #     policies_map = self._remove_policies_not_tiny(policies_map)
         if self.scope == 'basic':
             policies_map = self._remove_policies_multiple_transitions_in_month(
                 policies_map)
@@ -1037,43 +1035,6 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    def _remove_policies_not_tiny(
-        self,
-        policies_map: PoliciesMap,
-    ) -> PoliciesMap:
-        """Remove policies which have FROM and TO fields that do not fit in a
-        tiny year field (8-bits).
-        """
-        results: PoliciesMap = {}
-        removed_policies: CommentsMap = {}
-        for name, policy in policies_map.items():
-            valid = True
-            for rule in policy['rules']:
-                from_year = rule['from_year']
-                to_year = rule['to_year']
-                # TODO: categorize lower or upper truncation of Rule
-                if not is_year_tiny(from_year, self.tiny_base_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"from_year ({from_year}) exceeds int8_t")
-                    break
-                if not is_year_tiny(to_year, self.tiny_base_year):
-                    valid = False
-                    add_comment(
-                        removed_policies, name,
-                        f"to_year ({to_year}) exceeds int8_t")
-                    break
-            if valid:
-                results[name] = policy
-
-        self._print_comments_map(
-            'Removed %s policies with FROM or TO out of bounds',
-            removed_policies,
-        )
-        merge_comments(self.all_removed_policies, removed_policies)
-        return results
-
     def _remove_policies_multiple_transitions_in_month(
         self, policies_map: PoliciesMap,
     ) -> PoliciesMap:
@@ -1785,7 +1746,7 @@ def find_earliest_subsequent_rules(
 
 
 def is_year_tiny(year: int, tiny_base_year: int) -> bool:
-    """Determine if year fits in an int8_t field."""
+    """Determine if year fits in an int8_t tiny year field."""
     year_tiny = year - tiny_base_year
     return (
         year == INVALID_YEAR
