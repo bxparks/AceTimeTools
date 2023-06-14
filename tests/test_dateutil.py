@@ -2,8 +2,6 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
 
-from acetimetools.datatypes.attyping import SECONDS_SINCE_UNIX_EPOCH
-
 
 class TestDateUtil(unittest.TestCase):
 
@@ -32,9 +30,9 @@ class TestDateUtil(unittest.TestCase):
         tz = gettz('America/Los_Angeles')
         assert tz is not None
 
-        # One second before DST shift, 01:59:59 UTC-7
-        epoch_seconds = 26125199
-        unix_seconds = epoch_seconds + SECONDS_SINCE_UNIX_EPOCH
+        # One second before DST shift.
+        # $ date+%s -d '2000-10-29T01:59:59-07:00'
+        unix_seconds = 972809999
         dtu = datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
         # Date from epoch seconds.
@@ -71,9 +69,9 @@ class TestDateUtil(unittest.TestCase):
         tz = gettz('America/Los_Angeles')
         assert tz is not None
 
-        # Just after DST fall back 01:00:00 UTC-8
-        epoch_seconds = 26125200
-        unix_seconds = epoch_seconds + SECONDS_SINCE_UNIX_EPOCH
+        # Just after DST fall back.
+        # $ date +%s -d '2000-10-29T01:00:00-08:00'
+        unix_seconds = 972810000
         dtu = datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
         # Date from epoch seconds.
