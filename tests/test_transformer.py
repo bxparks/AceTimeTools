@@ -5,6 +5,14 @@
 import unittest
 from collections import OrderedDict
 
+from acetimetools.datatypes.attyping import INVALID_YEAR
+from acetimetools.datatypes.attyping import INVALID_YEAR_TINY
+from acetimetools.datatypes.attyping import MIN_YEAR
+from acetimetools.datatypes.attyping import MIN_YEAR_TINY
+from acetimetools.datatypes.attyping import MAX_TO_YEAR
+from acetimetools.datatypes.attyping import MAX_TO_YEAR_TINY
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
 from acetimetools.transformer.transformer import _parse_on_day_string
 from acetimetools.transformer.transformer import _days_in_month
 from acetimetools.transformer.transformer import calc_day_of_month
@@ -16,6 +24,8 @@ from acetimetools.transformer.transformer import truncate_to_granularity
 from acetimetools.transformer.transformer import INVALID_SECONDS
 from acetimetools.transformer.transformer import hash_name
 from acetimetools.transformer.transformer import add_string
+from acetimetools.transformer.transformer import to_tiny_from_to_year
+from acetimetools.transformer.transformer import to_tiny_until_year
 
 
 class TestParseOnDayString(unittest.TestCase):
@@ -135,3 +145,43 @@ class TestHash(unittest.TestCase):
         self.assertEqual(193485963, hash_name('abc'))
         self.assertEqual(2090069583, hash_name('abcd'))
         self.assertEqual(252819604, hash_name('abcde'))
+
+
+class TestTinyYear(unittest.TestCase):
+    def test_to_tiny_from_to_year(self) -> None:
+        self.assertEqual(
+            INVALID_YEAR_TINY,
+            to_tiny_from_to_year(INVALID_YEAR, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_from_to_year(MIN_YEAR, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_from_to_year(1800, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_from_to_year(1873, 2000))
+        self.assertEqual(-126, to_tiny_from_to_year(1874, 2000))
+        self.assertEqual(-1, to_tiny_from_to_year(1999, 2000))
+        self.assertEqual(0, to_tiny_from_to_year(2000, 2000))
+        self.assertEqual(23, to_tiny_from_to_year(2023, 2000))
+        self.assertEqual(125, to_tiny_from_to_year(2125, 2000))
+        self.assertEqual(MAX_TO_YEAR_TINY, to_tiny_from_to_year(2126, 2000))
+        self.assertEqual(MAX_TO_YEAR_TINY, to_tiny_from_to_year(2127, 2000))
+        self.assertEqual(MAX_TO_YEAR_TINY, to_tiny_from_to_year(2200, 2000))
+        self.assertEqual(
+            MAX_TO_YEAR_TINY,
+            to_tiny_from_to_year(MAX_TO_YEAR, 2000))
+
+    def test_to_tiny_until_year(self) -> None:
+        self.assertEqual(
+            INVALID_YEAR_TINY,
+            to_tiny_until_year(INVALID_YEAR, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_until_year(MIN_YEAR, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_until_year(1800, 2000))
+        self.assertEqual(MIN_YEAR_TINY, to_tiny_until_year(1873, 2000))
+        self.assertEqual(-126, to_tiny_until_year(1874, 2000))
+        self.assertEqual(-1, to_tiny_until_year(1999, 2000))
+        self.assertEqual(0, to_tiny_until_year(2000, 2000))
+        self.assertEqual(23, to_tiny_until_year(2023, 2000))
+        self.assertEqual(125, to_tiny_until_year(2125, 2000))
+        self.assertEqual(126, to_tiny_until_year(2126, 2000))
+        self.assertEqual(MAX_UNTIL_YEAR_TINY, to_tiny_until_year(2127, 2000))
+        self.assertEqual(MAX_UNTIL_YEAR_TINY, to_tiny_until_year(2200, 2000))
+        self.assertEqual(
+            MAX_UNTIL_YEAR_TINY,
+            to_tiny_until_year(MAX_UNTIL_YEAR, 2000))

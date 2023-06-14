@@ -23,6 +23,7 @@ from acetimetools.datatypes.attyping import TransformerResult
 from acetimetools.datatypes.attyping import add_comment
 from acetimetools.datatypes.attyping import merge_comments
 from acetimetools.datatypes.attyping import INVALID_YEAR
+from acetimetools.datatypes.attyping import INVALID_YEAR_TINY
 from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR
 from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR_TINY
 from acetimetools.datatypes.attyping import MIN_YEAR
@@ -950,14 +951,11 @@ class Transformer:
         for name, info in zones_map.items():
             for era in info['eras']:
                 until_year = era['until_year']
-                if not is_year_tiny(until_year, self.tiny_base_year):
+                until_year_tiny = to_tiny_until_year(
+                    until_year, self.tiny_base_year)
+                if until_year_tiny == INVALID_YEAR_TINY:
                     raise Exception(f"{name}: UNTIL {until_year} not tiny")
-                if until_year == MAX_UNTIL_YEAR:
-                    until_year_tiny = MAX_UNTIL_YEAR_TINY
-                    era['until_year_tiny'] = until_year_tiny
-                else:
-                    until_year_tiny = until_year - self.tiny_base_year
-                    era['until_year_tiny'] = until_year_tiny
+                era['until_year_tiny'] = until_year_tiny
 
         return zones_map
 
@@ -1453,21 +1451,26 @@ class Transformer:
         merge_comments(self.all_removed_policies, removed_policies)
         return results
 
-    # TODO: This does not quite work because there are rules whose
-    # [from_year,start_year] straddles the self.start_year. The from_year
-    # needs to be extended back to -Infinity.
     def _update_rules_tiny_from_to_years(
         self, policies_map: PoliciesMap
     ) -> PoliciesMap:
         for name, policy in policies_map.items():
             for rule in policy['rules']:
                 from_year = rule['from_year']
-                if from_year != MIN_YEAR and from_year != MAX_TO_YEAR:
-                    rule['from_year_tiny'] = from_year - self.tiny_base_year
+                from_year_tiny = to_tiny_from_to_year(
+                    from_year, self.tiny_base_year)
+                if from_year_tiny == INVALID_YEAR_TINY:
+                    raise Exception(
+                        f"{name}: from_year={from_year} not tiny")
+                rule['from_year_tiny'] = from_year_tiny
 
                 to_year = rule['to_year']
-                if to_year != MIN_YEAR and to_year != MAX_TO_YEAR:
-                    rule['to_year_tiny'] = to_year - self.tiny_base_year
+                to_year_tiny = to_tiny_from_to_year(
+                    to_year, self.tiny_base_year)
+                if to_year_tiny == INVALID_YEAR_TINY:
+                    raise Exception(
+                        f"{name}: to_year={to_year} not tiny")
+                rule['to_year_tiny'] = to_year_tiny
 
         return policies_map
 
@@ -1791,6 +1794,47 @@ def is_year_tiny(year: int, tiny_base_year: int) -> bool:
         or year == MAX_UNTIL_YEAR
         or (MIN_YEAR_TINY < year_tiny and year_tiny < MAX_TO_YEAR_TINY)
     )
+
+
+def to_tiny_from_to_year(year: int, tiny_base_year: int) -> int:
+    """Convert FROM and TO years of ZoneRule records to tiny year using the base
+    year. The tiny year is saturated to MIN_YEAR_TINY or MAX_TO_YEAR_TINY if
+    year is below or above those limits. Returns INVALID_YEAR_TINY if year is
+    INVALID_YEAR.
+    """
+    if year == INVALID_YEAR:
+        return INVALID_YEAR_TINY
+    if year == MIN_YEAR:
+        return MIN_YEAR_TINY
+    if year == MAX_TO_YEAR:
+        return MAX_TO_YEAR_TINY
+
+    year_tiny = year - tiny_base_year
+    if year_tiny <= MIN_YEAR_TINY:
+        return MIN_YEAR_TINY
+    if year_tiny >= MAX_TO_YEAR_TINY:
+        return MAX_TO_YEAR_TINY
+    return year_tiny
+
+
+def to_tiny_until_year(year: int, tiny_base_year: int) -> int:
+    """Convert UNTIL years of ZoneEra records to tiny year using the base
+    year. The tiny year is saturated to MAX_UNTIL_YEAR if greater than that
+    limit. Returns INVALID_YEAR_TINY if year is INVALID_YEAR.
+    """
+    if year == INVALID_YEAR:
+        return INVALID_YEAR_TINY
+    if year == MIN_YEAR:
+        return MIN_YEAR_TINY
+    if year == MAX_UNTIL_YEAR:
+        return MAX_UNTIL_YEAR_TINY
+
+    year_tiny = year - tiny_base_year
+    if year_tiny <= MIN_YEAR_TINY:
+        return MIN_YEAR_TINY
+    if year_tiny >= MAX_UNTIL_YEAR_TINY:
+        return MAX_UNTIL_YEAR_TINY
+    return year_tiny
 
 
 def calc_day_of_month(

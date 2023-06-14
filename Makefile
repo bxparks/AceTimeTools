@@ -10,7 +10,7 @@ all: mypy flake8 tests
 # finding the typing info when acetimepy is installed using 'pip3 install'.
 # Seems like typing info is not being installed by pip3.
 mypy:
-	mypy --strict src tests ../acetimepy/src/acetime
+	python3 -m mypy --strict src tests ../acetimepy/src/acetime
 
 tests:
 	python3 -m unittest
@@ -20,7 +20,7 @@ tests:
 # E501 uses 79 columns by default, but 80 is the default line wrap in
 # vim, so change the line-length.
 flake8:
-	flake8 . \
+	python3 -m flake8 . \
 		--exclude=archive \
 		--ignore W503 \
 		--max-line-length=80 \

@@ -540,7 +540,6 @@ def main() -> None:
         logging.info('======== Transforming to Arduino Zones and Rules')
         arduino_transformer = ArduinoTransformer(
             args.scope,
-            args.tiny_base_year,
             args.compress,
             time_code_format)
         arduino_transformer.transform(tresult)
