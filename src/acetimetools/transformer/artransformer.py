@@ -125,8 +125,9 @@ class ArduinoTransformer:
             memory_map8 = self._generate_memory_map(self.SIZEOF_HIRES8)
             memory_map32 = self._generate_memory_map(self.SIZEOF_HIRES32)
         elif self.scope == 'extended':
-            memory_map8 = self._generate_memory_map(self.SIZEOF_MID8)
-            memory_map32 = self._generate_memory_map(self.SIZEOF_MID32)
+            # Currently uses zoneinfolow classes, using tiny years.
+            memory_map8 = self._generate_memory_map(self.SIZEOF_LOW8)
+            memory_map32 = self._generate_memory_map(self.SIZEOF_LOW32)
         elif self.scope == 'basic':
             memory_map8 = self._generate_memory_map(self.SIZEOF_LOW8)
             memory_map32 = self._generate_memory_map(self.SIZEOF_LOW32)

@@ -419,23 +419,23 @@ def main() -> None:
 
     # Define default parameters from the '--scope' flag.
     if args.scope == 'basic':
-        until_at_granularity = 60
-        offset_granularity = 60
-        delta_granularity = 900
-        generate_tiny_years = True
-        time_code_format = 'low'
         if args.start_year < 1980:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'basic'")
-    elif args.scope == 'extended':
         until_at_granularity = 60
         offset_granularity = 60
         delta_granularity = 900
-        generate_tiny_years = False
         time_code_format = 'low'
+        generate_tiny_years = True
+    elif args.scope == 'extended':
         if args.start_year < 1973:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'extended'")
+        until_at_granularity = 60
+        offset_granularity = 60
+        delta_granularity = 900
+        time_code_format = 'low'
+        generate_tiny_years = True
     elif args.scope == 'complete':
         until_at_granularity = 1
         offset_granularity = 1
