@@ -116,6 +116,8 @@ from typing_extensions import Protocol
 from acetimetools.datatypes.attyping import TransformerResult
 from acetimetools.datatypes.attyping import ZoneInfoDatabase
 from acetimetools.datatypes.attyping import create_zone_info_database
+from acetimetools.datatypes.attyping import MIN_YEAR
+from acetimetools.datatypes.attyping import MAX_UNTIL_YEAR
 from acetimetools.extractor.extractor import Extractor
 from acetimetools.transformer.transformer import Transformer
 from acetimetools.transformer.artransformer import ArduinoTransformer
@@ -496,6 +498,8 @@ def main() -> None:
         generated_max_year=0,
         lower_truncated=False,
         upper_truncated=False,
+        start_year_accurate=MIN_YEAR,
+        until_year_accurate=MAX_UNTIL_YEAR,
         buf_sizes={},
         max_buf_size=0,
         estimator_min_year=0,

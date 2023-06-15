@@ -318,6 +318,8 @@ class TransformerResult:
     generated_max_year: int  # max year in generated zonedb
     lower_truncated: bool  # if ANY zone truncated at the lower years
     upper_truncated: bool  # if ANY zone truncated at the upper years
+    start_year_accurate: int  # start year of accuate transitions
+    until_year_accurate: int  # until year of accuate transitions
     # Data from BufSizeEstimator
     buf_sizes: BufSizeMap  # {zoneName -> CountAndYear}
     max_buf_size: int  # max buf size over all zones and years
@@ -379,6 +381,8 @@ class ZoneInfoDatabase(TypedDict):
     scope: str
     start_year: int
     until_year: int
+    start_year_accurate: int  # start year of accuracy
+    until_year_accurate: int  # until year of accuracy
     until_at_granularity: int
     offset_granularity: int
     delta_granularity: int
@@ -502,6 +506,8 @@ def create_zone_info_database(
         'generated_max_year': tresult.generated_max_year,
         'lower_truncated': tresult.lower_truncated,
         'upper_truncated': tresult.upper_truncated,
+        'start_year_accurate': tresult.start_year_accurate,
+        'until_year_accurate': tresult.until_year_accurate,
 
         # Commenter
         'zones_to_policies': tresult.zones_to_policies,

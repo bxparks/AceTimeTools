@@ -60,12 +60,15 @@ class PythonGenerator:
         self.merged_notable_zones = zidb['merged_notable_zones']
         self.notable_links = zidb['notable_links']
         self.notable_policies = zidb['notable_policies']
+        #
         self.original_min_year = zidb['original_min_year']
         self.original_max_year = zidb['original_max_year']
         self.generated_min_year = zidb['generated_min_year']
         self.generated_max_year = zidb['generated_max_year']
         self.lower_truncated = zidb['lower_truncated']
         self.upper_truncated = zidb['upper_truncated']
+        self.start_year_accurate = zidb['start_year_accurate']
+        self.until_year_accurate = zidb['until_year_accurate']
 
         self.zones_and_links = (
             list(self.zones_map.keys())
@@ -113,9 +116,12 @@ class PythonGenerator:
 # Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
 #
+# Requested Years: [{self.start_year},{self.until_year}]
+# Accurate Years: [{self.start_year_accurate},{self.until_year_accurate}]
+#
 # Original Years:  [{self.original_min_year},{self.original_max_year}]
 # Generated Years: [{self.generated_min_year},{self.generated_max_year}]
-# Lower/Upper Truncated: [{self.lower_truncated}, {self.upper_truncated}]
+# Lower/Upper Truncated: [{self.lower_truncated},{self.upper_truncated}]
 #
 # Records:
 #   Infos: {num_zones_and_links}
@@ -257,6 +263,8 @@ from .zone_policies import *
 TZDB_VERSION = '{self.tz_version}'
 START_YEAR = {self.start_year}
 UNTIL_YEAR = {self.until_year}
+START_YEAR_ACCURATE = {self.start_year_accurate}
+UNTIL_YEAR_ACCURATE = {self.until_year_accurate}
 
 # ---------------------------------------------------------------------------
 # Supported zones: {len(self.zones_map)}

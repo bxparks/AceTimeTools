@@ -81,6 +81,8 @@ class GoGenerator:
         self.generated_max_year = zidb['generated_max_year']
         self.lower_truncated = zidb['lower_truncated']
         self.upper_truncated = zidb['upper_truncated']
+        self.start_year_accurate = zidb['start_year_accurate']
+        self.until_year_accurate = zidb['until_year_accurate']
         #
         self.estimator_min_year = zidb['estimator_min_year']
         self.estimator_max_year = zidb['estimator_max_year']
@@ -153,9 +155,12 @@ class GoGenerator:
 // Unsupported Zones: {num_removed_zones_and_links} \
 ({num_removed_zones} zones, {num_removed_links} links)
 //
+// Requested Years: [{self.start_year},{self.until_year}]
+// Accurate Years: [{self.start_year_accurate},{self.until_year_accurate}]
+//
 // Original Years:  [{self.original_min_year},{self.original_max_year}]
 // Generated Years: [{self.generated_min_year},{self.generated_max_year}]
-// Lower/Upper Truncated: [{self.lower_truncated}, {self.upper_truncated}]
+// Lower/Upper Truncated: [{self.lower_truncated},{self.upper_truncated}]
 //
 // Estimator Years: [{self.estimator_min_year},{self.estimator_max_year}]
 // Max Buffer Size: {self.max_buf_size}
@@ -825,6 +830,8 @@ var DataContext = zoneinfo.ZoneDataContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
 \tStartYear: {self.start_year},
 \tUntilYear: {self.until_year},
+\tStartYearAccurate: {self.start_year_accurate},
+\tUntilYearAccurate: {self.until_year_accurate},
 \tMaxTransitions: {self.max_buf_size},
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,
@@ -890,6 +897,8 @@ var RecordContext = zoneinfo.ZoneRecordContext{{
 \tTzDatabaseVersion: TzDatabaseVersion,
 \tStartYear: {self.start_year},
 \tUntilYear: {self.until_year},
+\tStartYearAccurate: {self.start_year_accurate},
+\tUntilYearAccurate: {self.until_year_accurate},
 \tMaxTransitions: {self.max_buf_size},
 \tLetterData: LetterData,
 \tLetterOffsets: LetterOffsets,

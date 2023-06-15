@@ -201,6 +201,8 @@ class Transformer:
             info['upper_zone_truncated']
             for _, info in zones_map.items()
         ])
+        start_year_accurate, until_year_accurate = self._calc_accurate_years(
+            zones_map, lower_truncated, upper_truncated)
 
         # Part 8: Replace the original maps with the transformed ones, and
         # add additional results.
@@ -222,6 +224,8 @@ class Transformer:
             _detect_tzdb_years(zones_map, policies_map)
         tresult.lower_truncated = lower_truncated
         tresult.upper_truncated = upper_truncated
+        tresult.start_year_accurate = start_year_accurate
+        tresult.until_year_accurate = until_year_accurate
 
     def print_summary(self, tresult: TransformerResult) -> None:
         logging.info(
@@ -1448,8 +1452,7 @@ class Transformer:
     def _remove_zones_without_rules(
         self, zones_map: ZonesMap, policies_map: PoliciesMap
     ) -> ZonesMap:
-        """Remove zone eras whose RULES field contains a reference to
-        a set of Rules, which cannot be found.
+        """Remove Zones whose Policy cannot be found.
         """
         results: ZonesMap = {}
         removed_zones: CommentsMap = {}
@@ -1588,6 +1591,22 @@ class Transformer:
             info['upper_zone_truncated'] = upper_zone_truncated
 
         return zones_map
+
+    def _calc_accurate_years(
+        self,
+        zones_map: ZonesMap,
+        lower_truncated: int,
+        upper_truncated: int,
+    ) -> Tuple[int, int]:
+        start_year_accurate = self.start_year
+        if not lower_truncated:
+            start_year_accurate = MIN_YEAR
+
+        until_year_accurate = self.until_year
+        if not upper_truncated:
+            until_year_accurate = MAX_UNTIL_YEAR
+
+        return start_year_accurate, until_year_accurate
 
     # --------------------------------------------------------------------
     # Part 8: Add additional results
