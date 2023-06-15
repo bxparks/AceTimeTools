@@ -14,16 +14,19 @@
         * Replace `EPOCH_YEAR_FOR_TINY` constant with `--tiny_base_year flag`
         * Change `--scope basic` to use lowres zoneinfo data structures, using
           tiny year fields.
-    * argenerator.py
+        * Handle -Infinity and +Infinity consistently.
+    * `argenerator.py`
         * Move `ZoneContext`, `letters[]` and `fragments[]` into PROGMEM.
     * Rename `data_types` to `datatypes` for readability
         * Rename `at_types.py` to `attyping.py`
         * Rename `validation_types.py` to `valtyping.py`
-    * Add truncation flags
+    * Add truncation flags and accuracy years
         * `lower_truncated`: if any era or rule was truncated before the
           requested `start_year`
         * `upper_truncated`: if any era or rul was truncated on or after the
           requested `until_year`
+        * `start_year_accurate`: start year of accurate transitions
+        * `until_year_accurate`: until year of accurate transitions
 * 1.7.0 (2023-05-22)
     * Rename `AceTimePython` library to `acetimepy`.
     * Rename `AceTimeGo` library to `acetimego`.
