@@ -6,8 +6,8 @@
 
 """
 Read the raw TZ Database files at the location specified by `--input_dir`.
-Generate the zonedb files in various formats for different languages selected by
-the `--language` flag.
+Generate the output files (selected by `--actions`) for different languages or
+librarties (selected by the `--language`)
 
 The compiler has a number of stages implemented by various helper classes:
 
@@ -19,12 +19,25 @@ The compiler has a number of stages implemented by various helper classes:
       algorithms.
 * Generator
     * Generate the various zonedb files in the format requested by the
-      `--language` flag.
+      `--languages` flag.
 
 Informational Flags:
 
 * --tz_version
     * Pass through flag to identify the TZDB version.
+
+Workflow Flags:
+
+* `--actions` flags is a comma-separated list of output format
+    * zonedb: Generate zonedb files for the given language or library
+    * json: Generate `zonedb.json` file for the given language
+    * zonelist: Generate a raw list of zone names in 'zones.txt' file.
+
+* `--languages` flag is a comma-separated list of target language or library
+    * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
+    * c: Generate `zone_*.{h,cpp}` files for acetimec C library
+    * python: Generate `zone_*.py` files for acetimepy Python library
+    * go: Generate `zone_*.{go}` files for acetimego C library
 
 Extractor Flags:
 
@@ -82,22 +95,20 @@ Transformer Flags:
     * Filter the zones to include only those in this include list.
 * --compress, --nocompress
     * Compress zone names using keyword substitution.
+* --generate_tiny_years
+    * Create zonedbs using int8 years intead of int16 years
 
 Generator Flags:
 
-* `--language` flag is a comma-separated list of generator file:
-    * arduino: Generate `zone_*.{h,cpp}` files for AceTime Arduino library
-    * c: Generate `zone_*.{h,cpp}` files for acetimec C library
-    * python: Generate `zone_*.py` files for acetimepy Python library
-    * go: Generate `zone_*.{go}` files for acetimego C library
-    * json: Generate `zonedb.json` file.
-    * zonelist: Generate a raw list of zone names in 'zones.txt' file.
 * `--output_dir {dir}`
     * The directory where various files should be created.
     * If empty, it means the same as $PWD.
 * `--scope`
     * Determines the format of the zonedb file.
-
+* --generate_tiny_years
+    * Create zonedbs using int8 years intead of int16 years
+* --compress, --nocompress
+    * Compress zone names using keyword substitution.
 * JsonGenerator
     * --json_file {file}
         * Name of the JSON file (e.g. `zonedb.json`, `zonedbx.json`)
@@ -144,18 +155,16 @@ def generate_zonedb(
     compress: bool,
     generate_tiny_years: bool,
     tiny_base_year: int,
-    language: str,
+    languages: Set[str],
     output_dir: str,
-    json_file: str,
     zidb: ZoneInfoDatabase,
 ) -> None:
-    """Generate the zonedb/ or zonedbx/ files for Python or Arduino,
-    but probably mostly for Arduino.
+    """Generate various zonedb files for the requested languages.
+    Activated for '--actions zonedb'.
     """
     generator: Generator
 
-    # Create the Python or Arduino files as requested
-    if language == 'python':
+    if 'python' in languages:
         logging.info('==== Creating acetimepy zone_*.py files')
         generator = PythonGenerator(
             invocation=invocation,
@@ -163,7 +172,7 @@ def generate_zonedb(
         )
         generator.generate_files(output_dir)
 
-    elif language == 'arduino':
+    if 'arduino' in languages:
         logging.info('==== Creating AceTime zone_*.{h,cpp} files')
         generator = ArduinoGenerator(
             invocation=invocation,
@@ -175,7 +184,7 @@ def generate_zonedb(
         )
         generator.generate_files(output_dir)
 
-    elif language == 'c':
+    if 'c' in languages:
         logging.info('==== Creating acetimec zone_*.{h,c} files')
         generator = CGenerator(
             invocation=invocation,
@@ -187,7 +196,7 @@ def generate_zonedb(
         )
         generator.generate_files(output_dir)
 
-    elif language == 'go':
+    if 'go' in languages:
         logging.info('==== Creating acetimego zone_*.go files')
         generator = GoGenerator(
             invocation=invocation,
@@ -196,21 +205,29 @@ def generate_zonedb(
         )
         generator.generate_files(output_dir)
 
-    elif language == 'json':
-        logging.info('==== Creating zonedb.json file')
-        generator = JsonGenerator(zidb=zidb, json_file=json_file)
-        generator.generate_files(output_dir)
 
-    elif language == 'zonelist':
-        logging.info('==== Creating zones.txt file')
-        generator = ZoneListGenerator(
-            invocation=invocation,
-            zidb=zidb,
-        )
-        generator.generate_files(output_dir)
+def generate_json(
+    output_dir: str,
+    json_file: str,
+    zidb: ZoneInfoDatabase,
+) -> None:
+    """Generate JSON file. Activated for '--actions json'.
+    """
+    logging.info('==== Creating zonedb.json file')
+    generator = JsonGenerator(zidb=zidb, json_file=json_file)
+    generator.generate_files(output_dir)
 
-    else:
-        raise Exception(f"Unrecognized language '{language}'")
+
+def generate_zonelist(
+    invocation: str,
+    output_dir: str,
+    zidb: ZoneInfoDatabase,
+) -> None:
+    """Generate JSON file. Activated for '--actions zonelist'.
+    """
+    logging.info('==== Creating zones.txt file')
+    generator = ZoneListGenerator(invocation=invocation, zidb=zidb)
+    generator.generate_files(output_dir)
 
 
 def main() -> None:
@@ -224,6 +241,23 @@ def main() -> None:
     """
     # Configure command line flags.
     parser = argparse.ArgumentParser(description='Generate Zone Info.')
+
+    # Target action (i.e. output) selector.
+    parser.add_argument(
+        '--actions',
+        help='Comma-separated list of actions or targets '
+             '(zonedb|json|zonelist)',
+        default='zonedb',
+        required=True,
+    )
+
+    # Language selector for transforming.
+    parser.add_argument(
+        '--languages',
+        help='Comma-separated list of languages (arduino|c|python|go)',
+        default='',
+        required=True,
+    )
 
     # Extractor flags.
     parser.add_argument(
@@ -305,25 +339,8 @@ def main() -> None:
         dest='strict',
     )
 
-    # Data pipeline selectors. Reduced down to a single 'zonedb' option which
-    # is the default.
-    parser.add_argument(
-        '--action',
-        help='Action to perform (zonedb)',
-        default='zonedb',
-    )
-
-    # Language selector (for --action zonedb).
-    parser.add_argument(
-        '--language',
-        help='Comma-separated list of target languages '
-             '(arduino|c|python|go|json|zonelist)',
-        default='',
-    )
-
-    # Defines the namespace or package of the generated zonedb files for the
-    # given --language flag:
-    #
+    # Defines the namespace or package of the generated zonedb files depending
+    # on the --languages flag:
     #   * arduino: defines the C++ namespace
     #   * c: defines the prefix of the kAtc{db_namespace}ZoneXxx data structs
     #   * python: not used
@@ -397,13 +414,18 @@ def main() -> None:
     # Parse the command line arguments
     args = parser.parse_args()
 
-    # Manually parse the comma-separated --action.
-    languages = set(args.language.split(','))
-    allowed_languages = set([
-        'arduino', 'c', 'python', 'go', 'json', 'zonelist',
-    ])
+    # Validate the comma-separated --actions flag.
+    actions = set(args.actions.split(','))
+    allowed_actions = set(['zonedb', 'json', 'zonelist'])
+    if not actions.issubset(allowed_actions):
+        print(f'Invalid --actions: {actions - allowed_actions}')
+        sys.exit(1)
+
+    # Validate the comma-separated --languages flag.
+    languages = set(args.languages.split(','))
+    allowed_languages = set(['arduino', 'c', 'python', 'go'])
     if not languages.issubset(allowed_languages):
-        print(f'Invalid --language: {languages - allowed_languages}')
+        print(f'Invalid --languages: {languages - allowed_languages}')
         sys.exit(1)
 
     # Configure logging. This should normally be executed after the
@@ -479,7 +501,7 @@ def main() -> None:
     extractor.print_summary()
     policies_map, zones_map, links_map = extractor.get_data()
 
-    # Create initial TransformerResult
+    # Create initial TransformerResult.
     tresult = TransformerResult(
         zones_map=zones_map,
         policies_map=policies_map,
@@ -522,7 +544,7 @@ def main() -> None:
         go_memory_map={},
     )
 
-    # Transform the TZ zones and rules
+    # Transform the TZ zones and rules, for all languages.
     logging.info('======== Transforming Zones and Rules')
     transformer = Transformer(
         scope=args.scope,
@@ -539,18 +561,6 @@ def main() -> None:
     transformer.transform(tresult)
     transformer.print_summary(tresult)
 
-    # Generate the fields for the Arduino zoneinfo data.
-    if 'arduino' in languages or 'c' in languages:
-        logging.info('======== Transforming to Arduino Zones and Rules')
-        arduino_transformer = ArduinoTransformer(
-            args.scope,
-            args.compress,
-            time_code_format)
-        arduino_transformer.transform(tresult)
-        arduino_transformer.print_summary(tresult)
-    else:
-        logging.info('======== Skipping Arduino transformations')
-
     # Estimate the buffer size of ExtendedZoneProcessor.TransitionStorage.
     if args.skip_bufestimator:
         logging.info('======== Skipping buffer size estimation')
@@ -564,15 +574,27 @@ def main() -> None:
         estimator.transform(tresult)
         estimator.print_summary(tresult)
 
-    # Generate the fields for the Arduino zoneinfo data.
-    logging.info('======== Updating comments')
+    # Merge comments from ZonePolicies into ZoneInfos.
+    logging.info('======== Merging policy comments into zone comments')
     commenter = Commenter()
     commenter.transform(tresult)
     commenter.print_summary(tresult)
 
-    # Generate the fields for the Arduino zoneinfo data.
+    # Transform fields for the 'arduino' (AceTime) or 'c' (acetimec) libraries.
+    if 'arduino' in languages or 'c' in languages:
+        logging.info('======== Transforming to Arduino/C Zones and Rules')
+        arduino_transformer = ArduinoTransformer(
+            args.scope,
+            args.compress,
+            time_code_format)
+        arduino_transformer.transform(tresult)
+        arduino_transformer.print_summary(tresult)
+    else:
+        logging.info('======== Skipping Arduino/C transformations')
+
+    # Generate the fields for the 'go' (acetimego) library.
     if 'go' in languages:
-        logging.info('======== Transforming to Go Zones and Rules')
+        logging.info('======== Transforming to Go lang Zones and Rules')
         go_transformer = GoTransformer()
         go_transformer.transform(tresult)
         go_transformer.print_summary(tresult)
@@ -594,23 +616,31 @@ def main() -> None:
         tresult=tresult,
     )
 
-    if args.action == 'zonedb':
-        logging.info('======== Generating zonedb files')
-        for language in languages:
-            generate_zonedb(
-                invocation=invocation,
-                db_namespace=args.db_namespace,
-                compress=args.compress,
-                generate_tiny_years=generate_tiny_years,
-                tiny_base_year=args.tiny_base_year,
-                language=language,
-                output_dir=args.output_dir,
-                zidb=zidb,
-                json_file=args.json_file,
-            )
-    else:
-        logging.error(f"Unrecognized action '{args.action}'")
-        sys.exit(1)
+    # Perform one or more actions.
+    logging.info('======== Performing actions, generating files')
+    if 'zonedb' in actions:
+        generate_zonedb(
+            invocation=invocation,
+            db_namespace=args.db_namespace,
+            compress=args.compress,
+            generate_tiny_years=generate_tiny_years,
+            tiny_base_year=args.tiny_base_year,
+            languages=languages,
+            output_dir=args.output_dir,
+            zidb=zidb,
+        )
+    if 'json' in actions:
+        generate_json(
+            output_dir=args.output_dir,
+            json_file=args.json_file,
+            zidb=zidb,
+        )
+    if 'zonelist' in actions:
+        generate_zonelist(
+            invocation=invocation,
+            output_dir=args.output_dir,
+            zidb=zidb,
+        )
 
     logging.info('======== Finished processing TZ Data files.')
 
