@@ -6,14 +6,12 @@ from typing import NamedTuple
 from typing import Dict
 from typing import List
 from typing import Set
-from typing import Tuple
 from collections import OrderedDict, Counter
 import itertools
 import logging
 from acetimetools.datatypes.attyping import ZonesMap
 from acetimetools.datatypes.attyping import PoliciesMap
 from acetimetools.datatypes.attyping import LinksMap
-from acetimetools.datatypes.attyping import LettersPerPolicy
 from acetimetools.datatypes.attyping import IndexMap
 from acetimetools.datatypes.attyping import TransformerResult
 from acetimetools.datatypes.attyping import MemoryMap
@@ -99,13 +97,11 @@ class ArduinoTransformer:
         zone_ids = tresult.zone_ids
         link_ids = tresult.link_ids
 
-        self.letters_per_policy, self.letters_map = _collect_letter_strings(
-            self.policies_map)
+        self.letters_map = _collect_letter_strings(self.policies_map)
         self.formats_map = _collect_format_strings(self.zones_map)
 
         self._process_rules_from_to_at(self.policies_map)
-        self._process_rules_letter(
-            self.policies_map, self.letters_map, self.letters_per_policy)
+        self._process_rules_letter(self.policies_map, self.letters_map)
         self._process_rules_delta(self.policies_map)
 
         self._process_eras_stdoff_delta(self.zones_map)
@@ -134,7 +130,6 @@ class ArduinoTransformer:
 
         tresult.zone_ids = zone_ids
         tresult.link_ids = link_ids
-        tresult.letters_per_policy = self.letters_per_policy
         tresult.letters_map = self.letters_map
         tresult.formats_map = self.formats_map
         tresult.fragments_map = self.fragments_map
@@ -180,7 +175,6 @@ class ArduinoTransformer:
         self,
         policies_map: PoliciesMap,
         letters_map: IndexMap,
-        letters_per_policy: LettersPerPolicy,
     ) -> None:
         """Convert the LETTER fields of ZoneRuleRaw into values that are
         consumed by the ZonePolicy classes of the Arduino AceTime library.
@@ -193,12 +187,6 @@ class ArduinoTransformer:
                 rule['letter_index'] = _to_letter_index(
                     letter=letter,
                     indexed_letters=self.letters_map,
-                )
-                indexed_letters = letters_per_policy.get(policy_name)
-                assert indexed_letters is not None
-                rule['letter_index_per_policy'] = _to_letter_index(
-                    letter=letter,
-                    indexed_letters=indexed_letters,
                 )
 
     def _process_rules_delta(self, policies_map: PoliciesMap) -> None:
@@ -427,44 +415,29 @@ class ArduinoTransformer:
         }
 
 
-def _collect_letter_strings(
-    policies_map: PoliciesMap,
-) -> Tuple[LettersPerPolicy, IndexMap]:
+def _collect_letter_strings(policies_map: PoliciesMap) -> IndexMap:
     """Loop through all ZoneRules and collect:
     1) a sorted collection of all multi-LETTERs, with their self index,
     2) collection of multi-LETTERs, grouped by policyName
     """
 
-    # Create a global set() of letters, and a per-policy set() of letters
-    letters_per_policy: LettersPerPolicy = OrderedDict()
+    # Collect global set() of letters
     all_letters: Set[str] = set()
     all_letters.add('')  # TODO: delete? letter '-' is normalized to ''
-    for policy_name, policy in sorted(policies_map.items()):
+    for policy_name, policy in policies_map.items():
         rules = policy['rules']
-        policy_letters: Set[str] = set()
-        policy_letters.add('')  # TODO: delete? letter '-' is normalized to ''
         for rule in rules:
             letter = rule['letter']
             all_letters.add(letter)
-            policy_letters.add(letter)
 
-        # Create per-policy letters index map
-        if policy_letters:
-            indexed_letters: IndexMap = OrderedDict()
-            index = 0
-            for letter in sorted(policy_letters):
-                indexed_letters[letter] = index
-                index += 1
-            letters_per_policy[policy_name] = indexed_letters
-
-    # Create a global letters index map
+    # Create a {letter -> index} map
     index = 0
     letters_map: IndexMap = OrderedDict()
     for letter in sorted(all_letters):
         letters_map[letter] = index
         index += 1
 
-    return letters_per_policy, letters_map
+    return letters_map
 
 
 def _collect_format_strings(zones_map: ZonesMap) -> IndexMap:

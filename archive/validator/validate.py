@@ -270,7 +270,6 @@ def main() -> None:
         notable_links={},
         zone_ids={},
         link_ids={},
-        letters_per_policy={},
         letters_map={},
         formats_map={},
         fragments_map={},

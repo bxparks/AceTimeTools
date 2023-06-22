@@ -92,7 +92,6 @@ class ZoneRuleRaw(TypedDict, total=False):
     at_time_modifier: int  # suffix + at_time_minute
     delta_code: int  # DST delta offset in units of 15-min
     delta_code_encoded: int  # encoded version of delta_code
-    letter_index_per_policy: int  # index into letters_per_policy, or -1
     letter_index: int  # index into letters_map[], or -1
     # high resolution fields
     at_time_seconds_code: int  # at_time in units of 15-seconds
@@ -223,12 +222,6 @@ OffsetMap = Dict[str, Tuple[int, int]]
 # the number of rules.
 IndexSizeMap = Dict[str, Tuple[int, int, int]]
 
-# Map of LETTER strings that are more than 1-character long, grouped by
-# ZonePolicy. Allows the 'letter' index to be localzed to the given ZonePolicy
-# (i.e. will only be 0 or 1). Created by artransformer.py. map{policy_name ->
-# map{letter -> index}}
-LettersPerPolicy = Dict[str, IndexMap]
-
 # Map of {name -> Set[reason]} used by Transformer to collect de-duped error
 # messages or warnings. A set() collection does not serialize well to JSON, so
 # jsongenerator.py will convert these into {name -> List[Comment]} internally.
@@ -326,7 +319,6 @@ class TransformerResult:
     estimator_min_year: int  # min year for buf size variations
     estimator_max_year: int  # max year for buf size variations
     # Data from ArduinoTransformer
-    letters_per_policy: LettersPerPolicy  # {policyName -> {letter -> index}}
     letters_map: IndexMap  # {letter -> index}
     formats_map: IndexMap  # {format -> index}
     fragments_map: IndexMap  # {fragment -> index}
@@ -426,7 +418,6 @@ class ZoneInfoDatabase(TypedDict):
     zones_to_policies: ZonesToPolicies
 
     # Data from ArduinoTransformer
-    letters_per_policy: LettersPerPolicy  # multi-char letters by zonePolicy
     letters_map: IndexMap  # all multi-character letters
     formats_map: IndexMap  # all format strings
     fragments_map: IndexMap  # zoneName fragment -> index
@@ -519,7 +510,6 @@ def create_zone_info_database(
         'estimator_max_year': tresult.estimator_max_year,
 
         # Data from ArduinoTransformer
-        'letters_per_policy': tresult.letters_per_policy,
         'letters_map': tresult.letters_map,
         'formats_map': tresult.formats_map,
         'fragments_map': tresult.fragments_map,
