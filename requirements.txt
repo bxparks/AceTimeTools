@@ -2,7 +2,6 @@ backports.zoneinfo
 flake8
 mypy
 python-dateutil
-python-dateutil
 pytz
 setuptools
 types-backports
