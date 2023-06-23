@@ -433,6 +433,8 @@ const uint32_t kZoneId{link_normalized_name} = 0x{link_id:08x}; // {link_name}
 
 #include <zoneinfo/{include_header}>
 
+class __FlashStringHelper;
+
 namespace ace_time {{
 namespace {self.db_namespace} {{
 
@@ -441,7 +443,7 @@ namespace {self.db_namespace} {{
 //---------------------------------------------------------------------------
 
 // Version of the TZ Database which generated these files.
-extern const char kTzDatabaseVersion[];
+extern const __FlashStringHelper* const kTzDatabaseVersion;
 
 // Metadata about the zonedb files.
 extern const {self.scope}::ZoneContext kZoneContext;
@@ -559,7 +561,9 @@ namespace {self.db_namespace} {{
 // ZoneContext
 //---------------------------------------------------------------------------
 
-const char kTzDatabaseVersion[] {progmem} = "{self.tz_version}";
+static const char kVersionString[] {progmem} = "{self.tz_version}";
+const __FlashStringHelper* const kTzDatabaseVersion =
+    (const __FlashStringHelper*) kVersionString;
 
 {fragment_strings}
 const char* const kFragments[] {progmem} = {{
@@ -578,7 +582,7 @@ const {self.scope}::ZoneContext kZoneContext {progmem} = {{
   {self.until_year_accurate} /*untilYearAccurate*/,
   {self.tiny_base_year} /*baseYear*/,
   {self.max_buf_size} /*maxTransitions*/,
-  kTzDatabaseVersion /*tzVersion*/,
+  kVersionString /*tzVersion*/,
   {num_fragments} /*numFragments*/,
   {num_letters} /*numLetters*/,
   kFragments /*fragments*/,

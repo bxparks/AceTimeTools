@@ -1,6 +1,9 @@
 # Changelog
 
 * Unreleased
+    * `argenerator.py`
+        * Change type of `kTzDatabaseVersion` string from `const char*` to
+          `const __FlashStringHelper*`, since it is stored in `PROGMEM` now.
 * 1.8.0 (2023-06-23)
     * Support high-res `zonedbc` data files for AceTime library
         * Use `--scope complete`.
