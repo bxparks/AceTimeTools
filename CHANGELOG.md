@@ -1,15 +1,20 @@
 # Changelog
 
 * Unreleased
+* 1.8.0 (2023-06-23)
     * Support high-res `zonedbc` data files for AceTime library
-        * use `--scope complete`.
+        * Use `--scope complete`.
         * Simplify granularity flags, using `--scope` to determine the various
         granularity parameters.
         * Remove `--generate_hires` flag
-    * Refactor `--actions` and `--languages` flags
+    * `tzcompiler.py`
+        * Refactor `--actions` and `--languages` flags
         * `--actions` is now a comma-separate list: `zonedb`, `json`, `zonelist`
         * `--languages` can be: `arduino`, `c`, `go`, `python`
         * Allows `zonedb.json` to be generate properly for different languages.
+    * `letters_per_policy`
+        * Remove, no longer used.
+        * `letterIndex` always refers to the global `letters` map.
     * tiny years (i.e. low res mode for basic zonedb)
         * Remove `--generate_int16_years` flag.
         * Rename internal `generate_int16_years` parameter with
