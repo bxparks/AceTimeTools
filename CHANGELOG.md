@@ -1,9 +1,13 @@
 # Changelog
 
 * Unreleased
+* 1.8.1 (2023-06-27)
     * `argenerator.py`
         * Change type of `kTzDatabaseVersion` string from `const char*` to
           `const __FlashStringHelper*`, since it is stored in `PROGMEM` now.
+    * `valtyping.py `
+        * Add `scope` parameter to characterize the intended size and validity
+          of the validation data.
 * 1.8.0 (2023-06-23)
     * Support high-res `zonedbc` data files for AceTime library
         * Use `--scope complete`.

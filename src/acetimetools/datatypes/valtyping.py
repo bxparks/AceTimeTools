@@ -15,6 +15,7 @@ type can be serialized to JSON directly. The JSON looks like:
   'tz_version': str,
   'has_valid_abbrev': bool,
   'has_valid_dst': bool,
+  'offset_granularity': int,
   'test_data': {
     '{zone_name}: {
       "transitions": [
@@ -88,5 +89,6 @@ ValidationData = TypedDict('ValidationData', {
     'tz_version': str,
     'has_valid_abbrev': bool,  # 'abbrev' values are reliable
     'has_valid_dst': bool,  # DST offsets are reliable
+    'offset_granularity': int,  # total UTC offset resolution
     'test_data': TestData,
 })
