@@ -13,7 +13,7 @@
 #
 # Usage:
 #
-#   $ tzcompiler.sh -tzrepo repo [--tag tag] [tzcompiler_py_flags...]
+#   $ tzcompiler.sh --tzrepo repo [--tag tag] [tzcompiler_py_flags...]
 
 set -eu
 shopt -s extglob # needed by copy_tzfiles()
