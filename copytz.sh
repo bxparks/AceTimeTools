@@ -75,3 +75,7 @@ europe|\
 northamerica|\
 southamerica|\
 )
+
+# Add the tag (often the TZDB version) to `version.txt`.
+echo "+ echo $tag > $dst/version.txt"
+echo "$tag" > version.txt

@@ -61,7 +61,8 @@ class StdoffGenerator:
 #   $ {self.invocation}
 #
 # from https://github.com/eggert/tz/releases/tag/{self.tz_version}
-# for the year {self.year}.
+#
+# The STDOFF for each timezone was extracted for the year {self.year}.
 #
 # DO NOT EDIT
 
