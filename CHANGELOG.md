@@ -1,6 +1,8 @@
 # Changelog
 
 * Unreleased
+* 1.8.2 (2024-01-12)
+    * move `stdoff.py` to `tzplus` project
 * 1.8.1 (2023-06-27)
     * `argenerator.py`
         * Change type of `kTzDatabaseVersion` string from `const char*` to
