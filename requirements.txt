@@ -1,11 +1,11 @@
-backports.zoneinfo
+backports.zoneinfo;python_version<"3.9"
 flake8
 mypy
 python-dateutil
 pytz
 setuptools
-types-backports
+types-backports;python_version<"3.9"
 types-python-dateutil
 types-pytz
 types-setuptools
-typing_extensions
+typing_extensions;python_version<"3.9"
