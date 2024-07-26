@@ -1,6 +1,8 @@
 # Changelog
 
 - Unreleased
+- 1.8.3 (2024-07-26)
+    - requirements.txt: remove dependency to backports.zoneinfo for Python>=3.9
 - 1.8.2 (2024-01-12)
     - move `stdoff.py` to `tzplus` project
 - 1.8.1 (2023-06-27)
