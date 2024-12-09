@@ -329,19 +329,42 @@ def _add_policies_map(
 
 
 MONTH_TO_MONTH_INDEX: Dict[str, int] = {
-    'Jan': 1,
-    'Feb': 2,
-    'Mar': 3,
-    'Apr': 4,
-    'May': 5,
-    'Jun': 6,
-    'Jul': 7,
-    'Aug': 8,
-    'Sep': 9,
-    'Oct': 10,
-    'Nov': 11,
-    'Dec': 12
+    'jan': 1,
+    'feb': 2,
+    'mar': 3,
+    'apr': 4,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'aug': 8,
+    'sep': 9,
+    'oct': 10,
+    'nov': 11,
+    'dec': 12
 }
+
+
+def month_to_index(month: str) -> int:
+    """Convert a human readable month string to its index.
+
+    Prior to 2024b, the TZDB files used a 3-letter abbreviation for the month
+    (e.g. "Jan" or "Dec"). In version 2024b, the word "April" was used instead
+    of "Apr". This broke a number of TZDB parsers, including tzcompiler.py in
+    this project. Instead of fixing the 'April' to conform to the conventions
+    used in previous versions of TZDB, the maintainers argued that "April" was
+    allowed by the spec which is buried in an obscure paragraph of the zic(1)
+    compiler: 'A name can be abbreviated by omitting all but an initial prefix;
+    any abbreviation must be unambiguous in context.'
+
+    This function attempts to implement that spec by checking if the first 3
+    letters of the given 'month' parameter matches one of entries in
+    MONTH_TO_MONTH_INDEX, using case-insensitive comparisons."""
+    prefix = month[:3]
+    prefix = prefix.lower()
+    try:
+        return MONTH_TO_MONTH_INDEX[prefix]
+    except KeyError:
+        raise Exception(f"Unknown month '{month}'")
 
 
 def _process_rule_line(line: str) -> ZoneRuleRaw:
@@ -364,7 +387,7 @@ def _process_rule_line(line: str) -> ZoneRuleRaw:
     else:
         to_year = int(to_year_string)
 
-    in_month: int = MONTH_TO_MONTH_INDEX[tokens[5]]
+    in_month: int = month_to_index(tokens[5])
     on_day: str = tokens[6]
     at_time, at_time_suffix = parse_at_time_string(tokens[7])
     delta_offset = tokens[8]
@@ -423,7 +446,7 @@ def _process_zone_line(line: str) -> ZoneEraRaw:
     # check for additional components of 'UNTIL' field
     if len(tokens) >= 5:
         until_year_only: bool = False
-        until_month: int = MONTH_TO_MONTH_INDEX[tokens[4]]
+        until_month: int = month_to_index(tokens[4])
     else:
         until_year_only = True
         until_month = 1
