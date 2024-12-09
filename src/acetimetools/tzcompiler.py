@@ -450,7 +450,7 @@ def main() -> None:
         time_code_format = 'low'
         generate_tiny_years = True
     elif args.scope == 'extended':
-        if args.start_year < 1973:
+        if args.start_year < 1974:
             raise Exception(
                 f"Invalid StartYear {args.start_year} for scope 'extended'")
         until_at_granularity = 60
