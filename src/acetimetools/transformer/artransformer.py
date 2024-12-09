@@ -446,8 +446,7 @@ def _collect_format_strings(zones_map: ZonesMap) -> IndexMap:
     for zone_name, info in zones_map.items():
         eras = info['eras']
         for era in eras:
-            format = era['format']
-            short_format = format.replace('%s', '%')
+            short_format = era['format_short']
             short_formats.add(short_format)
 
     index = 0

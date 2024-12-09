@@ -753,24 +753,35 @@ class Transformer:
         for zone_name, info in zones_map.items():
             valid = True
             for era in info['eras']:
-                if not era['format']:
-                    add_comment(removed_zones, zone_name, 'FORMAT is empty')
-                    valid = False
-                    break
+                format = era['format']
 
+                # Empty FORMAT entry is not valid.
+                if not format:
+                    raise Exception(f"{zone_name}: empty FORMAT column")
+
+                # If the FORMAT contains '%z', it must be the entire string.
+                if '%z' in format and format != '%z':
+                    raise Exception(f"{zone_name}: invalid FORMAT '{format}'")
+
+                # If the RULES column is a '-' or 'hh:mm' (i.e. not a reference
+                # to a policy), then FORMAT probably shouldn't contain a '%s'
+                # because the value of %s is supposed to come from the LETTER
+                # column in the ZoneRule. TODO: Maybe throw an exception
+                # instead?
                 if era['policy_name'] is None:
-                    if '%' in era['format']:
-                        add_comment(
-                            removed_zones, zone_name,
-                            "RULES is fixed but FORMAT contains '%'")
-                        valid = False
-                        break
+                    if '%s' in format:
+                        raise Exception(
+                            f"{zone_name}: FORMAT contains %s "
+                            "without a ZonePolicy reference")
                 else:
-                    if not ('%' in era['format'] or '/' in era['format']):
+                    # There exist a few zones (South Africa if I remember) where
+                    # RULES points to a policy name, but FORMAT is fixed (has no
+                    # '%s' or '/'). Add to the "notable" zones list.
+                    if not ('%s' in format or '/' in format):
                         add_comment(
                             notable_zones, zone_name,
                             "RULES not fixed but FORMAT is missing "
-                            + "'%' or '/'")
+                            + "'%s' or '/'")
 
             if valid:
                 results[zone_name] = info
@@ -947,12 +958,19 @@ class Transformer:
         return results
 
     def _create_short_format_strings(self, zones_map: ZonesMap) -> ZonesMap:
-        """Convert 'format' with '%s' placeholder to 'format_short' with just a
-        '%' placeholder.
+        """Convert 'format' into its 'short' (i.e. compact) form:
+        - replace '%s' with just a '%' (to save space)
+        - replace '%z' with an empty string
         """
         for name, info in zones_map.items():
             for era in info['eras']:
-                era['format_short'] = era['format'].replace('%s', '%')
+                format = era['format']
+                if '%z' in format and format != '%z':
+                    raise Exception(
+                        f"{name}: FORMAT contains '%z' with extra characters")
+                format = format.replace('%z', '')  # must be applied first
+                format = format.replace('%s', '%')
+                era['format_short'] = format
         return zones_map
 
     def _create_tiny_until_years(self, zones_map: ZonesMap) -> ZonesMap:
