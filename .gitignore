@@ -67,9 +67,11 @@ MANIFEST
 *.app
 
 #-------------------------------------------------------------------------
-# Generated files and directories under tests/validation/*Test/
+# Generated files and directories used for testing
 #-------------------------------------------------------------------------
 
+zonedb*.json
+zones.txt
 tests/validation/*Test/validation_*.h
 tests/validation/*Test/validation_*.cpp
 tests/validation/*Test/validation_*.json

@@ -130,7 +130,7 @@ class ZoneEraRaw(TypedDict, total=False):
     raw_line: str  # original ZONE line in TZ file
 
     # Derived from above by transfomer.py
-    format_short: str  # Arduino version of format with %s -> %
+    format_short: str  # compressed format (%s -> %; %z -> '')
     offset_seconds: int  # STD offset from UTC/GMT in seconds
     offset_seconds_truncated: int  # offset_seconds truncated to granularity
     # If RULES is a string reference to a policy (i.e. set of RULES), this is

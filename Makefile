@@ -34,7 +34,7 @@ flake8:
 
 # The TZ DB version used for internal testing targets defined below. This does
 # not affect the zonedb files generated in AceTime or acetimepy.
-TZ_VERSION := 2022g
+TZ_VERSION := 2024b
 TZ_REPO := $(abspath ../tz)
 
 # Generate zonedb.json for testing purposes.
@@ -42,22 +42,36 @@ zonedb.json:
 	./tzcompiler.sh \
 		--tzrepo $(TZ_REPO) \
 		--tag $(TZ_VERSION) \
+		--action json \
+		--languages arduino \
 		--scope basic \
-		--language json \
 		--json_file $@ \
-		--start_year 2000 \
-		--until_year 2050
+		--start_year 1980 \
+		--until_year 2100
 
 # Generate zonedbx.json for testing purposes.
 zonedbx.json:
 	./tzcompiler.sh \
 		--tzrepo $(TZ_REPO) \
 		--tag $(TZ_VERSION) \
+		--action json \
+		--languages arduino \
 		--scope extended \
-		--language json \
 		--json_file $@ \
-		--start_year 2000 \
-		--until_year 2050
+		--start_year 1974 \
+		--until_year 2100
+
+# Generate zonedbc.json for testing purposes.
+zonedbc.json:
+	./tzcompiler.sh \
+		--tzrepo $(TZ_REPO) \
+		--tag $(TZ_VERSION) \
+		--action json \
+		--languages arduino \
+		--scope complete \
+		--json_file $@ \
+		--start_year 1800 \
+		--until_year 2200
 
 # Generate the zones.txt file for testing purposes.
 zones.txt:
@@ -65,10 +79,10 @@ zones.txt:
 		--tzrepo $(TZ_REPO) \
 		--tag $(TZ_VERSION) \
 		--scope basic \
-		--language zonelist
+		--action zonelist \
+		--languages arduino
 
 #------------------------------------------------------------------------------
 
 clean:
-	rm -f zones.txt zonedb.json zonedbx.json validation_data.json \
-		validation_data.h validation_data.cpp validation_tests.cpp
+	rm -f zonedb.json zonedbx.json zonedbc.json zones.txt
