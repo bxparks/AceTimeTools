@@ -1,6 +1,7 @@
 # Changelog
 
 - Unreleased
+- 1.9.0 (2024-12-13)
     - Support new `%z` value in FORMAT column appearing in TZDB 2024b.
 - 1.8.3 (2024-07-26)
     - requirements.txt: remove dependency to backports.zoneinfo for Python>=3.9
